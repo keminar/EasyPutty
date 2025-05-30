@@ -6,7 +6,7 @@
 3. Tags管理
 4. 启动pageant.exe
 
-## Cmder + Putty
+## Cmder + PuTTY
 - 优点：内存占用少
 - 缺点：机器ip多了不好配置
 
