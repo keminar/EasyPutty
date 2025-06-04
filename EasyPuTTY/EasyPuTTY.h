@@ -7,6 +7,7 @@
 HWND hTabCtrl;
 HWND hToolbar;
 HWND g_mainWindowHandle;
+int g_tabHitIndex;
 
 // will use this structure to group fields which describe tab header and editor
 struct TabEditorsInfo {
@@ -34,3 +35,10 @@ void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentW
 void AddNewTab(HWND hTab);
 void RemoveTab(HWND hTab, int currentTab);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
+
+void selectTab(HWND tabCtrlWinHandle, int tabIndex);
+void moveTabToPosition(struct TabEditorsInfo* tabEditorsInfo, int tabIndex, int newPosition);
+void selectedTabToRightmost();
+void selectedTabToRight();
+void selectedTabToLeftmost();
+void selectedTabToLeft();

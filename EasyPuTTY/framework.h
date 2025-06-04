@@ -16,5 +16,6 @@
 #include <commctrl.h>
 #include <wchar.h>
 #include <stdio.h>
-
+#include <strsafe.h>
+#include <cstring>
 #pragma comment(lib, "comctl32.lib")
