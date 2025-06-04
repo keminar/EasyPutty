@@ -72,8 +72,12 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
 
+	// since it is allocated on stack, we need to clear this memory before we use it
+	memset(&wcex, 0, sizeof(wcex));
+
     wcex.cbSize = sizeof(WNDCLASSEX);
 
+	// 支持双击消息
     wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
@@ -133,8 +137,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 	case WM_CREATE:
 		{
+			// application properties loaded from file
+			wchar_t fontPropertyVal[LF_FACESIZE];
+			StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
 			// here we specify default properties of font shared by all editor instances
-			// these could be later changed via "Choose font" dialog
 			g_tabEditorsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
 			g_tabEditorsInfo.editorFontProperties.lfWidth = 0;
 			g_tabEditorsInfo.editorFontProperties.lfEscapement = 0;
@@ -148,20 +154,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			g_tabEditorsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 			g_tabEditorsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
 			g_tabEditorsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
-			//wcscpy(g_tabEditorsInfo.editorFontProperties.lfFaceName, fontPropertyVal);
+			wcscpy_s(g_tabEditorsInfo.editorFontProperties.lfFaceName, _countof(g_tabEditorsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
 			g_tabEditorsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabEditorsInfo.editorFontProperties));
 
 			CreateToolBarTabControl(&g_tabEditorsInfo, hWnd);
-			// 添加初始标签
-			TCITEMW tie = { 0 };
-			tie.mask = TCIF_TEXT;
-			tie.pszText = (LPWSTR)L"标签 1";
-			TabCtrl_InsertItem(hTabCtrl, 0, &tie);
+
+			if (g_tabEditorsInfo.tabCtrlWinHandle == NULL) {
+				MessageBoxW(NULL, L"Error while creating main application window: could not create tab control", L"Note", MB_OK);
+			}
+			else {
+				g_tabEditorsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
+				g_tabEditorsInfo.tabMenuHandle = GetSubMenu(g_tabEditorsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
+
+				// we want a single tab to be present in new window
+				//createTabWithEditor(&g_tabEditorsInfo, TRUE);
+
+
+				// 添加初始标签
+				TCITEMW tie = { 0 };
+				tie.mask = TCIF_TEXT;
+				tie.pszText = (LPWSTR)L"标签 1";
+				TabCtrl_InsertItem(hTabCtrl, 0, &tie);
+			}
 		}
 		break;
 	case WM_SIZE:
 		{
 			// 调整标签控件和按钮大小
+			if (hToolbar) {
+				MoveWindow(hToolbar, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+				// 自动调整大小
+				SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
+			}
 			if (hTabCtrl) MoveWindow(hTabCtrl, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 		}
 		break;
@@ -180,6 +204,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					RemoveTab(hTabCtrl, currentTab);
 				}
 				break;
+			case ID_TAB_CLOSE: {
+					RemoveTab(hTabCtrl, g_tabHitIndex);
+				}
+				break;
+			case ID_TAB_MOVETOLEFT: {
+					selectedTabToLeft();
+					return 0;
+				}
+			case ID_TAB_MOVETOLEFTMOST: {
+					selectedTabToLeftmost();
+					return 0;
+				}
+			case ID_TAB_MOVETORIGHT: {
+					selectedTabToRight();
+					return 0;
+				}
+			case ID_TAB_MOVETORIGHTMOST: {
+					selectedTabToRightmost();
+					return 0;
+				}
             case IDM_ABOUT:
                 DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
@@ -237,9 +281,9 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 
 	switch (code) {
 	case TCN_SELCHANGING: {
-		// Return 0 to allow the selection to change.
-		return 0;
-	}
+			// Return 0 to allow the selection to change.
+			return 0;
+		}
 
 	case TCN_SELCHANGE: {
 		//showEditorForSelectedTabItem(tabCtrlWinHandle, -1);
@@ -248,27 +292,80 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 		return 1;
 	}
 	case NM_RCLICK: {
-		GetCursorPos(&absCursorPos);
-		cursorPos = absCursorPos;
-		// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
-		ScreenToClient(tabCtrlWinHandle, &cursorPos);
-		tabControlHitTestInfo.pt = cursorPos;
-		int tabIndex = TabCtrl_HitTest(tabCtrlWinHandle, &tabControlHitTestInfo);
-		int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			GetCursorPos(&absCursorPos);
+			cursorPos = absCursorPos;
+			// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
+			ScreenToClient(tabCtrlWinHandle, &cursorPos);
+			tabControlHitTestInfo.pt = cursorPos;
+			int tabIndex = TabCtrl_HitTest(tabCtrlWinHandle, &tabControlHitTestInfo);
+			int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			g_tabHitIndex = tabIndex;
 
-		/*selectTab(tabCtrlWinHandle, tabIndex);
-		// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
-		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
-		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
-		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
-		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHTMOST, !(tabIndex < (numTabs - 1)));
-		*/
-		TrackPopupMenu(tabMenuHandle, TPM_RIGHTBUTTON, absCursorPos.x, absCursorPos.y, 0, menuCommandProcessorWindowHandle, NULL);
+			/*selectTab(tabCtrlWinHandle, tabIndex);*/
+			// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
+			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
+			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
+			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
+			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHTMOST, !(tabIndex < (numTabs - 1)));
+		
+			TrackPopupMenu(tabMenuHandle, TPM_RIGHTBUTTON, absCursorPos.x, absCursorPos.y, 0, menuCommandProcessorWindowHandle, NULL);
 
-		return 1;
-	}
+			return 1;
+		}
 	}
 	return 0;
+}
+
+void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
+	TabCtrl_SetCurSel(tabCtrlWinHandle, tabIndex);
+	//showEditorForSelectedTabItem(tabCtrlWinHandle, tabIndex);
+}
+
+// 只移动标签不修改选中
+void moveTabToPosition(struct TabEditorsInfo* tabEditorsInfo, int tabIndex, int newPosition) {
+
+	HWND tabCtrlWinHandle = tabEditorsInfo->tabCtrlWinHandle;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	wchar_t tabNameBuf[512];  // Temporary buffer for strings.
+	tabCtrlItemInfo.tcitemheader.pszText = tabNameBuf;
+	tabCtrlItemInfo.tcitemheader.cchTextMax = sizeof(tabNameBuf) / sizeof(wchar_t);
+
+	// we want to get a copy of all the info for tab, so we need to specify all info item keys here
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_IMAGE | TCIF_PARAM | TCIF_RTLREADING | TCIF_STATE | TCIF_TEXT;
+	// retrieve information about tab control item with tabIndex
+	TabCtrl_GetItem(tabCtrlWinHandle, tabIndex, &tabCtrlItemInfo);
+	// delete item on old position
+	TabCtrl_DeleteItem(tabCtrlWinHandle, tabIndex);
+	// insert new tab item into specified location
+	TabCtrl_InsertItem(tabCtrlWinHandle, newPosition, &tabCtrlItemInfo); // content of tabControlItemInfo will be copied 
+}
+
+void selectedTabToRightmost() {
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	if (g_tabHitIndex < newTabItemsCount - 1) {
+		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, newTabItemsCount - 1);
+	}
+}
+
+void selectedTabToRight() {
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	if (g_tabHitIndex < newTabItemsCount - 1) {
+		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, g_tabHitIndex + 1);
+	}
+}
+
+void selectedTabToLeftmost() {
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	if (g_tabHitIndex > 0) {
+		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, 0);
+	}
+}
+
+void selectedTabToLeft() {
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	if (g_tabHitIndex > 0) {
+		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, g_tabHitIndex - 1);
+	}
 }
 
 // “关于”框的消息处理程序。
@@ -320,7 +417,6 @@ void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentW
 	// 添加按钮
 	SendMessage(hToolbar, TB_ADDBUTTONS,
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
-
 	// 自动调整大小
 	SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
 
@@ -353,7 +449,7 @@ void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentW
 	tabCaptionFont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	tabCaptionFont.lfQuality = DEFAULT_QUALITY;
 	tabCaptionFont.lfPitchAndFamily = DEFAULT_PITCH;
-	//wcscpy(tabCaptionFont.lfFaceName, &(L"MS Shell dlg")); // this font is used by dialog controls
+	wcscpy_s(tabCaptionFont.lfFaceName,_countof(tabCaptionFont.lfFaceName), L"MS Shell dlg"); // this font is used by dialog controls
 	tabCaptionFontHandle = CreateFontIndirectW(&tabCaptionFont);
 
 	SendMessageW(hTabCtrl, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
@@ -374,16 +470,19 @@ void AddNewTab(HWND hTab) {
 	TabCtrl_SetCurSel(hTab, count);
 }
 
-void RemoveTab(HWND hTab, int currentTab) {
+// 删除标签
+void RemoveTab(HWND hTab, int deleteTab) {
 	int newTabItemsCount;
 	int newSelectedTab;
-	TabCtrl_DeleteItem(hTab, currentTab);
+	int currentTab = TabCtrl_GetCurSel(hTabCtrl);
+
+	TabCtrl_DeleteItem(hTab, deleteTab);
 	newTabItemsCount = TabCtrl_GetItemCount(hTab);
 
 	if (newTabItemsCount == 0) {
 		AddNewTab(hTab);
 	}
-	else {
+	else if (deleteTab == currentTab) { //如果删除项非选中项，不切换选中
 		// if last item was removed, select previous item, otherwise select next item
 		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
 		TabCtrl_SetCurSel(hTab, newSelectedTab);
