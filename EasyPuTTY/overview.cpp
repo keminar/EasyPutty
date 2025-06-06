@@ -66,26 +66,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 
 // 创建窗口
-HWND createOverviewWindow(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo) {
-
-	// 创建宿主窗口
-	HWND hostWindow = CreateWindowExW(
-		0,
-		L"Static",
-		L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_THICKFRAME, // 允许调整大小
-		0, 0,
-		800, 600,
-		tabWindowsInfo->parentWinHandle,
-		NULL,
-		hInstance,
-		NULL
-	);
-
-	if (!hostWindow) {
-		MessageBoxW(NULL, L"无法创建宿主窗口", L"错误", MB_OK | MB_ICONERROR);
-		return NULL;
-	}
+HWND createOverviewWindow(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
 	SendMessageW(hostWindow, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
 
 	hWndListView = CreateWindow(

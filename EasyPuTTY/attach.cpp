@@ -5,28 +5,6 @@
 DWORD  dwThreadId;
 wchar_t commandLine[MAX_PATH];
 
-HWND createAttachWindow(HINSTANCE hInstance, HWND parentWindow, BOOL show) {
-	// 创建宿主窗口
-	HWND hostWindow = CreateWindowExW(
-		0,
-		L"Static",
-		L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_THICKFRAME, // 允许调整大小
-		0, 0,
-		800, 600,
-		parentWindow,
-		NULL,
-		hInstance,
-		NULL
-	);
-
-	if (!hostWindow) {
-		MessageBoxW(NULL, L"无法创建宿主窗口", L"错误", MB_OK | MB_ICONERROR);
-		return NULL;
-	}
-	return hostWindow;
-}
-
 // 回调函数：用于查找PuTTY窗口
 BOOL CALLBACK EnumPuTTYWindows(HWND hwnd, LPARAM lParam) {
 	WCHAR szTitle[256] = { 0 };
