@@ -27,9 +27,24 @@
     <ClInclude Include="EasyPuTTY.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="overview.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="attach.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EasyPuTTY.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="overview.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="attach.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
