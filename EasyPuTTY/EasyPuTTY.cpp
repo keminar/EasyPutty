@@ -4,7 +4,7 @@
 #include "framework.h"
 #include "EasyPuTTY.h"
 
-#define MAX_LOADSTRING 100
+#define MAX_LOADSTRING 256
 // 自定义定时
 #define TIMER_ID_FOCUS 101
 #define IDC_TABCONTROL 100
@@ -196,7 +196,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// 自动调整大小
 				SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 			}
-
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			RECT rc;
 			// WM_SIZE params contain width and height of main window's client area
 			// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
@@ -204,7 +204,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			resizeTabControl(&g_tabWindowsInfo, rc);
 
 			// 刷新当前标签
-			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
 				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
@@ -294,24 +293,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 
 			// 新建立
-			HWND attachWinHandle = createAttachWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle, 1);
-			if (attachWinHandle == NULL) {
+			HWND newHostWinHandle = createHostWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle);
+			if (newHostWinHandle == NULL) {
 				MessageBoxW(NULL, L"Could not create edit window", L"提示", MB_OK);
 				return 0;
 			}
 			else {
 				// 创建新的PuTTY标签页
 				// 创建其他进程需要attachWinHandle打底，不然explorer测试有问题
-				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, attachWinHandle, inputText);
+				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, newHostWinHandle, inputText);
 				// 修改选项卡标题
 				if (puttyWindowHandle) {
-					if (tabCtrlItemInfo.overviewWindowHandle && IsWindow(tabCtrlItemInfo.overviewWindowHandle)) {
-						DestroyWindow(tabCtrlItemInfo.overviewWindowHandle); // 会自动销毁所有子控件
+					if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
+						DestroyWindow(tabCtrlItemInfo.hostWindowHandle); // 会自动销毁所有子控件
 					}
 					DWORD  dwThreadId;
 					GetWindowThreadProcessId(puttyWindowHandle, &dwThreadId);
 
-					tabCtrlItemInfo.overviewWindowHandle = attachWinHandle;
+					tabCtrlItemInfo.hostWindowHandle = newHostWinHandle;
 					tabCtrlItemInfo.attachWindowHandle = puttyWindowHandle;
 					tabCtrlItemInfo.attachProcessId = dwThreadId;
 
@@ -328,7 +327,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					RECT rc;
 					GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
 					TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-					setTabWindowPos(tabCtrlItemInfo.overviewWindowHandle, puttyWindowHandle, rc);
+					setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc);
 					//重绘，部分软件需要，如cmd
 					RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 
@@ -344,7 +343,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 				}
 				else {
-					DestroyWindow(attachWinHandle);
+					DestroyWindow(newHostWinHandle);
 				}
 			}
 			return 0;
@@ -468,7 +467,6 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 			int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			g_tabHitIndex = tabIndex;
 
-			/*selectTab(tabCtrlWinHandle, tabIndex);*/
 			// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
 			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
 			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
@@ -584,7 +582,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 创建标签控件
 	tabCtrlWinHandle = CreateWindowW(
 		WC_TABCONTROL, L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS,
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS | TCS_BOTTOM,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parentWinHandle, (HMENU)tabWindowsInfo->tabWindowIdentifier, g_appInstance, NULL
 	);
 	if (tabCtrlWinHandle == NULL) {
@@ -627,7 +625,7 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	tabCtrlItemInfo.tcitemheader.iImage = -1;
 	tabCtrlItemInfo.tcitemheader.pszText = tabNameBuf;
 
-	tabCtrlItemInfo.overviewWindowHandle = 0;
+	tabCtrlItemInfo.hostWindowHandle = 0;
 	tabCtrlItemInfo.attachWindowHandle = 0;
 	tabCtrlItemInfo.attachProcessId = 0;
 
@@ -645,7 +643,13 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 
 	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor);
-	overviewHandle = createOverviewWindow(g_appInstance, tabWindowsInfo);
+	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
+	if (hostWindow == NULL) {
+		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
+		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		return 0;
+	}
+	overviewHandle = createOverviewWindow(g_appInstance, tabWindowsInfo, hostWindow);
 	if (overviewHandle == NULL) {
 		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
 		MessageBoxW(NULL, L"创建预览窗口失败", L"提示", MB_OK);
@@ -654,7 +658,7 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	else {
 		// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
 		tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
-		tabCtrlItemInfo.overviewWindowHandle = overviewHandle;
+		tabCtrlItemInfo.hostWindowHandle = overviewHandle;
 		TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 
 		// 获取整个window区域
@@ -704,7 +708,7 @@ TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i) {
 	TCCUSTOMITEM tabCtrlItemInfo;
 
 	tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
-	return tabCtrlItemInfo.overviewWindowHandle;
+	return tabCtrlItemInfo.hostWindowHandle;
 }
 
 // 删除标签
@@ -719,8 +723,8 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	TabCtrl_GetItem(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-	if (tabCtrlItemInfo.overviewWindowHandle) {
-		DestroyWindow(tabCtrlItemInfo.overviewWindowHandle);
+	if (tabCtrlItemInfo.hostWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 	if (tabCtrlItemInfo.attachWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
@@ -759,19 +763,40 @@ HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	int numTabs, i;
 	TCCUSTOMITEM tabCtrlItemInfo;
 	HWND overviewWinHandle, puttyWindowHandle;
-	RECT editorRectangle = rc;  // initilize with total area of tab ctrl and editors
+	RECT tabRectangle = rc;  // initilize with total area of tab ctrl and editors
 
 	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
-	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &editorRectangle); // values in editorRectangle are updated with dimensions of display area of tabCtrl
-
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &tabRectangle); // values in editorRectangle are updated with dimensions of display area of tabCtrl
 	// Resize the tab control
-	if (!SetWindowPos(tabCtrlWinHandle, HWND_TOP, rc.left, rc.top, rc.right - rc.left, editorRectangle.top - rc.top, SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
+	if (!SetWindowPos(tabCtrlWinHandle, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
 		return E_FAIL;
 	numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	for (i = 0; i < numTabs; i++) {
 		tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
-		setTabWindowPos(tabCtrlItemInfo.overviewWindowHandle, tabCtrlItemInfo.attachWindowHandle, editorRectangle);
+		setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, tabCtrlItemInfo.attachWindowHandle, tabRectangle);
 	}
 	return S_OK;
 
+}
+
+HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
+	// 创建宿主窗口
+	HWND hostWindow = CreateWindowExW(
+		0,
+		L"Static",
+		L"",
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_THICKFRAME, // 允许调整大小
+		100, 200,
+		800, 600,
+		parentWindow,
+		NULL,
+		hInstance,
+		NULL
+	);
+
+	if (!hostWindow) {
+		MessageBoxW(NULL, L"无法创建宿主窗口", L"错误", MB_OK | MB_ICONERROR);
+		return NULL;
+	}
+	return hostWindow;
 }

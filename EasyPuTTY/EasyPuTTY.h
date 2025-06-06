@@ -8,7 +8,7 @@
 // Data associated with each tab control item. We will use it instead of TCITEM. First member must be TCITEMHEADER, other members we can freely define
 typedef struct tagTCCUSTOMITEM {
 	TCITEMHEADER tcitemheader;
-	HWND overviewWindowHandle;
+	HWND hostWindowHandle;
 	HWND attachWindowHandle;
 	DWORD attachProcessId;
 } TCCUSTOMITEM;
@@ -33,3 +33,5 @@ TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);
 HWND getWindowForTabItem(HWND tabCtrlWinHandle, int i);
 void FocusWindow(HWND hWnd);
 HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
+
+HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow);
