@@ -5,11 +5,21 @@
 #include "EasyPuTTY.h"
 
 #define MAX_LOADSTRING 100
+// 自定义定时
+#define TIMER_ID_FOCUS 101
+#define IDC_TABCONTROL 100
 
 // 全局变量:
-HINSTANCE g_appInstance;                                // 当前实例
+HINSTANCE g_appInstance;                        // 当前实例
 WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
 WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
+
+HWND g_toolbarHandle;                          // 工具条
+HWND g_mainWindowHandle;                       // 主窗体
+int g_tabHitIndex;                             // 标签右键触发索引
+
+// single global instance of TabWindowsInfo
+struct TabWindowsInfo g_tabWindowsInfo;
 
 // 此代码模块中包含的函数的前向声明:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -107,7 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	g_appInstance = hInstance; // 将实例句柄存储在全局变量中
 
-   g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
    if (!g_mainWindowHandle)
@@ -137,109 +147,220 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 	case WM_CREATE:
 		{
-			// application properties loaded from file
+			// application properties
 			wchar_t fontPropertyVal[LF_FACESIZE];
 			StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
 			// here we specify default properties of font shared by all editor instances
-			g_tabEditorsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
-			g_tabEditorsInfo.editorFontProperties.lfWidth = 0;
-			g_tabEditorsInfo.editorFontProperties.lfEscapement = 0;
-			g_tabEditorsInfo.editorFontProperties.lfOrientation = 0;
-			g_tabEditorsInfo.editorFontProperties.lfWeight = FW_NORMAL;
-			g_tabEditorsInfo.editorFontProperties.lfItalic = FALSE;
-			g_tabEditorsInfo.editorFontProperties.lfUnderline = FALSE;
-			g_tabEditorsInfo.editorFontProperties.lfStrikeOut = FALSE;
-			g_tabEditorsInfo.editorFontProperties.lfCharSet = ANSI_CHARSET;
-			g_tabEditorsInfo.editorFontProperties.lfOutPrecision = OUT_DEFAULT_PRECIS;
-			g_tabEditorsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-			g_tabEditorsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
-			g_tabEditorsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
-			wcscpy_s(g_tabEditorsInfo.editorFontProperties.lfFaceName, _countof(g_tabEditorsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
-			g_tabEditorsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabEditorsInfo.editorFontProperties));
+			g_tabWindowsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
+			g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
+			g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
+			g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
+			g_tabWindowsInfo.editorFontProperties.lfWeight = FW_NORMAL;
+			g_tabWindowsInfo.editorFontProperties.lfItalic = FALSE;
+			g_tabWindowsInfo.editorFontProperties.lfUnderline = FALSE;
+			g_tabWindowsInfo.editorFontProperties.lfStrikeOut = FALSE;
+			g_tabWindowsInfo.editorFontProperties.lfCharSet = ANSI_CHARSET;
+			g_tabWindowsInfo.editorFontProperties.lfOutPrecision = OUT_DEFAULT_PRECIS;
+			g_tabWindowsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+			g_tabWindowsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
+			g_tabWindowsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
+			wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
+			g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
 
-			CreateToolBarTabControl(&g_tabEditorsInfo, hWnd);
+			// 创建工具条和标签
+			CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
-			if (g_tabEditorsInfo.tabCtrlWinHandle == NULL) {
+			if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
 				MessageBoxW(NULL, L"Error while creating main application window: could not create tab control", L"Note", MB_OK);
+				return 0;
 			}
 			else {
-				g_tabEditorsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
-				g_tabEditorsInfo.tabMenuHandle = GetSubMenu(g_tabEditorsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
-
-				// we want a single tab to be present in new window
-				//createTabWithEditor(&g_tabEditorsInfo, TRUE);
-
+				// 获取标签的右键菜单
+				g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
+				g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
 
 				// 添加初始标签
-				TCITEMW tie = { 0 };
-				tie.mask = TCIF_TEXT;
-				tie.pszText = (LPWSTR)L"标签 1";
-				TabCtrl_InsertItem(hTabCtrl, 0, &tie);
+				AddNewOverview(&g_tabWindowsInfo);
 			}
 		}
-		break;
+		return 0;
 	case WM_SIZE:
 		{
-			// 调整标签控件和按钮大小
-			if (hToolbar) {
-				MoveWindow(hToolbar, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
-				// 自动调整大小
-				SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
+			// 跳过最小化处理，否则在putty中开screen最小化后最大化显示会变
+			if (wParam == SIZE_MINIMIZED) {
+				return 0;
 			}
-			if (hTabCtrl) MoveWindow(hTabCtrl, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+			// 调整标签控件和按钮大小
+			if (g_toolbarHandle) {
+				MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+				// 自动调整大小
+				SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+			}
+
+			RECT rc;
+			// WM_SIZE params contain width and height of main window's client area
+			// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
+			SetRect(&rc, 0, 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			resizeTabControl(&g_tabWindowsInfo, rc);
+
+			// 刷新当前标签
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			if (sel != -1) {
+				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+				if (tabCtrlItemInfo.attachWindowHandle) {//解决句柄为NULL + RDW_ALLCHILDREN时，两个进程调整一个大小另一个也会刷新的问题
+					RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+				}
+			}
+			// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
+			SetTimer(hWnd, TIMER_ID_FOCUS, 240, NULL);
+			return 0;
 		}
 		break;
-    case WM_COMMAND:
+	case WM_TIMER:
+		if (wParam == TIMER_ID_FOCUS) {
+			KillTimer(hWnd, TIMER_ID_FOCUS); // 关闭计时器
+			TCCUSTOMITEM tabCtrlItemInfo;
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			if (sel != -1) {
+				tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+				// retrieve information about tab control item with index i
+				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
+
+				// tab焦点不能写在TabCtrl_GetCurSel前
+				FocusWindow(tabCtrlItemInfo.attachWindowHandle);
+			}
+		}
+		return 0;
+    case WM_COMMAND: {
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+        int wmId = LOWORD(wParam);
+        // 分析菜单选择:
+        switch (wmId)
         {
-            int wmId = LOWORD(wParam);
-            // 分析菜单选择:
-            switch (wmId)
-            {
-			case IDM_OPEN:
-				// 添加新标签
-				AddNewTab(hTabCtrl);
-				break;
-			case IDM_CLOSE: {
-					int currentTab = TabCtrl_GetCurSel(hTabCtrl);
-					RemoveTab(hTabCtrl, currentTab);
+		case IDM_OPEN: {
+			AddNewOverview(&g_tabWindowsInfo);
+			break;
+		}
+		case IDM_CLOSE: {
+			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			RemoveTab(tabCtrlWinHandle, currentTab);
+			break;
+		}
+		case ID_TAB_CLOSE: {
+			RemoveTab(tabCtrlWinHandle, g_tabHitIndex);
+			break;
+		}
+		case ID_TAB_MOVETOLEFT: {
+			selectedTabToLeft();
+			return 0;
+		}
+		case ID_TAB_MOVETOLEFTMOST: {
+			selectedTabToLeftmost();
+			return 0;
+		}
+		case ID_TAB_MOVETORIGHT: {
+			selectedTabToRight();
+			return 0;
+		}
+		case ID_TAB_MOVETORIGHTMOST: {
+			selectedTabToRightmost();
+			return 0;
+		}
+        case IDM_ABOUT:
+            DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            break;
+        case IDM_EXIT:
+            DestroyWindow(hWnd);
+            break;
+		case WM_GETMAINWINDOW:
+			// 主窗口直接返回自身句柄
+			return (LRESULT)hWnd;
+		case 7002: { // 连接按钮点击
+			// 获取输入框中的文本
+			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+
+			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			if (sel != -1) {
+				tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
+			}
+
+			wchar_t* inputText = (wchar_t*)lParam;
+			if (wcslen(inputText) == 0) {
+				MessageBoxW(g_mainWindowHandle, L"请输入命令", L"提示", MB_OK | MB_ICONINFORMATION);
+				return 0;
+			}
+
+			// 新建立
+			HWND attachWinHandle = createAttachWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle, 1);
+			if (attachWinHandle == NULL) {
+				MessageBoxW(NULL, L"Could not create edit window", L"提示", MB_OK);
+				return 0;
+			}
+			else {
+				// 创建新的PuTTY标签页
+				// 创建其他进程需要attachWinHandle打底，不然explorer测试有问题
+				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, attachWinHandle, inputText);
+				// 修改选项卡标题
+				if (puttyWindowHandle) {
+					if (tabCtrlItemInfo.overviewWindowHandle && IsWindow(tabCtrlItemInfo.overviewWindowHandle)) {
+						DestroyWindow(tabCtrlItemInfo.overviewWindowHandle); // 会自动销毁所有子控件
+					}
+					DWORD  dwThreadId;
+					GetWindowThreadProcessId(puttyWindowHandle, &dwThreadId);
+
+					tabCtrlItemInfo.overviewWindowHandle = attachWinHandle;
+					tabCtrlItemInfo.attachWindowHandle = puttyWindowHandle;
+					tabCtrlItemInfo.attachProcessId = dwThreadId;
+
+					// 要更新数据，窗口大小调整时才随动
+					TabCtrl_SetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
+
+					wchar_t puttyTitle[256] = { 0 };
+					GetWindowTextW(puttyWindowHandle, puttyTitle, 256);
+					TCITEM tie = { 0 };
+					tie.mask = TCIF_TEXT;
+					tie.pszText = puttyTitle;
+					SendMessage(tabCtrlWinHandle, TCM_SETITEM, sel, (LPARAM)&tie);
+
+					RECT rc;
+					GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
+					TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+					setTabWindowPos(tabCtrlItemInfo.overviewWindowHandle, puttyWindowHandle, rc);
+					//重绘，部分软件需要，如cmd
+					RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+
+					if (wcsstr(inputText, L"putty") != NULL) {
+						// 按下 Ctrl 键
+						keybd_event(VK_CONTROL, 0, 0, 0);
+						// 按下 Space 键
+						keybd_event(VK_SPACE, 0, 0, 0);
+						// 释放 Space 键
+						keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
+						// 释放 Ctrl 键
+						keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+					}
 				}
-				break;
-			case ID_TAB_CLOSE: {
-					RemoveTab(hTabCtrl, g_tabHitIndex);
+				else {
+					DestroyWindow(attachWinHandle);
 				}
-				break;
-			case ID_TAB_MOVETOLEFT: {
-					selectedTabToLeft();
-					return 0;
-				}
-			case ID_TAB_MOVETOLEFTMOST: {
-					selectedTabToLeftmost();
-					return 0;
-				}
-			case ID_TAB_MOVETORIGHT: {
-					selectedTabToRight();
-					return 0;
-				}
-			case ID_TAB_MOVETORIGHTMOST: {
-					selectedTabToRightmost();
-					return 0;
-				}
-            case IDM_ABOUT:
-                DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
+			}
+			return 0;
+		}
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
         }
-        break;
-	case WM_NOTIFY:
-		if (((LPNMHDR)lParam)->hwndFrom == hTabCtrl) {
-			return processTabNotification(g_tabEditorsInfo.tabCtrlWinHandle, g_tabEditorsInfo.tabMenuHandle, g_mainWindowHandle, ((LPNMHDR)lParam)->code);
+		break;
+    }
+	case WM_NOTIFY: {
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		if (((LPNMHDR)lParam)->hwndFrom == tabCtrlWinHandle) {
+			return processTabNotification(g_tabWindowsInfo.tabCtrlWinHandle, g_tabWindowsInfo.tabMenuHandle, g_mainWindowHandle, ((LPNMHDR)lParam)->code);
 		}
 		break;
+	}	
 	case WM_LBUTTONDBLCLK: {
 		// 处理鼠标双击事件(不包含标签上面的双击）
 		int x = LOWORD(lParam);
@@ -250,29 +371,75 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		// 获取标签区域
 		RECT tabRect;
-		GetClientRect(hTabCtrl, &tabRect);
-		int count = TabCtrl_GetItemCount(hTabCtrl);
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		GetClientRect(tabCtrlWinHandle, &tabRect);
+		int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (count > 0) {
 			// 获取最后一个标签项的矩形
 			RECT tabStripRect = { 0 };
-			TabCtrl_GetItemRect(hTabCtrl, count, &tabStripRect);
+			TabCtrl_GetItemRect(tabCtrlWinHandle, count, &tabStripRect);
 			tabRect.left = tabStripRect.right;
 			tabRect.top = tabStripRect.top;
 			if (PtInRect(&tabRect, pt)) {
-				AddNewTab(hTabCtrl);
+				AddNewOverview(&g_tabWindowsInfo);
 			}
 		}
 		break;
 	}
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
+	case WM_DESTROY: {
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+		for (int i = 0; i < tabItemsCount; i++) {
+			RemoveTab(tabCtrlWinHandle, i);
+		}
+
+		PostQuitMessage(0);
+		break;
+	}	
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
 
+// 假设hWnd是你想要聚焦的窗口句柄
+void FocusWindow(HWND hWnd) {
+	if (!hWnd) {
+		return;
+	}
+	// 尝试将窗口带到前台并聚焦
+	if (!SetForegroundWindow(hWnd)) {
+		// 如果SetForegroundWindow失败，可以尝试其他方法
+		BringWindowToTop(hWnd);
+		SetFocus(hWnd);
+	}
+}
+
+int GetTitleBarHeightWithoutMenu(HWND hWnd) {
+	if (!IsWindow(hWnd)) return 0;
+	RECT windowRect, clientRect;
+	GetWindowRect(hWnd, &windowRect);        // 获取窗口在屏幕坐标系中的位置
+	GetClientRect(hWnd, &clientRect);        // 获取客户区在窗口坐标系中的位置
+
+	// 将客户区左上角坐标从窗口坐标转换为屏幕坐标
+	POINT clientTopLeft = { clientRect.left, clientRect.top };
+	ClientToScreen(hWnd, &clientTopLeft);
+
+	// 计算标题栏高度（包含边框）
+	int titleBarHeight = clientTopLeft.y - windowRect.top;
+	return titleBarHeight;
+}
+
+BOOL setTabWindowPos(HWND overviewWinHandle, HWND attachWindowHandle, RECT rc) {
+	//不能使用SetWindowPos窗口刷新会有问题，MoveWindow也不重绘
+	// 新增：调整 PuTTY 窗口大小（若句柄有效）
+	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
+		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
+		MoveWindow(attachWindowHandle, 0, -captionHeight,
+			rc.right - rc.left - 12, rc.bottom - rc.top + captionHeight - 18, FALSE);
+	}
+	return MoveWindow(overviewWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
+}
 
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
 
@@ -286,9 +453,9 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 		}
 
 	case TCN_SELCHANGE: {
-		//showEditorForSelectedTabItem(tabCtrlWinHandle, -1);
+		showWindowForSelectedTabItem(tabCtrlWinHandle, -1);
 
-		//SetTimer(g_mainWindowHandle, TIMER_ID_FOCUS, 1, NULL);
+		SetTimer(g_mainWindowHandle, TIMER_ID_FOCUS, 1, NULL);
 		return 1;
 	}
 	case NM_RCLICK: {
@@ -316,15 +483,10 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 	return 0;
 }
 
-void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
-	TabCtrl_SetCurSel(tabCtrlWinHandle, tabIndex);
-	//showEditorForSelectedTabItem(tabCtrlWinHandle, tabIndex);
-}
-
 // 只移动标签不修改选中
-void moveTabToPosition(struct TabEditorsInfo* tabEditorsInfo, int tabIndex, int newPosition) {
+void moveTabToPosition(struct TabWindowsInfo* tabWindowsInfo, int tabIndex, int newPosition) {
 
-	HWND tabCtrlWinHandle = tabEditorsInfo->tabCtrlWinHandle;
+	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 	TCCUSTOMITEM tabCtrlItemInfo;
 	wchar_t tabNameBuf[512];  // Temporary buffer for strings.
 	tabCtrlItemInfo.tcitemheader.pszText = tabNameBuf;
@@ -341,30 +503,30 @@ void moveTabToPosition(struct TabEditorsInfo* tabEditorsInfo, int tabIndex, int 
 }
 
 void selectedTabToRightmost() {
-	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabWindowsInfo.tabCtrlWinHandle);
 	if (g_tabHitIndex < newTabItemsCount - 1) {
-		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, newTabItemsCount - 1);
+		moveTabToPosition(&g_tabWindowsInfo, g_tabHitIndex, newTabItemsCount - 1);
 	}
 }
 
 void selectedTabToRight() {
-	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabWindowsInfo.tabCtrlWinHandle);
 	if (g_tabHitIndex < newTabItemsCount - 1) {
-		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, g_tabHitIndex + 1);
+		moveTabToPosition(&g_tabWindowsInfo, g_tabHitIndex, g_tabHitIndex + 1);
 	}
 }
 
 void selectedTabToLeftmost() {
-	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabWindowsInfo.tabCtrlWinHandle);
 	if (g_tabHitIndex > 0) {
-		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, 0);
+		moveTabToPosition(&g_tabWindowsInfo, g_tabHitIndex, 0);
 	}
 }
 
 void selectedTabToLeft() {
-	int newTabItemsCount = TabCtrl_GetItemCount(g_tabEditorsInfo.tabCtrlWinHandle);
+	int newTabItemsCount = TabCtrl_GetItemCount(g_tabWindowsInfo.tabCtrlWinHandle);
 	if (g_tabHitIndex > 0) {
-		moveTabToPosition(&g_tabEditorsInfo, g_tabHitIndex, g_tabHitIndex - 1);
+		moveTabToPosition(&g_tabWindowsInfo, g_tabHitIndex, g_tabHitIndex - 1);
 	}
 }
 
@@ -389,25 +551,24 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 // 创建 TabControl 控件
-void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentWinHandle) {
-	RECT rc;
+void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle) {
+	HWND tabCtrlWinHandle;
 	LOGFONTW tabCaptionFont;
-	HFONT tabCaptionFontHandle;  // consider exposing this to TabEditorsInfo
+	HFONT tabCaptionFontHandle;
 
-	tabEditorsInfo->tabWindowIdentifier = 3000;  // just some value which I've chosen. This value is passed as param to CreateWindow for tabCtrl, and will be returned in WM_NOTIFY messages
-	tabEditorsInfo->tabIncrementor = 0;
-
-	tabEditorsInfo->parentWinHandle = parentWinHandle;
+	tabWindowsInfo->tabWindowIdentifier = IDC_TABCONTROL;
+	tabWindowsInfo->tabIncrementor = 0;
+	tabWindowsInfo->parentWinHandle = parentWinHandle;
 
 	// 创建 Toolbar
-	hToolbar = CreateWindowExW(
+	g_toolbarHandle = CreateWindowExW(
 		0, TOOLBARCLASSNAME, NULL,
 		WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS,
 		0, 0, 0, 0, parentWinHandle, (HMENU)IDR_MAIN_TOOLBAR, g_appInstance, NULL
 	);
 
 	// 设置 ImageList
-	SendMessage(hToolbar, TB_SETIMAGELIST, 0, 0);
+	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 	// 定义按钮
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"新建(&T)" },
@@ -415,25 +576,24 @@ void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentW
 	};
 
 	// 添加按钮
-	SendMessage(hToolbar, TB_ADDBUTTONS,
+	SendMessage(g_toolbarHandle, TB_ADDBUTTONS,
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
 	// 自动调整大小
-	SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
+	SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 
-	GetClientRect(parentWinHandle, &rc);
 	// 创建标签控件
-	hTabCtrl = CreateWindowW(
+	tabCtrlWinHandle = CreateWindowW(
 		WC_TABCONTROL, L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS | TCS_BOTTOM,
-		0, 0, rc.right, rc.bottom, parentWinHandle, (HMENU)IDC_TABCONTROL, g_appInstance, NULL
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS,
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parentWinHandle, (HMENU)tabWindowsInfo->tabWindowIdentifier, g_appInstance, NULL
 	);
-	if (hTabCtrl == NULL) {
-		return ; // Error happened, and we don't handle it here, invoker should call GetLastError()
+	if (tabCtrlWinHandle == NULL) {
+		return; // Error happened, and we don't handle it here, invoker should call GetLastError()
 	}
-	tabEditorsInfo->tabCtrlWinHandle = hTabCtrl;
+	tabWindowsInfo->tabCtrlWinHandle = tabCtrlWinHandle;
 
 	// We are going to store custom application data associated with each tab item. To achieve that, we need to specify once how many bytes do we need for app data
-	TabCtrl_SetItemExtra(hTabCtrl, sizeof(TCCUSTOMITEM) - sizeof(TCITEMHEADER));
+	TabCtrl_SetItemExtra(tabCtrlWinHandle, sizeof(TCCUSTOMITEM) - sizeof(TCITEMHEADER));
 
 	// Here we specify properties of font used in tab captions
 	tabCaptionFont.lfHeight = -17; // this height seems fine
@@ -452,39 +612,166 @@ void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentW
 	wcscpy_s(tabCaptionFont.lfFaceName,_countof(tabCaptionFont.lfFaceName), L"MS Shell dlg"); // this font is used by dialog controls
 	tabCaptionFontHandle = CreateFontIndirectW(&tabCaptionFont);
 
-	SendMessageW(hTabCtrl, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(tabCtrlWinHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 }
 
 // 添加新标签
-void AddNewTab(HWND hTab) {
-	int count = TabCtrl_GetItemCount(hTab);
-	wchar_t title[20];
-	swprintf_s(title, L"新标签 %d", count + 1);
+int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
+	TCCUSTOMITEM tabCtrlItemInfo;
+	int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	wchar_t tabNameBuf[256];
 
-	TCITEMW tie = { 0 };
-	tie.mask = TCIF_TEXT;
-	tie.pszText = title;
+	swprintf_s(tabNameBuf, L"新标签 %d", suffix);
 
-	// 使用TabCtrl_InsertItemEx替代TabCtrl_InsertItem，减少重绘
-	TabCtrl_InsertItem(hTab, count, &tie);
-	TabCtrl_SetCurSel(hTab, count);
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_TEXT | TCIF_IMAGE;
+	tabCtrlItemInfo.tcitemheader.iImage = -1;
+	tabCtrlItemInfo.tcitemheader.pszText = tabNameBuf;
+
+	tabCtrlItemInfo.overviewWindowHandle = 0;
+	tabCtrlItemInfo.attachWindowHandle = 0;
+	tabCtrlItemInfo.attachProcessId = 0;
+
+	TabCtrl_InsertItem(tabCtrlWinHandle, count, &tabCtrlItemInfo);
+	TabCtrl_SetCurSel(tabCtrlWinHandle, count);
+	return count;
+}
+
+int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
+	RECT rc;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	int newTabIndex;
+	HWND overviewHandle, tabCtrlWinHandle;
+	
+	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
+
+	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor);
+	overviewHandle = createOverviewWindow(g_appInstance, tabWindowsInfo);
+	if (overviewHandle == NULL) {
+		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
+		MessageBoxW(NULL, L"创建预览窗口失败", L"提示", MB_OK);
+		return 0;
+	}
+	else {
+		// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
+		tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+		tabCtrlItemInfo.overviewWindowHandle = overviewHandle;
+		TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
+
+		// 获取整个window区域
+		GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
+		// 获取tab标签的区域
+		TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+		// 设置预览大小
+		setTabWindowPos(overviewHandle, NULL, rc);
+		selectTab(tabCtrlWinHandle, newTabIndex);
+	}
+	(tabWindowsInfo->tabIncrementor)++;
+}
+
+void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
+	TabCtrl_SetCurSel(tabCtrlWinHandle, tabIndex);
+	showWindowForSelectedTabItem(tabCtrlWinHandle, tabIndex);
+}
+
+void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected) {
+	int iPage = selected < 0 ? TabCtrl_GetCurSel(tabCtrlWinHandle) : selected;
+	int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	int i;
+	HWND editorWinHandle;
+	for (i = 0; i < numTabs; i++) {
+		editorWinHandle = getWindowForTabItem(tabCtrlWinHandle, i);
+		if (i == iPage) {
+			ShowWindow(editorWinHandle, SW_SHOW);
+			SetFocus(editorWinHandle);
+		}
+		else {
+			ShowWindow(editorWinHandle, SW_HIDE);
+		}
+	}
+}
+
+TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i) {
+	TCCUSTOMITEM tabCtrlItemInfo;
+
+	// set mask so we are interested only in app data associated with tab item
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	// retrieve information about tab control item with index i
+	TabCtrl_GetItem(tabCtrlWinHandle, i, &tabCtrlItemInfo);
+	return tabCtrlItemInfo;
+}
+
+ HWND getWindowForTabItem(HWND tabCtrlWinHandle, int i) {
+	TCCUSTOMITEM tabCtrlItemInfo;
+
+	tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
+	return tabCtrlItemInfo.overviewWindowHandle;
 }
 
 // 删除标签
-void RemoveTab(HWND hTab, int deleteTab) {
+void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	int newTabItemsCount;
 	int newSelectedTab;
-	int currentTab = TabCtrl_GetCurSel(hTabCtrl);
+	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 
-	TabCtrl_DeleteItem(hTab, deleteTab);
-	newTabItemsCount = TabCtrl_GetItemCount(hTab);
+	TCCUSTOMITEM tabCtrlItemInfo;
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	// retrieve information about tab control item with index i
+	TabCtrl_GetItem(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 
+	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
+	if (tabCtrlItemInfo.overviewWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.overviewWindowHandle);
+	}
+	if (tabCtrlItemInfo.attachWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
+	}
+	if (tabCtrlItemInfo.attachProcessId > 0) {
+		DWORD dwExitCode = 0;
+		// 打开进程，获取句柄
+		HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
+		if (hProc != NULL) {
+			if (WaitForSingleObject(hProc, 1000) != WAIT_OBJECT_0) {
+				//exe文件采用这种可以关闭
+				DWORD dwExitCode = 0;
+				// 获取子进程的退出码 
+				GetExitCodeProcess(hProc, &dwExitCode);
+				TerminateProcess(hProc, dwExitCode);//终止进程
+			}
+			CloseHandle(hProc);
+		}
+		tabCtrlItemInfo.attachProcessId = 0;
+	}
+
+	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	if (newTabItemsCount == 0) {
-		AddNewTab(hTab);
+		AddNewOverview(&g_tabWindowsInfo);
 	}
 	else if (deleteTab == currentTab) { //如果删除项非选中项，不切换选中
 		// if last item was removed, select previous item, otherwise select next item
 		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
-		TabCtrl_SetCurSel(hTab, newSelectedTab);
+		selectTab(tabCtrlWinHandle, newSelectedTab);
 	}
+}
+
+// Resize tab container so it fits provided RECT
+// RECT is specified in parent window's client coordinates
+HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
+	int numTabs, i;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	HWND overviewWinHandle, puttyWindowHandle;
+	RECT editorRectangle = rc;  // initilize with total area of tab ctrl and editors
+
+	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &editorRectangle); // values in editorRectangle are updated with dimensions of display area of tabCtrl
+
+	// Resize the tab control
+	if (!SetWindowPos(tabCtrlWinHandle, HWND_TOP, rc.left, rc.top, rc.right - rc.left, editorRectangle.top - rc.top, SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
+		return E_FAIL;
+	numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	for (i = 0; i < numTabs; i++) {
+		tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
+		setTabWindowPos(tabCtrlItemInfo.overviewWindowHandle, tabCtrlItemInfo.attachWindowHandle, editorRectangle);
+	}
+	return S_OK;
+
 }

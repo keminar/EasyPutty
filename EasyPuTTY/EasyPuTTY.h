@@ -1,44 +1,35 @@
 #pragma once
 
 #include "resource.h"
-
-#define IDC_TABCONTROL 100
-
-HWND hTabCtrl;
-HWND hToolbar;
-HWND g_mainWindowHandle;
-int g_tabHitIndex;
-
-// will use this structure to group fields which describe tab header and editor
-struct TabEditorsInfo {
-	int tabWindowIdentifier;
-	int tabIncrementor;
-	HWND parentWinHandle;
-	HWND tabCtrlWinHandle;
-	HMENU tabMenuHandle;
-	LOGFONT editorFontProperties;
-	HFONT editorFontHandle;
-};
+#include "common.h"
+#include "overview.h"
+#include "attach.h"
 
 // Data associated with each tab control item. We will use it instead of TCITEM. First member must be TCITEMHEADER, other members we can freely define
 typedef struct tagTCCUSTOMITEM {
 	TCITEMHEADER tcitemheader;
-	HWND editorWindowHandle;
-	HWND puttyWindowHandle;
-	wchar_t* fileName;
+	HWND overviewWindowHandle;
+	HWND attachWindowHandle;
+	DWORD attachProcessId;
 } TCCUSTOMITEM;
 
-// single global instance of TabEditorsInfo
-struct TabEditorsInfo g_tabEditorsInfo;
-
-void CreateToolBarTabControl(struct TabEditorsInfo *tabEditorsInfo, HWND parentWinHandle);
-void AddNewTab(HWND hTab);
-void RemoveTab(HWND hTab, int currentTab);
+void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle);
+int AddNewTab(HWND tabCtrlWinHandle, int suffix);
+int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
+void RemoveTab(HWND tabCtrlWinHandle, int currentTab);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
 
-void selectTab(HWND tabCtrlWinHandle, int tabIndex);
-void moveTabToPosition(struct TabEditorsInfo* tabEditorsInfo, int tabIndex, int newPosition);
+void moveTabToPosition(struct TabWindowsInfo *tabWindowsInfo, int tabIndex, int newPosition);
 void selectedTabToRightmost();
 void selectedTabToRight();
 void selectedTabToLeftmost();
 void selectedTabToLeft();
+
+int GetTitleBarHeightWithoutMenu(HWND hWnd);
+BOOL setTabWindowPos(HWND overviewWinHandle, HWND attachWindowHandle, RECT rc);
+void selectTab(HWND tabCtrlWinHandle, int tabIndex);
+void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected);
+TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);
+HWND getWindowForTabItem(HWND tabCtrlWinHandle, int i);
+void FocusWindow(HWND hWnd);
+HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc);

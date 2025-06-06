@@ -151,13 +151,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="attach.h" />
+    <ClInclude Include="common.h" />
     <ClInclude Include="EasyPuTTY.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="overview.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="attach.cpp" />
     <ClCompile Include="EasyPuTTY.cpp" />
+    <ClCompile Include="overview.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="EasyPuTTY.rc" />
