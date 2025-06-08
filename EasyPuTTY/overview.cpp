@@ -25,7 +25,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			GetClientRect(hwnd, &rc);
 			MoveWindow(hWndListView,
 				rc.left + 20,          // 左偏移
-				rc.top + 60,         // 上偏移
+				rc.top + 43,         // 上偏移
 				rc.right - 40,       // 宽度
 				rc.bottom - 80,      // 高度
 				TRUE);
@@ -77,9 +77,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 		WC_LISTVIEW,
 		L"",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_EDITLABELS | LVS_SHOWSELALWAYS,
-		hostRect.left, hostRect.top, // 左上角为(0,0)
-		hostRect.right - hostRect.left, // 宽度为客户区宽度
-		hostRect.bottom - hostRect.top, // 高度为客户区高度
+		0, 0, 550, 300, // 初始位置和大小
 		hostWindow,
 		(HMENU)7001, // 控件ID
 		hInstance,

@@ -664,16 +664,9 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	tabCtrlItemInfo.hostWindowHandle = hostWindow;
 	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 
-	// 获取tab标签去掉工具栏大小比较复杂，先不在创建处理
-	/*// 获取整个window区域
+	// 获取整个window区域
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
-	GetWindowRect(g_toolbarHandle, &rcToolbar);
-	// 将工具栏高度从父窗口客户区高度中减去
-	rc.top += rcToolbar.bottom - rcToolbar.top;
-	// 获取tab标签的客户区域
-	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-	// 设置预览大小
-	setTabWindowPos(overviewHandle, NULL, rc);*/
+	resizeTabControl(tabWindowsInfo, rc);
 	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
 }
