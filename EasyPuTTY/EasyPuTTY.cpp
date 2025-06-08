@@ -196,14 +196,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// 自动调整大小
 				SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 			}
-			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			RECT rc;
 			// WM_SIZE params contain width and height of main window's client area
 			// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
+			// 值等于GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
 			SetRect(&rc, 0, 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			
 			resizeTabControl(&g_tabWindowsInfo, rc);
 
 			// 刷新当前标签
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
 				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
@@ -376,9 +378,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (count > 0) {
 			// 获取最后一个标签项的矩形
 			RECT tabStripRect = { 0 };
-			TabCtrl_GetItemRect(tabCtrlWinHandle, count, &tabStripRect);
+			RECT toolbarRect;
+			TabCtrl_GetItemRect(tabCtrlWinHandle, count-1, &tabStripRect);
+			// 获取工具栏的屏幕坐标
+			GetWindowRect(g_toolbarHandle, &toolbarRect);
+			// 将工具栏坐标转换为父窗口的客户区坐标
+			MapWindowPoints(HWND_DESKTOP, (&g_tabWindowsInfo)->parentWinHandle, (LPPOINT)&toolbarRect, 2);
+
 			tabRect.left = tabStripRect.right;
 			tabRect.top = tabStripRect.top;
+			tabRect.bottom = toolbarRect.bottom + tabStripRect.bottom;
 			if (PtInRect(&tabRect, pt)) {
 				AddNewOverview(&g_tabWindowsInfo);
 			}
@@ -429,7 +438,7 @@ int GetTitleBarHeightWithoutMenu(HWND hWnd) {
 	return titleBarHeight;
 }
 
-BOOL setTabWindowPos(HWND overviewWinHandle, HWND attachWindowHandle, RECT rc) {
+BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 	//不能使用SetWindowPos窗口刷新会有问题，MoveWindow也不重绘
 	// 新增：调整 PuTTY 窗口大小（若句柄有效）
 	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
@@ -437,7 +446,7 @@ BOOL setTabWindowPos(HWND overviewWinHandle, HWND attachWindowHandle, RECT rc) {
 		MoveWindow(attachWindowHandle, 0, -captionHeight,
 			rc.right - rc.left - 12, rc.bottom - rc.top + captionHeight - 18, FALSE);
 	}
-	return MoveWindow(overviewWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
+	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 }
 
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
@@ -582,7 +591,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 创建标签控件
 	tabCtrlWinHandle = CreateWindowW(
 		WC_TABCONTROL, L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS | TCS_BOTTOM,
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parentWinHandle, (HMENU)tabWindowsInfo->tabWindowIdentifier, g_appInstance, NULL
 	);
 	if (tabCtrlWinHandle == NULL) {
@@ -635,40 +644,37 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 }
 
 int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
-	RECT rc;
+	RECT rc, rcToolbar;
 	TCCUSTOMITEM tabCtrlItemInfo;
 	int newTabIndex;
 	HWND overviewHandle, tabCtrlWinHandle;
 	
 	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 
-	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor);
+	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor + 1);
 	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
 	if (hostWindow == NULL) {
 		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
 		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
 		return 0;
 	}
-	overviewHandle = createOverviewWindow(g_appInstance, tabWindowsInfo, hostWindow);
-	if (overviewHandle == NULL) {
-		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
-		MessageBoxW(NULL, L"创建预览窗口失败", L"提示", MB_OK);
-		return 0;
-	}
-	else {
-		// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
-		tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
-		tabCtrlItemInfo.hostWindowHandle = overviewHandle;
-		TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
+	InitOverview(g_appInstance, tabWindowsInfo, hostWindow);
+	// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	tabCtrlItemInfo.hostWindowHandle = hostWindow;
+	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 
-		// 获取整个window区域
-		GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
-		// 获取tab标签的区域
-		TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-		// 设置预览大小
-		setTabWindowPos(overviewHandle, NULL, rc);
-		selectTab(tabCtrlWinHandle, newTabIndex);
-	}
+	// 获取tab标签去掉工具栏大小比较复杂，先不在创建处理
+	/*// 获取整个window区域
+	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
+	GetWindowRect(g_toolbarHandle, &rcToolbar);
+	// 将工具栏高度从父窗口客户区高度中减去
+	rc.top += rcToolbar.bottom - rcToolbar.top;
+	// 获取tab标签的客户区域
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+	// 设置预览大小
+	setTabWindowPos(overviewHandle, NULL, rc);*/
+	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
 }
 
@@ -762,21 +768,55 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	int numTabs, i;
 	TCCUSTOMITEM tabCtrlItemInfo;
-	HWND overviewWinHandle, puttyWindowHandle;
-	RECT tabRectangle = rc;  // initilize with total area of tab ctrl and editors
+	RECT tabCtrlRect = rc;      // 标签控件的位置和大小
+	RECT clientRect = rc;       // 标签控件客户区的位置和大小
+	RECT toolbarRect;
 
 	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
-	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &tabRectangle); // values in editorRectangle are updated with dimensions of display area of tabCtrl
-	// Resize the tab control
-	if (!SetWindowPos(tabCtrlWinHandle, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
+
+	// 获取工具栏的屏幕坐标
+	GetWindowRect(g_toolbarHandle, &toolbarRect);
+
+	// 将工具栏坐标转换为父窗口的客户区坐标
+	MapWindowPoints(HWND_DESKTOP, tabWindowsInfo->parentWinHandle, (LPPOINT)&toolbarRect, 2);
+
+	// 计算工具栏高度
+	int toolbarHeight = toolbarRect.bottom - toolbarRect.top;
+
+	// 调整标签控件位置到工具栏下方
+	tabCtrlRect.top = toolbarRect.bottom;
+	tabCtrlRect.bottom = rc.bottom;
+
+	// 计算标签控件的客户区（不包括标签栏）
+	clientRect = tabCtrlRect;
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &clientRect);
+
+	// 调整标签控件大小
+	int tabCtrlWidth = tabCtrlRect.right - tabCtrlRect.left;
+	int tabCtrlHeight = tabCtrlRect.bottom - tabCtrlRect.top;
+
+	if (!SetWindowPos(tabCtrlWinHandle,
+		HWND_TOP,
+		tabCtrlRect.left,
+		tabCtrlRect.top,    // 从工具栏下方开始
+		tabCtrlWidth,
+		tabCtrlHeight,      // 使用正确的高度
+		SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
 		return E_FAIL;
+
+
+	// 调整每个标签页内容窗口的位置
 	numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	for (i = 0; i < numTabs; i++) {
 		tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
-		setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, tabCtrlItemInfo.attachWindowHandle, tabRectangle);
-	}
-	return S_OK;
 
+		// 使用 clientRect 作为标签页内容的位置和大小
+		setTabWindowPos(tabCtrlItemInfo.hostWindowHandle,
+			tabCtrlItemInfo.attachWindowHandle,
+			clientRect);
+	}
+
+	return S_OK;
 }
 
 HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
@@ -786,7 +826,7 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 		L"Static",
 		L"",
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_THICKFRAME, // 允许调整大小
-		100, 200,
+		0, 0,
 		800, 600,
 		parentWindow,
 		NULL,
