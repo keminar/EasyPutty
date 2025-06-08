@@ -66,14 +66,20 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 
 // 创建窗口
-HWND createOverviewWindow(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
+void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
 	SendMessageW(hostWindow, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
+
+	// 获取宿主窗口的客户区大小
+	RECT hostRect;
+	GetClientRect(hostWindow, &hostRect);
 
 	hWndListView = CreateWindow(
 		WC_LISTVIEW,
 		L"",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_EDITLABELS | LVS_SHOWSELALWAYS,
-		50, 100, 550, 300, // 初始位置和大小
+		hostRect.left, hostRect.top, // 左上角为(0,0)
+		hostRect.right - hostRect.left, // 宽度为客户区宽度
+		hostRect.bottom - hostRect.top, // 高度为客户区高度
 		hostWindow,
 		(HMENU)7001, // 控件ID
 		hInstance,
@@ -82,7 +88,7 @@ HWND createOverviewWindow(HINSTANCE hInstance, struct TabWindowsInfo *tabWindows
 
 	if (!hWndListView) {
 		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
-		return NULL;
+		return;
 	}
 	// 设置列表视图扩展样式
 	ListView_SetExtendedListViewStyle(hWndListView,
@@ -149,8 +155,6 @@ HWND createOverviewWindow(HINSTANCE hInstance, struct TabWindowsInfo *tabWindows
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
 	// 存储原始窗口过程，用于后续调用
 	SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
-
-	return hostWindow;
 }
 
 // 初始化列表视图列（显式使用宽字符版本）
