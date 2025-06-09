@@ -297,7 +297,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 新建立
 			HWND newHostWinHandle = createHostWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle);
 			if (newHostWinHandle == NULL) {
-				MessageBoxW(NULL, L"Could not create edit window", L"提示", MB_OK);
+				MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
 				return 0;
 			}
 			else {
@@ -328,6 +328,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 					RECT rc;
 					GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
+					rc = getTabRect(&g_tabWindowsInfo, rc);
 					TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 					setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc);
 					//重绘，部分软件需要，如cmd
@@ -444,9 +445,9 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
 		MoveWindow(attachWindowHandle, 0, -captionHeight,
-			rc.right - rc.left - 12, rc.bottom - rc.top + captionHeight - 18, FALSE);
+			rc.right - rc.left, rc.bottom - rc.top + captionHeight, FALSE);
 	}
-	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
 }
 
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
@@ -639,7 +640,6 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	tabCtrlItemInfo.attachProcessId = 0;
 
 	TabCtrl_InsertItem(tabCtrlWinHandle, count, &tabCtrlItemInfo);
-	TabCtrl_SetCurSel(tabCtrlWinHandle, count);
 	return count;
 }
 
@@ -666,7 +666,9 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 
 	// 获取整个window区域
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
-	resizeTabControl(tabWindowsInfo, rc);
+	rc = getTabRect(tabWindowsInfo, rc);
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+	setTabWindowPos(hostWindow, NULL, rc);
 	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
 }
@@ -756,17 +758,10 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	}
 }
 
-// Resize tab container so it fits provided RECT
-// RECT is specified in parent window's client coordinates
-HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
-	int numTabs, i;
-	TCCUSTOMITEM tabCtrlItemInfo;
-	RECT tabCtrlRect = rc;      // 标签控件的位置和大小
-	RECT clientRect = rc;       // 标签控件客户区的位置和大小
+// 含标签条大小位置
+RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	RECT toolbarRect;
-
-	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
-
+	RECT tabRect = rc;
 	// 获取工具栏的屏幕坐标
 	GetWindowRect(g_toolbarHandle, &toolbarRect);
 
@@ -777,23 +772,33 @@ HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	int toolbarHeight = toolbarRect.bottom - toolbarRect.top;
 
 	// 调整标签控件位置到工具栏下方
-	tabCtrlRect.top = toolbarRect.bottom;
-	tabCtrlRect.bottom = rc.bottom;
+	tabRect.top = toolbarRect.bottom;
+	tabRect.bottom = rc.bottom;
 
+	return tabRect;
+}
+
+// Resize tab container so it fits provided RECT
+// RECT is specified in parent window's client coordinates
+HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
+	int numTabs, i;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	RECT clientRect;       // 标签控件客户区的位置和大小
+
+	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
+
+	rc = getTabRect(tabWindowsInfo, rc);
+	clientRect = rc;
 	// 计算标签控件的客户区（不包括标签栏）
-	clientRect = tabCtrlRect;
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &clientRect);
 
-	// 调整标签控件大小
-	int tabCtrlWidth = tabCtrlRect.right - tabCtrlRect.left;
-	int tabCtrlHeight = tabCtrlRect.bottom - tabCtrlRect.top;
-
+	// 设置标签条
 	if (!SetWindowPos(tabCtrlWinHandle,
 		HWND_TOP,
-		tabCtrlRect.left,
-		tabCtrlRect.top,    // 从工具栏下方开始
-		tabCtrlWidth,
-		tabCtrlHeight,      // 使用正确的高度
+		rc.left,
+		rc.top,    // 从工具栏下方开始
+		rc.right - rc.left,
+		clientRect.top - rc.top,      // 使用正确的高度
 		SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
 		return E_FAIL;
 
@@ -818,7 +823,7 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 		0,
 		L"Static",
 		L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_THICKFRAME, // 允许调整大小
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
 		0, 0,
 		800, 600,
 		parentWindow,
