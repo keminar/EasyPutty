@@ -214,7 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 			}
 			// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
-			SetTimer(hWnd, TIMER_ID_FOCUS, 240, NULL);
+			SetTimer(hWnd, TIMER_ID_FOCUS, 249, NULL);
 			return 0;
 		}
 		break;
@@ -230,10 +230,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 
 				// tab焦点不能写在TabCtrl_GetCurSel前
-				FocusWindow(tabCtrlItemInfo.attachWindowHandle);
+				if (tabCtrlItemInfo.attachWindowHandle) {
+					FocusWindow(tabCtrlItemInfo.attachWindowHandle);
+				}
+				else {
+					FocusWindow(tabCtrlItemInfo.hostWindowHandle);
+				}
 			}
 		}
 		return 0;
+	case WM_SETFOCUS: {
+		SetTimer(hWnd, TIMER_ID_FOCUS, 1, NULL);
+		break;
+	}
     case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
         int wmId = LOWORD(wParam);
