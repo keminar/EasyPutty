@@ -238,10 +238,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		return 0;
-	case WM_SETFOCUS: {
-		SetFocus(hWnd);
-		break;
-	}
     case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
         int wmId = LOWORD(wParam);
