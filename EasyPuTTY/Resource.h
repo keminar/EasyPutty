@@ -20,7 +20,7 @@
 #define ID_32775                        32775
 #define ID_32776                        32776
 #define ID_32777                        32777
-#define ID_TAB_32778                    32778
+#define ID_LIST_VIEW                    32778
 #define ID_TAB_CLOSE                    32779
 #define ID_TAB_MOVETOLEFT               32780
 #define ID_TAB_MOVETORIGHT              32781

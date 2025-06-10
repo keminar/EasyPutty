@@ -1,12 +1,10 @@
 #pragma once
 
 #include "overview.h"
+#include "Resource.h"
 #include "common.h"
 
 #define IniName L".\\MultiTab.ini"
-
-// 宿主窗口中列表视图的句柄
-HWND hWndListView;
 
 
 // 宿主窗口的子类化过程
@@ -18,43 +16,51 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	case WM_GETMAINWINDOW:
 		// 向上级窗口查询主窗口句柄
 		return (LRESULT)GetParent(hwnd);
-	case WM_SIZE:
+	case WM_SIZE: {
+		HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 		// 调整列表视图大小以适应宿主窗口
-		if (hWndListView) {
+		if (hListView) {
 			RECT rc;
 			GetClientRect(hwnd, &rc);
-			MoveWindow(hWndListView,
-				rc.left,          // 左偏移
-				rc.top,         // 上偏移
-				rc.right,       // 宽度
-				rc.bottom,      // 高度
-				TRUE);
+			MoveWindow(hListView, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 		}
 		break;
-	case WM_NOTIFY:
-		// 处理列表视图通知消息
-		switch (((LPNMHDR)lParam)->code) {
-		case LVN_ITEMCHANGED: {
-			LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
-			if (pnmlv->uNewState & LVIS_SELECTED) {
-				// 项目被选中
-				wchar_t szText[256] = { 0 };
-				LVITEMW lvi = { 0 };
-				lvi.mask = LVIF_TEXT;
-				lvi.iItem = pnmlv->iItem;
-				lvi.iSubItem = 0;
-				lvi.pszText = szText;
-				lvi.cchTextMax = 256;
-				//第一列内容
-				SendMessageW(hWndListView, LVM_GETITEMW, 0, (LPARAM)&lvi);
-				// 通过发送自定义消息获取主窗口句柄
-				HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
-				if (mainWindow) {
-					// 转发按钮点击消息到主窗口
-					SendMessage(mainWindow, WM_COMMAND, 7002, (LPARAM)&szText[0]);
+	}
+	case WM_NOTIFY: {
+		// 处理 ListView 通知消息
+		LPNMHDR pnmh = (LPNMHDR)lParam;
+		HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+		if (pnmh->hwndFrom == hListView) {
+			if  (pnmh->code == NM_DBLCLK) {
+				// 双击事件处理
+				LPNMITEMACTIVATE pnmia = (LPNMITEMACTIVATE)lParam;
+				if (pnmia->iItem != -1) {
+					wchar_t szText[256] = { 0 };
+					ListView_GetItemText(hListView, pnmia->iItem, 0, szText, sizeof(szText));
+					// 通过发送自定义消息获取主窗口句柄
+					HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+					if (mainWindow) {
+						// 转发按钮点击消息到主窗口
+						SendMessage(mainWindow, WM_COMMAND, 7002, (LPARAM)&szText[0]);
+					}
 				}
 			}
-			return 0;
+			else if (pnmh->code == LVN_KEYDOWN) {
+				LPNMLVKEYDOWN pnmlvkd = (LPNMLVKEYDOWN)lParam;
+				if (pnmlvkd->wVKey == VK_RETURN) {  // 回车键
+					int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+					if (selectedItem != -1) {
+						wchar_t szText[256] = { 0 };
+						ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+						// 通过发送自定义消息获取主窗口句柄
+						HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+						if (mainWindow) {
+							// 转发按钮点击消息到主窗口
+							SendMessage(mainWindow, WM_COMMAND, 7002, (LPARAM)&szText[0]);
+						}
+					}
+				}
+			}
 		}
 		}
 		break;
@@ -69,31 +75,27 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
 	SendMessageW(hostWindow, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
 
-	// 获取宿主窗口的客户区大小
-	RECT hostRect;
-	GetClientRect(hostWindow, &hostRect);
-
-	hWndListView = CreateWindow(
+	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
 		L"",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_EDITLABELS | LVS_SHOWSELALWAYS,
 		0, 0, 500, 300, // 初始位置和大小
 		hostWindow,
-		(HMENU)7001, // 控件ID
+		(HMENU)ID_LIST_VIEW, // 控件ID
 		hInstance,
 		NULL
 	);
 
-	if (!hWndListView) {
+	if (!hListView) {
 		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
 		return;
 	}
 	// 设置列表视图扩展样式
-	ListView_SetExtendedListViewStyle(hWndListView,
+	ListView_SetExtendedListViewStyle(hListView,
 		LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
 
 	// 初始化列表视图列
-	InitializeListViewColumns(hWndListView);
+	InitializeListViewColumns(hListView);
 
 	WCHAR app1[256] = { 0 };
 	WCHAR app2[256] = { 0 };
@@ -104,50 +106,50 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	int i = 0;
 	// 添加示例数据
 	if (wcscmp(app1, L"") != 0) {
-		AddListViewItem(hWndListView, i, app1, 0);
-		AddListViewItem(hWndListView, i, L"putty", 1);
-		AddListViewItem(hWndListView, i, L"putty", 2);
-		AddListViewItem(hWndListView, i, L"1", 3);
+		AddListViewItem(hListView, i, app1, 0);
+		AddListViewItem(hListView, i, L"putty", 1);
+		AddListViewItem(hListView, i, L"putty", 2);
+		AddListViewItem(hListView, i, L"1", 3);
 		i++;
 	}
 
 	if (wcscmp(app2, L"") != 0) {
-		AddListViewItem(hWndListView, i, app2, 0);
-		AddListViewItem(hWndListView, i, L"putty", 1);
-		AddListViewItem(hWndListView, i, L"putty", 2);
-		AddListViewItem(hWndListView, i, L"1", 3);
+		AddListViewItem(hListView, i, app2, 0);
+		AddListViewItem(hListView, i, L"putty", 1);
+		AddListViewItem(hListView, i, L"putty", 2);
+		AddListViewItem(hListView, i, L"1", 3);
 		i++;
 	}
 
 
-	AddListViewItem(hWndListView, i, L"explorer .\\", 0);
-	AddListViewItem(hWndListView, i, L"资源管理器", 1);
-	AddListViewItem(hWndListView, i, L"其他", 2);
-	AddListViewItem(hWndListView, i, L"1", 3);
+	AddListViewItem(hListView, i, L"explorer .\\", 0);
+	AddListViewItem(hListView, i, L"资源管理器", 1);
+	AddListViewItem(hListView, i, L"其他", 2);
+	AddListViewItem(hListView, i, L"1", 3);
 	i++;
 
-	AddListViewItem(hWndListView, i, L"..\\..\\ProxyUI", 0);
-	AddListViewItem(hWndListView, i, L"ProxyUI", 1);
-	AddListViewItem(hWndListView, i, L"其他", 2);
-	AddListViewItem(hWndListView, i, L"1", 3);
+	AddListViewItem(hListView, i, L"..\\..\\ProxyUI", 0);
+	AddListViewItem(hListView, i, L"ProxyUI", 1);
+	AddListViewItem(hListView, i, L"其他", 2);
+	AddListViewItem(hListView, i, L"1", 3);
 	i++;
 
-	AddListViewItem(hWndListView, i, L"C:\\Program Files\\FileZilla FTP Client\\filezilla.exe", 0);
-	AddListViewItem(hWndListView, i, L"filezilla", 1);
-	AddListViewItem(hWndListView, i, L"其他", 2);
-	AddListViewItem(hWndListView, i, L"1", 3);
+	AddListViewItem(hListView, i, L"C:\\Program Files\\FileZilla FTP Client\\filezilla.exe", 0);
+	AddListViewItem(hListView, i, L"filezilla", 1);
+	AddListViewItem(hListView, i, L"其他", 2);
+	AddListViewItem(hListView, i, L"1", 3);
 	i++;
 
-	AddListViewItem(hWndListView, i, L"C:\\HA_EmEditor9x64\\emed106c64\\EmEditor10x64\\EmEditor.exe", 0);
-	AddListViewItem(hWndListView, i, L"EmEditor", 1);
-	AddListViewItem(hWndListView, i, L"其他", 2);
-	AddListViewItem(hWndListView, i, L"1", 3);
+	AddListViewItem(hListView, i, L"C:\\HA_EmEditor9x64\\emed106c64\\EmEditor10x64\\EmEditor.exe", 0);
+	AddListViewItem(hListView, i, L"EmEditor", 1);
+	AddListViewItem(hListView, i, L"其他", 2);
+	AddListViewItem(hListView, i, L"1", 3);
 	i++;
 
-	AddListViewItem(hWndListView, i, L"cmd", 0);
-	AddListViewItem(hWndListView, i, L"命令行", 1);
-	AddListViewItem(hWndListView, i, L"其他", 2);
-	AddListViewItem(hWndListView, i, L"1", 3);
+	AddListViewItem(hListView, i, L"cmd", 0);
+	AddListViewItem(hListView, i, L"命令行", 1);
+	AddListViewItem(hListView, i, L"其他", 2);
+	AddListViewItem(hListView, i, L"1", 3);
 
 	// 子类化宿主窗口
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
@@ -164,26 +166,30 @@ void InitializeListViewColumns(HWND hWndListView) {
 	lvc.iSubItem = 0;
 	lvc.cx = 500;
 	lvc.pszText = (LPWSTR)L"命令";
-	SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
+	ListView_InsertColumn(hWndListView, 0, &lvc);
+	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
 
 
 	// 第2列：
 	lvc.iSubItem = 1;
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)L"简称";
-	SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
+	ListView_InsertColumn(hWndListView, 1, &lvc);
+	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
 
 	// 第3列：
 	lvc.iSubItem = 2;
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)L"分类";
-	SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 2, (LPARAM)&lvc);
+	ListView_InsertColumn(hWndListView, 2, &lvc);
+	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 2, (LPARAM)&lvc);
 
 	// 第4列：
 	lvc.iSubItem = 3;
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)L"发送ctl+space";
-	SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 3, (LPARAM)&lvc);
+	ListView_InsertColumn(hWndListView, 3, &lvc);
+	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 3, (LPARAM)&lvc);
 
 	//支持sftp，winscp等
 }
@@ -196,11 +202,13 @@ void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* pszText, int n
 	lvi.iSubItem = nSubItem;
 	lvi.pszText = (LPWSTR)pszText;
 	if (nSubItem == 0) {
-		SendMessageW(hWndListView, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
+		//SendMessageW(hWndListView, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
+		ListView_InsertItem(hWndListView, &lvi);
 	}
 	else {
 		// 设置子项
-		SendMessageW(hWndListView, LVM_SETITEMW, 0, (LPARAM)&lvi);
+		//SendMessageW(hWndListView, LVM_SETITEMW, 0, (LPARAM)&lvi);
+		ListView_SetItemText(hWndListView, nItem, nSubItem, (LPWSTR)pszText);
 
 	}
 }
