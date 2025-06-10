@@ -652,6 +652,7 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	return count;
 }
 
+// 预览窗口
 int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	RECT rc, rcToolbar;
 	TCCUSTOMITEM tabCtrlItemInfo;
@@ -687,19 +688,20 @@ void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
 	showWindowForSelectedTabItem(tabCtrlWinHandle, tabIndex);
 }
 
+// 切换到要显示的标签内容
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected) {
 	int iPage = selected < 0 ? TabCtrl_GetCurSel(tabCtrlWinHandle) : selected;
 	int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	int i;
-	HWND editorWinHandle;
+	HWND hostHandle;
 	for (i = 0; i < numTabs; i++) {
-		editorWinHandle = getWindowForTabItem(tabCtrlWinHandle, i);
+		hostHandle = getHostWindowForTabItem(tabCtrlWinHandle, i);
 		if (i == iPage) {
-			ShowWindow(editorWinHandle, SW_SHOW);
-			SetFocus(editorWinHandle);
+			ShowWindow(hostHandle, SW_SHOW);
+			SetFocus(hostHandle);
 		}
 		else {
-			ShowWindow(editorWinHandle, SW_HIDE);
+			ShowWindow(hostHandle, SW_HIDE);
 		}
 	}
 }
@@ -714,7 +716,7 @@ TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i) {
 	return tabCtrlItemInfo;
 }
 
- HWND getWindowForTabItem(HWND tabCtrlWinHandle, int i) {
+ HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i) {
 	TCCUSTOMITEM tabCtrlItemInfo;
 
 	tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
