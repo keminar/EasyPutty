@@ -143,81 +143,81 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message)
-    {
+	switch (message)
+	{
 	case WM_CREATE:
-		{
-			// application properties
-			wchar_t fontPropertyVal[LF_FACESIZE];
-			StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
-			// here we specify default properties of font shared by all editor instances
-			g_tabWindowsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
-			g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
-			g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
-			g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
-			g_tabWindowsInfo.editorFontProperties.lfWeight = FW_NORMAL;
-			g_tabWindowsInfo.editorFontProperties.lfItalic = FALSE;
-			g_tabWindowsInfo.editorFontProperties.lfUnderline = FALSE;
-			g_tabWindowsInfo.editorFontProperties.lfStrikeOut = FALSE;
-			g_tabWindowsInfo.editorFontProperties.lfCharSet = ANSI_CHARSET;
-			g_tabWindowsInfo.editorFontProperties.lfOutPrecision = OUT_DEFAULT_PRECIS;
-			g_tabWindowsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-			g_tabWindowsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
-			g_tabWindowsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
-			wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
-			g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
+	{
+		// application properties
+		wchar_t fontPropertyVal[LF_FACESIZE];
+		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
+		// here we specify default properties of font shared by all editor instances
+		g_tabWindowsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
+		g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
+		g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
+		g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
+		g_tabWindowsInfo.editorFontProperties.lfWeight = FW_NORMAL;
+		g_tabWindowsInfo.editorFontProperties.lfItalic = FALSE;
+		g_tabWindowsInfo.editorFontProperties.lfUnderline = FALSE;
+		g_tabWindowsInfo.editorFontProperties.lfStrikeOut = FALSE;
+		g_tabWindowsInfo.editorFontProperties.lfCharSet = ANSI_CHARSET;
+		g_tabWindowsInfo.editorFontProperties.lfOutPrecision = OUT_DEFAULT_PRECIS;
+		g_tabWindowsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+		g_tabWindowsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
+		g_tabWindowsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
+		wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
+		g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
 
-			// 创建工具条和标签
-			CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
+		// 创建工具条和标签
+		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
-			if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
-				MessageBoxW(NULL, L"Error while creating main application window: could not create tab control", L"Note", MB_OK);
-				return 0;
-			}
-			else {
-				// 获取标签的右键菜单
-				g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
-				g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
-
-				// 添加初始标签
-				AddNewOverview(&g_tabWindowsInfo);
-			}
-		}
-		return 0;
-	case WM_SIZE:
-		{
-			// 跳过最小化处理，否则在putty中开screen最小化后最大化显示会变
-			if (wParam == SIZE_MINIMIZED) {
-				return 0;
-			}
-			// 调整标签控件和按钮大小
-			if (g_toolbarHandle) {
-				MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
-				// 自动调整大小
-				SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
-			}
-			RECT rc;
-			// WM_SIZE params contain width and height of main window's client area
-			// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
-			// 值等于GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
-			SetRect(&rc, 0, 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			
-			resizeTabControl(&g_tabWindowsInfo, rc);
-
-			// 刷新当前标签
-			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
-			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
-			if (sel != -1) {
-				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
-				if (tabCtrlItemInfo.attachWindowHandle) {//解决句柄为NULL + RDW_ALLCHILDREN时，两个进程调整一个大小另一个也会刷新的问题
-					RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
-				}
-			}
-			// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
-			SetTimer(hWnd, TIMER_ID_FOCUS, 249, NULL);
+		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
+			MessageBoxW(NULL, L"Error while creating main application window: could not create tab control", L"Note", MB_OK);
 			return 0;
 		}
-		break;
+		else {
+			// 获取标签的右键菜单
+			g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
+			g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
+
+			// 添加初始标签
+			AddNewOverview(&g_tabWindowsInfo);
+		}
+	}
+	return 0;
+	case WM_SIZE:
+	{
+		// 跳过最小化处理，否则在putty中开screen最小化后最大化显示会变
+		if (wParam == SIZE_MINIMIZED) {
+			return 0;
+		}
+		// 调整标签控件和按钮大小
+		if (g_toolbarHandle) {
+			MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+			// 自动调整大小
+			SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+		}
+		RECT rc;
+		// WM_SIZE params contain width and height of main window's client area
+		// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
+		// 值等于GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
+		SetRect(&rc, 0, 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+
+		resizeTabControl(&g_tabWindowsInfo, rc);
+
+		// 刷新当前标签
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+		if (sel != -1) {
+			TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+			if (tabCtrlItemInfo.attachWindowHandle) {//解决句柄为NULL + RDW_ALLCHILDREN时，两个进程调整一个大小另一个也会刷新的问题
+				RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+			}
+		}
+		// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
+		SetTimer(hWnd, TIMER_ID_FOCUS, 269, NULL);
+		return 0;
+	}
+	break;
 	case WM_TIMER:
 		if (wParam == TIMER_ID_FOCUS) {
 			KillTimer(hWnd, TIMER_ID_FOCUS); // 关闭计时器
@@ -228,19 +228,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 				// retrieve information about tab control item with index i
 				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
-
 				// tab焦点不能写在TabCtrl_GetCurSel前
 				if (tabCtrlItemInfo.attachWindowHandle) {
-					FocusWindow(tabCtrlItemInfo.attachWindowHandle);
+					SetForegroundWindow(tabCtrlItemInfo.attachWindowHandle);
 				}
 				else {
-					FocusWindow(tabCtrlItemInfo.hostWindowHandle);
+					SetForegroundWindow(tabCtrlItemInfo.hostWindowHandle);
 				}
 			}
 		}
 		return 0;
 	case WM_SETFOCUS: {
-		SetTimer(hWnd, TIMER_ID_FOCUS, 1, NULL);
+		SetFocus(hWnd);
 		break;
 	}
     case WM_COMMAND: {
