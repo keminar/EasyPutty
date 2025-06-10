@@ -41,7 +41,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 					if (mainWindow) {
 						// 转发按钮点击消息到主窗口
-						SendMessage(mainWindow, WM_COMMAND, 7002, (LPARAM)&szText[0]);
+						SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
 					}
 				}
 			}
@@ -56,7 +56,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 						HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 						if (mainWindow) {
 							// 转发按钮点击消息到主窗口
-							SendMessage(mainWindow, WM_COMMAND, 7002, (LPARAM)&szText[0]);
+							SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
 						}
 					}
 				}

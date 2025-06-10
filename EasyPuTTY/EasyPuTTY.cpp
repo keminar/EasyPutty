@@ -287,7 +287,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_GETMAINWINDOW:
 			// 主窗口直接返回自身句柄
 			return (LRESULT)hWnd;
-		case 7002: { // 连接按钮点击
+		case ID_LIST_ATTACH: { // 连接按钮点击
 			// 获取输入框中的文本
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 
