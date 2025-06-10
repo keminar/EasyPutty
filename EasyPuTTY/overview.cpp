@@ -4,7 +4,7 @@
 #include "Resource.h"
 #include "common.h"
 
-#define IniName L".\\MultiTab.ini"
+#define IniName L".\\EasyPuTTY.ini"
 
 
 // 宿主窗口的子类化过程
@@ -35,14 +35,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				// 双击事件处理
 				LPNMITEMACTIVATE pnmia = (LPNMITEMACTIVATE)lParam;
 				if (pnmia->iItem != -1) {
-					wchar_t szText[256] = { 0 };
-					ListView_GetItemText(hListView, pnmia->iItem, 0, szText, sizeof(szText));
-					// 通过发送自定义消息获取主窗口句柄
-					HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
-					if (mainWindow) {
-						// 转发按钮点击消息到主窗口
-						SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
-					}
+					execCommand(hwnd, hListView, pnmia->iItem);
 				}
 			}
 			else if (pnmh->code == LVN_KEYDOWN) {
@@ -50,14 +43,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				if (pnmlvkd->wVKey == VK_RETURN) {  // 回车键
 					int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 					if (selectedItem != -1) {
-						wchar_t szText[256] = { 0 };
-						ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
-						// 通过发送自定义消息获取主窗口句柄
-						HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
-						if (mainWindow) {
-							// 转发按钮点击消息到主窗口
-							SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
-						}
+						execCommand(hwnd, hListView, selectedItem);
 					}
 				}
 			}
@@ -70,6 +56,17 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	return CallWindowProcW(originalProc, hwnd, uMsg, wParam, lParam);
 }
 
+// 执行命令在新标签打开
+void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
+	wchar_t szText[256] = { 0 };
+	ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+	// 通过发送自定义消息获取主窗口句柄
+	HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+	if (mainWindow) {
+		// 转发按钮点击消息到主窗口
+		SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
+	}
+}
 
 // 创建窗口
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
@@ -157,7 +154,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
 }
 
-// 初始化列表视图列（显式使用宽字符版本）
+// 初始化列表视图列
 void InitializeListViewColumns(HWND hWndListView) {
 	LVCOLUMNW lvc = { 0 }; // 使用宽字符版本的结构体
 	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT; // 移除错误的 LVIF_TEXT
@@ -194,21 +191,17 @@ void InitializeListViewColumns(HWND hWndListView) {
 	//支持sftp，winscp等
 }
 
-// 添加列表项（显式使用宽字符版本）
+// 添加列表项
 void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* pszText, int nSubItem) {
-	LVITEMW lvi = { 0 };
-	lvi.mask = LVIF_TEXT;
-	lvi.iItem = nItem;
-	lvi.iSubItem = nSubItem;
-	lvi.pszText = (LPWSTR)pszText;
 	if (nSubItem == 0) {
-		//SendMessageW(hWndListView, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
+		LVITEMW lvi = { 0 };
+		lvi.mask = LVIF_TEXT;
+		lvi.iItem = nItem;
+		lvi.iSubItem = nSubItem;
+		lvi.pszText = (LPWSTR)pszText;
 		ListView_InsertItem(hWndListView, &lvi);
 	}
 	else {
-		// 设置子项
-		//SendMessageW(hWndListView, LVM_SETITEMW, 0, (LPARAM)&lvi);
 		ListView_SetItemText(hWndListView, nItem, nSubItem, (LPWSTR)pszText);
-
 	}
 }
