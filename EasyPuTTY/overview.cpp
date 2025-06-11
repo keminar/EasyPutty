@@ -1,8 +1,6 @@
 #pragma once
 
 #include "overview.h"
-#include "Resource.h"
-#include "common.h"
 
 #define IniName L".\\EasyPuTTY.ini"
 

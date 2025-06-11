@@ -1,5 +1,7 @@
 #pragma once
 
+#include "resource.h"
+
 // will use this structure to group fields which describe tab header and editor
 struct TabWindowsInfo {
 	int tabWindowIdentifier;//±Í«©±Í ∂∑˚IDC_TABCONTROL

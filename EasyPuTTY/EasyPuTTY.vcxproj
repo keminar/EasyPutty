@@ -154,6 +154,7 @@
     <ClInclude Include="attach.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="EasyPuTTY.h" />
+    <ClInclude Include="enum.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="overview.h" />
     <ClInclude Include="Resource.h" />
@@ -162,6 +163,7 @@
   <ItemGroup>
     <ClCompile Include="attach.cpp" />
     <ClCompile Include="EasyPuTTY.cpp" />
+    <ClCompile Include="enum.cpp" />
     <ClCompile Include="overview.cpp" />
   </ItemGroup>
   <ItemGroup>

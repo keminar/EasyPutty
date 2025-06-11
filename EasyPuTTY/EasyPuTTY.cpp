@@ -25,7 +25,6 @@ struct TabWindowsInfo g_tabWindowsInfo;
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -96,7 +95,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_EASYPUTTY));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);
+    //wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -171,7 +170,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
 		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
-			MessageBoxW(NULL, L"Error while creating main application window: could not create tab control", L"Note", MB_OK);
+			MessageBoxW(NULL, L"创建工具条标签失败", L"提示", MB_OK);
 			return 0;
 		}
 		else {
@@ -253,7 +252,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RemoveTab(tabCtrlWinHandle, currentTab);
 			break;
 		}
-		case ID_TAB_CLOSE: {
+		case ID_TAB_CLOSE: {//右键关闭
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex);
 			break;
 		}
@@ -272,6 +271,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_TAB_MOVETORIGHTMOST: {
 			selectedTabToRightmost();
 			return 0;
+		}
+		case ID_ENUM_WINDOW: {
+			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
+			break;
 		}
         case IDM_ABOUT:
             DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
@@ -542,6 +545,27 @@ void selectedTabToLeft() {
 	}
 }
 
+// “枚举”框的消息处理程序。
+INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		createEnum(g_appInstance, &g_tabWindowsInfo, hDlg);
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
 // “关于”框的消息处理程序。
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -584,7 +608,8 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 定义按钮
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"新建(&T)" },
-		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" }
+		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" },
+		{ -1, ID_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口" }
 	};
 
 	// 添加按钮
@@ -596,7 +621,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 创建标签控件
 	tabCtrlWinHandle = CreateWindowW(
 		WC_TABCONTROL, L"",
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK | TCS_BUTTONS,
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parentWinHandle, (HMENU)tabWindowsInfo->tabWindowIdentifier, g_appInstance, NULL
 	);
 	if (tabCtrlWinHandle == NULL) {
@@ -648,11 +673,11 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 }
 
 // 预览窗口
-int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
-	RECT rc, rcToolbar;
+void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
+	RECT rc;
 	TCCUSTOMITEM tabCtrlItemInfo;
 	int newTabIndex;
-	HWND overviewHandle, tabCtrlWinHandle;
+	HWND tabCtrlWinHandle;
 	
 	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 
@@ -661,7 +686,7 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	if (hostWindow == NULL) {
 		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
 		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
-		return 0;
+		return;
 	}
 	InitOverview(g_appInstance, tabWindowsInfo, hostWindow);
 	// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
