@@ -14,7 +14,6 @@
 struct WindowInfo {
 	HWND hWnd;
 	wchar_t title[MAX_PATH];
-	wchar_t className[MAX_PATH];
 	DWORD processId;
 	wchar_t processName[MAX_PATH];
 	wchar_t processPath[MAX_PATH];
@@ -57,12 +56,8 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 
 	// 获取窗口标题
 	wchar_t title[MAX_PATH] = { 0 };
-	if (GetWindowTextW(hWnd, title, MAX_PATH) == 0)
+	if (GetWindowTextW(hWnd, title, sizeof(title) / sizeof(WCHAR)) == 0)
 		return TRUE;
-
-	// 获取窗口类名
-	wchar_t className[MAX_PATH] = { 0 };
-	GetClassNameW(hWnd, className, MAX_PATH);
 
 	// 获取进程ID
 	DWORD processId;
@@ -75,7 +70,6 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	WindowInfo info = { 0 };
 	info.hWnd = hWnd;
 	wcscpy_s(info.title, title);
-	wcscpy_s(info.className, className);
 	info.processId = processId;
 
 	// 获取进程名称和路径
@@ -86,20 +80,18 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	return TRUE; // 继续枚举
 }
 
-
-
 // 创建窗口
-void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
+void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND parentWindow) {
 	RECT rc;
-	static std::vector<WindowInfo> windows;
+	std::vector<WindowInfo> windows;
 
-	GetClientRect(hostWindow, &rc);
+	GetClientRect(parentWindow, &rc);
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
 		L"",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_EDITLABELS | LVS_SHOWSELALWAYS,
 		rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top - 50, // 初始位置和大小
-		hostWindow,
+		parentWindow,
 		(HMENU)ID_ENUM_VIEW, // 控件ID
 		hInstance,
 		NULL
@@ -125,11 +117,11 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 
 	for (size_t i = 0; i < windows.size(); i++) {
 		swprintf_s(pidText, L"%lu", windows[i].processId);
-		AddEnumItem(hListView, i, pidText, 0);
+		AddEnumItem(hListView, i, pidText, 0, windows[i].hWnd);
 
-		AddEnumItem(hListView, i, windows[i].title, 1);
-		AddEnumItem(hListView, i, windows[i].processName, 2);
-		AddEnumItem(hListView, i, windows[i].processPath, 3);
+		AddEnumItem(hListView, i, windows[i].title, 1, windows[i].hWnd);
+		AddEnumItem(hListView, i, windows[i].processName, 2, windows[i].hWnd);
+		AddEnumItem(hListView, i, windows[i].processPath, 3, windows[i].hWnd);
 	}
 
 
@@ -141,47 +133,44 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 
 // 初始化列表视图列
 void InitEnumColumns(HWND hWndListView) {
-	LVCOLUMNW lvc = { 0 }; // 使用宽字符版本的结构体
-	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT; // 移除错误的 LVIF_TEXT
+	LVCOLUMNW lvc = { 0 };
+	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT; 
 
 	// 第1列：
 	lvc.iSubItem = 0;
 	lvc.cx = 100;
 	lvc.pszText = (LPWSTR)L"PID";
 	ListView_InsertColumn(hWndListView, 0, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
 
 
 	// 第2列：
 	lvc.iSubItem = 1;
-	lvc.cx = 200;
+	lvc.cx = 225;
 	lvc.pszText = (LPWSTR)L"窗口";
 	ListView_InsertColumn(hWndListView, 1, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
 
 	// 第3列：
 	lvc.iSubItem = 2;
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)L"进程名";
 	ListView_InsertColumn(hWndListView, 2, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 2, (LPARAM)&lvc);
 
 	// 第4列：
 	lvc.iSubItem = 3;
-	lvc.cx = 400;
+	lvc.cx = 460;
 	lvc.pszText = (LPWSTR)L"路径";
 	ListView_InsertColumn(hWndListView, 3, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 3, (LPARAM)&lvc);
 }
 
 // 添加列表项
-void AddEnumItem(HWND hWndListView, int nItem, const wchar_t* pszText, int nSubItem) {
+void AddEnumItem(HWND hWndListView, int nItem, const wchar_t* pszText, int nSubItem, HWND hWnd) {
 	if (nSubItem == 0) {
 		LVITEMW lvi = { 0 };
-		lvi.mask = LVIF_TEXT;
+		lvi.mask = LVIF_TEXT | LVIF_PARAM;
 		lvi.iItem = nItem;
 		lvi.iSubItem = nSubItem;
 		lvi.pszText = (LPWSTR)pszText;
+		lvi.lParam = (LPARAM)hWnd;
 		ListView_InsertItem(hWndListView, &lvi);
 	}
 	else {

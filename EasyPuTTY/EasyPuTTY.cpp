@@ -285,6 +285,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_GETMAINWINDOW:
 			// 主窗口直接返回自身句柄
 			return (LRESULT)hWnd;
+		case 7009: {
+			HWND attachHwnd = (HWND)lParam;
+			AddAttachTab(&g_tabWindowsInfo, attachHwnd);
+			return 0;
+		}
 		case ID_LIST_ATTACH: { // 连接按钮点击
 			// 获取输入框中的文本
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
@@ -327,7 +332,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					TabCtrl_SetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 
 					wchar_t puttyTitle[256] = { 0 };
-					GetWindowTextW(puttyWindowHandle, puttyTitle, 256);
+					GetWindowTextW(puttyWindowHandle, puttyTitle, sizeof(puttyTitle)/sizeof(wchar_t));
 					TCITEM tie = { 0 };
 					tie.mask = TCIF_TEXT;
 					tie.pszText = puttyTitle;
@@ -556,20 +561,23 @@ INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		return (INT_PTR)TRUE;
 
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		if (LOWORD(wParam) == IDOK)
 		{
+			HWND hListView = GetDlgItem(hDlg, ID_ENUM_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+
+			// 检索HWND
+			LVITEM lvItem = { 0 };
+			lvItem.mask = LVIF_PARAM;
+			lvItem.iItem = selectedItem;
+			ListView_GetItem(hListView, &lvItem);
+			SendMessage(g_mainWindowHandle, WM_COMMAND, 7009, (LPARAM)lvItem.lParam);
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}
-		break;
-	case WM_NOTIFY:
-		// 处理ListView通知消息
-		if (((LPNMHDR)lParam)->code == LVN_ITEMCHANGED) {
-			// 处理选中项变化事件
-			LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
-			if (pnmlv->uNewState & LVIS_SELECTED) {
-				MessageBoxW(NULL, L"", L"", MB_OK);
-			}
+		else if (LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
 		}
 		break;
 	}
@@ -711,6 +719,60 @@ void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	setTabWindowPos(hostWindow, NULL, rc);
 	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
+}
+
+void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
+	RECT rc;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	int newTabIndex;
+	HWND tabCtrlWinHandle;
+
+	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
+
+	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor + 1);
+	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
+	if (hostWindow == NULL) {
+		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
+		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		return;
+	}
+	// 嵌入PuTTY窗口到宿主窗口
+	SetParent(attachHwnd, hostWindow);
+
+	// 调整PuTTY窗口样式
+	LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
+	style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
+	// 应用新样式
+	SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
+
+	// 获取进程ID
+	DWORD processId;
+	GetWindowThreadProcessId(attachHwnd, &processId);
+
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	tabCtrlItemInfo.hostWindowHandle = hostWindow;
+	tabCtrlItemInfo.attachWindowHandle = attachHwnd;
+	tabCtrlItemInfo.attachProcessId = processId;
+	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
+
+	wchar_t processTitle[256] = { 0 };
+	GetWindowTextW(attachHwnd, processTitle, sizeof(processTitle) / sizeof(wchar_t));
+	TCITEM tie = { 0 };
+	tie.mask = TCIF_TEXT;
+	tie.pszText = processTitle;
+	SendMessage(tabCtrlWinHandle, TCM_SETITEM, newTabIndex, (LPARAM)&tie);
+
+	// 获取整个window区域
+	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
+	rc = getTabRect(tabWindowsInfo, rc);
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+	setTabWindowPos(hostWindow, attachHwnd, rc);
+	selectTab(tabCtrlWinHandle, newTabIndex);
+	(tabWindowsInfo->tabIncrementor)++;
+
+	//重绘，部分软件需要，如cmd
+	//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
