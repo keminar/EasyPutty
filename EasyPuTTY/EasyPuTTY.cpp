@@ -285,7 +285,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_GETMAINWINDOW:
 			// 主窗口直接返回自身句柄
 			return (LRESULT)hWnd;
-		case 7009: {
+		case ID_ENUM_ATTACH: {
 			HWND attachHwnd = (HWND)lParam;
 			AddAttachTab(&g_tabWindowsInfo, attachHwnd);
 			return 0;
@@ -571,7 +571,7 @@ INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			lvItem.mask = LVIF_PARAM;
 			lvItem.iItem = selectedItem;
 			ListView_GetItem(hListView, &lvItem);
-			SendMessage(g_mainWindowHandle, WM_COMMAND, 7009, (LPARAM)lvItem.lParam);
+			SendMessage(g_mainWindowHandle, WM_COMMAND, ID_ENUM_ATTACH, (LPARAM)lvItem.lParam);
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}
