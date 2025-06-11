@@ -19,4 +19,6 @@
 #include <stdio.h>
 #include <strsafe.h>
 #include <cstring>
+#include <tlhelp32.h>
+
 #pragma comment(lib, "comctl32.lib")
