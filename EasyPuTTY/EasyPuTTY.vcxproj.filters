@@ -36,6 +36,9 @@
     <ClInclude Include="common.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="enum.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EasyPuTTY.cpp">
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="attach.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="enum.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

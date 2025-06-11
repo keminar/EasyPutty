@@ -1,9 +1,9 @@
 #pragma once
 
-#include "resource.h"
 #include "common.h"
 #include "overview.h"
 #include "attach.h"
+#include "enum.h"
 
 // Data associated with each tab control item. We will use it instead of TCITEM. First member must be TCITEMHEADER, other members we can freely define
 typedef struct tagTCCUSTOMITEM {
@@ -13,9 +13,12 @@ typedef struct tagTCCUSTOMITEM {
 	DWORD attachProcessId;
 } TCCUSTOMITEM;
 
+INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    ENUM(HWND, UINT, WPARAM, LPARAM);
+
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle);
 int AddNewTab(HWND tabCtrlWinHandle, int suffix);
-int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
+void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
 void RemoveTab(HWND tabCtrlWinHandle, int currentTab);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
 
