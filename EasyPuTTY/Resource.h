@@ -29,6 +29,9 @@
 #define ID_TAB_MOVETORIGHT              32781
 #define ID_TAB_MOVETOLEFTMOST           32782
 #define ID_TAB_MOVETORIGHTMOST          32783
+#define ID_Menu                         32784
+#define ID_DEATCH                       32785
+#define ID_DETACH                       32786
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -37,7 +40,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
-#define _APS_NEXT_COMMAND_VALUE         32784
+#define _APS_NEXT_COMMAND_VALUE         32787
 #define _APS_NEXT_CONTROL_VALUE         1004
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

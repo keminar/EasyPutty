@@ -116,6 +116,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	g_appInstance = hInstance; // 将实例句柄存储在全局变量中
 
+	// 通过szWindowClass和前面注册的窗口类wcex关联起来
 	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
@@ -288,6 +289,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_ENUM_ATTACH: {
 			HWND attachHwnd = (HWND)lParam;
 			AddAttachTab(&g_tabWindowsInfo, attachHwnd);
+			return 0;
+		}
+		case ID_DETACH: {
+			DetachTab(tabCtrlWinHandle, g_tabHitIndex);
 			return 0;
 		}
 		case ID_LIST_ATTACH: { // 连接按钮点击
@@ -721,60 +726,6 @@ void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	(tabWindowsInfo->tabIncrementor)++;
 }
 
-void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
-	RECT rc;
-	TCCUSTOMITEM tabCtrlItemInfo;
-	int newTabIndex;
-	HWND tabCtrlWinHandle;
-
-	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
-
-	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor + 1);
-	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
-	if (hostWindow == NULL) {
-		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
-		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
-		return;
-	}
-	// 嵌入PuTTY窗口到宿主窗口
-	SetParent(attachHwnd, hostWindow);
-
-	// 调整PuTTY窗口样式
-	LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
-	style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-
-	// 应用新样式
-	SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
-
-	// 获取进程ID
-	DWORD processId;
-	GetWindowThreadProcessId(attachHwnd, &processId);
-
-	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
-	tabCtrlItemInfo.hostWindowHandle = hostWindow;
-	tabCtrlItemInfo.attachWindowHandle = attachHwnd;
-	tabCtrlItemInfo.attachProcessId = processId;
-	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
-
-	wchar_t processTitle[256] = { 0 };
-	GetWindowTextW(attachHwnd, processTitle, sizeof(processTitle) / sizeof(wchar_t));
-	TCITEM tie = { 0 };
-	tie.mask = TCIF_TEXT;
-	tie.pszText = processTitle;
-	SendMessage(tabCtrlWinHandle, TCM_SETITEM, newTabIndex, (LPARAM)&tie);
-
-	// 获取整个window区域
-	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
-	rc = getTabRect(tabWindowsInfo, rc);
-	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-	setTabWindowPos(hostWindow, attachHwnd, rc);
-	selectTab(tabCtrlWinHandle, newTabIndex);
-	(tabWindowsInfo->tabIncrementor)++;
-
-	//重绘，部分软件需要，如cmd
-	//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
-}
-
 void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
 	TabCtrl_SetCurSel(tabCtrlWinHandle, tabIndex);
 	showWindowForSelectedTabItem(tabCtrlWinHandle, tabIndex);
@@ -940,4 +891,101 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 		return NULL;
 	}
 	return hostWindow;
+}
+
+
+void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
+	RECT rc;
+	TCCUSTOMITEM tabCtrlItemInfo;
+	int newTabIndex;
+	HWND tabCtrlWinHandle;
+
+	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
+
+	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor + 1);
+	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
+	if (hostWindow == NULL) {
+		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
+		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		return;
+	}
+	// 嵌入PuTTY窗口到宿主窗口
+	SetParent(attachHwnd, hostWindow);
+
+	// 调整PuTTY窗口样式
+	LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
+	style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
+	// 应用新样式
+	SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
+
+	// 获取进程ID
+	DWORD processId;
+	GetWindowThreadProcessId(attachHwnd, &processId);
+
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	tabCtrlItemInfo.hostWindowHandle = hostWindow;
+	tabCtrlItemInfo.attachWindowHandle = attachHwnd;
+	tabCtrlItemInfo.attachProcessId = processId;
+	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
+
+	wchar_t processTitle[256] = { 0 };
+	GetWindowTextW(attachHwnd, processTitle, sizeof(processTitle) / sizeof(wchar_t));
+	TCITEM tie = { 0 };
+	tie.mask = TCIF_TEXT;
+	tie.pszText = processTitle;
+	SendMessage(tabCtrlWinHandle, TCM_SETITEM, newTabIndex, (LPARAM)&tie);
+
+	// 获取整个window区域
+	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
+	rc = getTabRect(tabWindowsInfo, rc);
+	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
+	setTabWindowPos(hostWindow, attachHwnd, rc);
+	selectTab(tabCtrlWinHandle, newTabIndex);
+	(tabWindowsInfo->tabIncrementor)++;
+}
+
+// 分离程序并删除标签
+void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
+	int newTabItemsCount;
+	int newSelectedTab;
+	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
+
+	TCCUSTOMITEM tabCtrlItemInfo;
+	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+	TabCtrl_GetItem(tabCtrlWinHandle, indexTab, &tabCtrlItemInfo);
+
+	if (tabCtrlItemInfo.attachWindowHandle) {
+		// 获取子窗口当前位置和大小
+		RECT rect;
+		GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
+		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
+
+		// 设置为顶级窗口样式
+		LONG style = GetWindowLong(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
+		style &= ~WS_CHILD;
+		style |= WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+		style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+		SetWindowLong(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
+
+		// 重新定位窗口（使用屏幕坐标）
+		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
+			rect.left, rect.top,
+			rect.right - rect.left, rect.bottom - rect.top,
+			TRUE);
+	}
+
+	TabCtrl_DeleteItem(tabCtrlWinHandle, indexTab);
+	if (tabCtrlItemInfo.hostWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+	}
+	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	if (newTabItemsCount == 0) {
+		AddNewOverview(&g_tabWindowsInfo);
+	}
+	else if (indexTab == currentTab) { //如果删除项非选中项，不切换选中
+		// if last item was removed, select previous item, otherwise select next item
+		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
+		selectTab(tabCtrlWinHandle, newSelectedTab);
+	}
 }
