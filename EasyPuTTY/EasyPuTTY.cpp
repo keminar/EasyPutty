@@ -562,6 +562,16 @@ INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			return (INT_PTR)TRUE;
 		}
 		break;
+	case WM_NOTIFY:
+		// 处理ListView通知消息
+		if (((LPNMHDR)lParam)->code == LVN_ITEMCHANGED) {
+			// 处理选中项变化事件
+			LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
+			if (pnmlv->uNewState & LVIS_SELECTED) {
+				MessageBoxW(NULL, L"", L"", MB_OK);
+			}
+		}
+		break;
 	}
 	return (INT_PTR)FALSE;
 }
