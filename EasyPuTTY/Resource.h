@@ -21,7 +21,7 @@
 #define IDM_CLOSE                       32773
 #define ID_ENUM_WINDOW                  32774
 #define ID_ENUM_VIEW                    32775
-#define ID_32776                        32776
+#define ID_ENUM_ATTACH                  32776
 #define ID_LIST_VIEW                    32777
 #define ID_LIST_ATTACH                  32778
 #define ID_TAB_CLOSE                    32779
