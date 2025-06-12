@@ -291,7 +291,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			AddAttachTab(&g_tabWindowsInfo, attachHwnd);
 			return 0;
 		}
-		case ID_DETACH: {
+		case ID_TAB_DETACH: {
 			DetachTab(tabCtrlWinHandle, g_tabHitIndex);
 			return 0;
 		}
@@ -500,7 +500,10 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 			int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			g_tabHitIndex = tabIndex;
 
+			TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, tabIndex);
+
 			// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
+			EnableMenuItem(tabMenuHandle, ID_TAB_DETACH, !(tabCtrlItemInfo.attachProcessId > 0));
 			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
 			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
 			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
@@ -727,6 +730,8 @@ void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	// we need to associate window handle of rich edit with tab control item. We do that by using TabCtrl_SetItem with mask which specifies that only app data should be set
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 	tabCtrlItemInfo.hostWindowHandle = hostWindow;
+	tabCtrlItemInfo.attachWindowHandle = 0;
+	tabCtrlItemInfo.attachProcessId = 0;//必须再设置
 	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 
 	// 获取整个window区域
