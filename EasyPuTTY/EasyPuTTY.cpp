@@ -322,7 +322,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// 创建其他进程需要attachWinHandle打底，不然explorer测试有问题
 				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, newHostWinHandle, inputText);
 				// 修改选项卡标题
-				if (puttyWindowHandle) {
+				if (puttyWindowHandle && IsWindow(puttyWindowHandle)) {
 					if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 						DestroyWindow(tabCtrlItemInfo.hostWindowHandle); // 会自动销毁所有子控件
 					}
@@ -336,11 +336,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					// 要更新数据，窗口大小调整时才随动
 					TabCtrl_SetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 
-					wchar_t puttyTitle[256] = { 0 };
-					GetWindowTextW(puttyWindowHandle, puttyTitle, sizeof(puttyTitle)/sizeof(wchar_t));
+					wchar_t attachTitle[256] = { 0 };
+					wchar_t cutTitle[256] = { 0 };
+					GetWindowTextW(puttyWindowHandle, attachTitle, _countof(attachTitle));
+					TruncateString(attachTitle, cutTitle, 18);
 					TCITEM tie = { 0 };
 					tie.mask = TCIF_TEXT;
-					tie.pszText = puttyTitle;
+					tie.pszText = cutTitle;
 					SendMessage(tabCtrlWinHandle, TCM_SETITEM, sel, (LPARAM)&tie);
 
 					RECT rc;
@@ -349,7 +351,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 					setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc);
 					//重绘，部分软件需要，如cmd
-					RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+					//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 
 					if (wcsstr(inputText, L"putty") != NULL) {
 						// 按下 Ctrl 键
@@ -949,11 +951,13 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	(tabWindowsInfo->tabIncrementor)++;
 
 	// 更新标题
-	wchar_t processTitle[256] = { 0 };
-	GetWindowTextW(attachHwnd, processTitle, sizeof(processTitle) / sizeof(wchar_t));
+	wchar_t attachTitle[256] = { 0 };
+	wchar_t cutTitle[256] = { 0 };
+	GetWindowTextW(attachHwnd, attachTitle, _countof(attachTitle));
+	TruncateString(attachTitle, cutTitle, 18);
 	TCITEM tie = { 0 };
 	tie.mask = TCIF_TEXT;
-	tie.pszText = processTitle;
+	tie.pszText = cutTitle;
 	SendMessage(tabCtrlWinHandle, TCM_SETITEM, newTabIndex, (LPARAM)&tie);
 
 	// 获取整个window区域

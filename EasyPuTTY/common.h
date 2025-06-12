@@ -1,6 +1,7 @@
 #pragma once
 
 #include "resource.h"
+#include <windows.h>
 
 // will use this structure to group fields which describe tab header and editor
 struct TabWindowsInfo {
@@ -16,3 +17,5 @@ struct TabWindowsInfo {
 
 // 定义自定义消息
 #define WM_GETMAINWINDOW (WM_USER + 1)
+
+void TruncateString(const wchar_t* src, wchar_t* dest, size_t maxLength);
