@@ -460,11 +460,15 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 	//不能使用SetWindowPos窗口刷新会有问题，MoveWindow也不重绘
 	// 新增：调整 PuTTY 窗口大小（若句柄有效）
 	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
+		// 2次MoveWindow奇怪的解决了 cmd 进程反复attach 和detach时候的刷新问题，第一次可以是FALSE
+		MoveWindow(attachWindowHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
+		// 这个要用TRUE
 		MoveWindow(attachWindowHandle, 0, -captionHeight,
-			rc.right - rc.left, rc.bottom - rc.top + captionHeight, FALSE);
+			rc.right - rc.left, rc.bottom - rc.top + captionHeight, TRUE);
+		
 	}
-	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
+	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 }
 
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
@@ -776,20 +780,33 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 	// retrieve information about tab control item with index i
 	TabCtrl_GetItem(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
-
+	// 删除标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
+
+	// 销毁窗体
 	if (tabCtrlItemInfo.hostWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 	if (tabCtrlItemInfo.attachWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
 	}
+	// 检查进程是否关闭，超时强杀进程
 	if (tabCtrlItemInfo.attachProcessId > 0) {
 		DWORD dwExitCode = 0;
 		// 打开进程，获取句柄
 		HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
 		if (hProc != NULL) {
-			if (WaitForSingleObject(hProc, 1000) != WAIT_OBJECT_0) {
+			BOOL stoped = FALSE;
+			int i;
+			for (i = 0; i < 3; i++) {
+				if (WaitForSingleObject(hProc, 50) == WAIT_OBJECT_0) {
+					// 进程已结束
+					stoped = TRUE;
+					break;
+				}
+			}
+			int j = i;
+			if (!stoped) {
 				//exe文件采用这种可以关闭
 				DWORD dwExitCode = 0;
 				// 获取子进程的退出码 
@@ -801,6 +818,7 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 		tabCtrlItemInfo.attachProcessId = 0;
 	}
 
+	// 标签切换
 	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	if (newTabItemsCount == 0) {
 		AddNewOverview(&g_tabWindowsInfo);
@@ -909,15 +927,14 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
 		return;
 	}
-	// 嵌入PuTTY窗口到宿主窗口
+	// 嵌入窗口到宿主窗口
 	SetParent(attachHwnd, hostWindow);
-
-	// 调整PuTTY窗口样式
-	LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
-	style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-
-	// 应用新样式
-	SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
+	// cmd设置样式会有问题
+	if (!IsConsoleWindow(attachHwnd)) {
+		LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
+		style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+		SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
+	}
 
 	// 获取进程ID
 	DWORD processId;
@@ -928,7 +945,10 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	tabCtrlItemInfo.attachWindowHandle = attachHwnd;
 	tabCtrlItemInfo.attachProcessId = processId;
 	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
+	selectTab(tabCtrlWinHandle, newTabIndex);
+	(tabWindowsInfo->tabIncrementor)++;
 
+	// 更新标题
 	wchar_t processTitle[256] = { 0 };
 	GetWindowTextW(attachHwnd, processTitle, sizeof(processTitle) / sizeof(wchar_t));
 	TCITEM tie = { 0 };
@@ -941,8 +961,9 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	rc = getTabRect(tabWindowsInfo, rc);
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 	setTabWindowPos(hostWindow, attachHwnd, rc);
-	selectTab(tabCtrlWinHandle, newTabIndex);
-	(tabWindowsInfo->tabIncrementor)++;
+	//重绘，部分软件需要，如cmd
+	
+	//RedrawWindow(attachHwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 // 分离程序并删除标签
@@ -955,30 +976,8 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 	TabCtrl_GetItem(tabCtrlWinHandle, indexTab, &tabCtrlItemInfo);
 
-	if (tabCtrlItemInfo.attachWindowHandle) {
-		// 获取子窗口当前位置和大小
-		RECT rect;
-		GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
-		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
-
-		// 设置为顶级窗口样式
-		LONG style = GetWindowLong(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
-		style &= ~WS_CHILD;
-		style |= WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
-		style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-		SetWindowLong(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
-
-		// 重新定位窗口（使用屏幕坐标）
-		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
-			rect.left, rect.top,
-			rect.right - rect.left, rect.bottom - rect.top,
-			TRUE);
-	}
-
+	// 先关闭标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, indexTab);
-	if (tabCtrlItemInfo.hostWindowHandle) {
-		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-	}
 	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	if (newTabItemsCount == 0) {
 		AddNewOverview(&g_tabWindowsInfo);
@@ -987,5 +986,29 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 		// if last item was removed, select previous item, otherwise select next item
 		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
 		selectTab(tabCtrlWinHandle, newSelectedTab);
+	}
+
+	// 后分离窗口，这样新窗口在前台
+	if (tabCtrlItemInfo.attachWindowHandle) {
+		// 获取子窗口当前位置和大小
+		RECT rect;
+		GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
+		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
+
+		if (!IsConsoleWindow(tabCtrlItemInfo.attachWindowHandle)) {
+			LONG_PTR style = GetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
+			style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+			SetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
+		}
+		// 重新定位窗口，增加一些错位
+		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
+			rect.left+30, rect.top+50,
+			rect.right - rect.left, rect.bottom - rect.top,
+			TRUE);
+	}
+
+	// 最后释放资源
+	if (tabCtrlItemInfo.hostWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 }
