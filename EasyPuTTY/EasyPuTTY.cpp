@@ -586,6 +586,12 @@ INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}
+		else if (LOWORD(wParam) == IDC_REFRESH) {
+			HWND hListView = GetDlgItem(hDlg, ID_ENUM_VIEW);
+			DestroyWindow(hListView);
+			createEnum(g_appInstance, &g_tabWindowsInfo, hDlg);
+			return (INT_PTR)TRUE;
+		}
 		else if (LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
