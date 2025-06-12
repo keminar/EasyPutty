@@ -10,7 +10,6 @@
 #define IDM_ABOUT                       106
 #define IDM_EXIT                        107
 #define IDI_EASYPUTTY                   108
-#define IDI_SMALL                       109
 #define IDC_EASYPUTTY                   110
 #define IDR_MAINFRAME                   128
 #define IDR_MAIN_TOOLBAR                129

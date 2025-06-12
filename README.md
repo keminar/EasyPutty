@@ -18,6 +18,14 @@
 - 优点：机器ip管理方便
 - 缺点：内存占用多，有广告，GPU占用大
 
+## 标签样式
+开始编程时tabcontrol标签头显示旧系统样式，为显示新版本系统样式，修改`EasyPuTTY.vcxproj`在`<Link>`节点下增加下面配置实现
+```
+      <AdditionalManifestDependencies>type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'</AdditionalManifestDependencies>
+      <AdditionalDependencies>comctl32.lib;comdlg32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(WindowsSdkDir)Lib\$(Platform)\um;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+```
+
 ## 第三方下载
 - [putty] http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html
 - [winscp] https://winscp.net/download/WinSCP-5.15.3-Automation.zip
