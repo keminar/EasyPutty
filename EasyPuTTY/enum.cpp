@@ -9,6 +9,9 @@
 // 链接所需库
 #pragma comment(lib, "psapi.lib")
 
+// 全局变量:
+WCHAR myWindowClass[256];            // 主窗口类名
+HWND enumWindow;
 
 // 存储窗口信息的结构体
 struct WindowInfo {
@@ -53,6 +56,16 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	// 检查窗口是否可见且有标题
 	if (!IsWindowVisible(hWnd))
 		return TRUE;
+	// 排除自身窗口
+	if (enumWindow == hWnd)
+		return TRUE;
+
+	// 排除自身主程序
+	wchar_t className[256] = { 0 };
+	GetClassNameW(hWnd, className, ARRAYSIZE(className));
+	if (wcsstr(className, myWindowClass) != NULL) {
+		return TRUE;
+	}
 
 	// 获取窗口标题
 	wchar_t title[MAX_PATH] = { 0 };
@@ -75,6 +88,28 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	// 获取进程名称和路径
 	GetProcessInfo(processId, info.processName, info.processPath, MAX_PATH);
 
+	// 已知需要排掉的进程
+	if (wcsstr(info.processName, L"explorer.exe") != NULL) {
+		if (wcsstr(title, L"Program Manager") != NULL) {//桌面管理
+			return TRUE;
+		}
+	}
+	else if (wcsstr(info.processName, L"ApplicationFrameHost.exe") != NULL) {
+		return TRUE;
+	}
+	else if (wcsstr(info.processName, L"ShellExperienceHost.exe") != NULL) {
+		return TRUE;
+	}
+	else if (wcsstr(info.processName, L"WindowsInternal.ComposableShell.Experiences.TextInput.InputApp.exe") != NULL) {
+		return TRUE;
+	}
+	else if (wcsstr(info.processName, L"MicrosoftEdge") != NULL) {
+		return TRUE;
+	}
+	else if (wcsstr(info.processName, L"WeMail.exe") != NULL) {//微信邮件
+		return TRUE;
+	}
+	
 	pWindows->push_back(info);
 
 	return TRUE; // 继续枚举
@@ -85,6 +120,7 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 	RECT rc;
 	std::vector<WindowInfo> windows;
 
+	enumWindow = parentWindow;
 	GetClientRect(parentWindow, &rc);
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
@@ -108,6 +144,8 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 	// 初始化列表视图列
 	InitEnumColumns(hListView);
 
+	// 本程序类名
+	LoadStringW(hInstance, IDC_EASYPUTTY, myWindowClass, sizeof(myWindowClass)/sizeof(wchar_t));
 	 
 	// 枚举所有窗口
 	EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&windows));

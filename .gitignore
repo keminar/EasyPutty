@@ -1,6 +1,7 @@
 .vs
 enc_temp_folder
 Debug
+Release
 x64
 x86
 EasyPuTTY.ini
