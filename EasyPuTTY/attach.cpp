@@ -81,12 +81,39 @@ HWND createPuttyWindow(HINSTANCE hInstance, HWND hostWindow, const wchar_t* putt
 	}
 	// 嵌入PuTTY窗口到宿主窗口
 	SetParent(puttyHwnd, hostWindow);
-
-	// 调整PuTTY窗口样式
 	LONG_PTR style = GetWindowLongPtr(puttyHwnd, GWL_STYLE);
-	style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 
-	// 应用新样式
-	SetWindowLongPtr(puttyHwnd, GWL_STYLE, style);
+	// cmd设置样式在detach时会有问题
+	if (!IsConsoleWindow(puttyHwnd)) {
+		// 调整PuTTY窗口样式
+		LONG_PTR style = GetWindowLongPtr(puttyHwnd, GWL_STYLE);
+		style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+		SetWindowLongPtr(puttyHwnd, GWL_STYLE, style);
+	}
 	return puttyHwnd;
+}
+
+// 检测窗口是否为控制台窗口
+BOOL IsConsoleWindow(HWND hWnd) {
+	// 获取窗口类名（宽字符版本）
+	WCHAR className[256];
+	if (GetClassNameW(hWnd, className, ARRAYSIZE(className))) {
+		// 控制台窗口的类名通常为"ConsoleWindowClass"
+		if (wcscmp(className, L"ConsoleWindowClass") == 0) {
+			return TRUE;
+		}
+	}
+
+	// 尝试获取窗口标题（宽字符版本）
+	WCHAR windowTitle[256];
+	if (GetWindowTextW(hWnd, windowTitle, ARRAYSIZE(windowTitle))) {
+		// 检查标题是否包含"命令提示符"或"cmd"
+		if (wcsstr(windowTitle, L"命令提示符") ||
+			wcsstr(windowTitle, L"cmd") ||
+			wcsstr(windowTitle, L"Command Prompt")) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
 }
