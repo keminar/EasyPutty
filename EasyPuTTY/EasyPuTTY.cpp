@@ -785,7 +785,7 @@ TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i) {
 
 // 删除标签
 void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
-	int newTabItemsCount;
+	int count;
 	int newSelectedTab;
 	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 
@@ -793,6 +793,13 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 	// retrieve information about tab control item with index i
 	TabCtrl_GetItem(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
+
+	// 最后一个预览不删除
+	count = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	if (count == 1 && tabCtrlItemInfo.attachProcessId==0) {
+		return;
+	}
+
 	// 删除标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
 
@@ -832,13 +839,13 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	}
 
 	// 标签切换
-	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
-	if (newTabItemsCount == 0) {
+	count = TabCtrl_GetItemCount(tabCtrlWinHandle);
+	if (count == 0) {
 		AddNewOverview(&g_tabWindowsInfo);
 	}
 	else if (deleteTab == currentTab) { //如果删除项非选中项，不切换选中
 		// if last item was removed, select previous item, otherwise select next item
-		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
+		newSelectedTab = (currentTab == count) ? (currentTab - 1) : currentTab;
 		selectTab(tabCtrlWinHandle, newSelectedTab);
 	}
 }
