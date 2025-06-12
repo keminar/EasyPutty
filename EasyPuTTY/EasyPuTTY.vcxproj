@@ -162,6 +162,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="attach.cpp" />
+    <ClCompile Include="common.cpp" />
     <ClCompile Include="EasyPuTTY.cpp" />
     <ClCompile Include="enum.cpp" />
     <ClCompile Include="overview.cpp" />
