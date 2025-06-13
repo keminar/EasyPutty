@@ -214,7 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
-		SetTimer(hWnd, TIMER_ID_FOCUS, 269, NULL);
+		SetTimer(hWnd, TIMER_ID_FOCUS, 260, NULL);
 		return 0;
 	}
 	break;
@@ -230,25 +230,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 				// tab焦点不能写在TabCtrl_GetCurSel前
 				if (tabCtrlItemInfo.attachWindowHandle) {
-					SetForegroundWindow(tabCtrlItemInfo.hostWindowHandle);
+					/*SetForegroundWindow(tabCtrlItemInfo.hostWindowHandle);
 					for (int i = 0; i < 100; i++) {
 						if (tabCtrlItemInfo.hostWindowHandle == GetForegroundWindow()) {
 							break;
 						}
-					}
+					}*/
 					// 延迟一小段时间，确保窗口已完全激活
 					//Sleep(100);
 					SetForegroundWindow(tabCtrlItemInfo.attachWindowHandle);
 					for (int i = 0; i < 100; i++) {
+						// 很重要，当为前台窗口才能设置焦点
 						if (tabCtrlItemInfo.attachWindowHandle == GetForegroundWindow()) {
 							// 设置焦点
-							SetFocus(tabCtrlItemInfo.attachWindowHandle);
+							SetFocus(tabCtrlItemInfo.attachWindowHandle); 
+							break;
 						}
+						Sleep(30);
 					}
 				}
 			}
 		}
 		return 0;
+	case WM_ACTIVATE:
+		// 窗口切换激活，设置焦点
+		switch (LOWORD(wParam)) {
+		case WA_ACTIVE: //（非鼠标点击，鼠标点击激活焦点不能失去，否则主窗体功能没法用）
+			SetTimer(hWnd, TIMER_ID_FOCUS, 100, NULL);
+			break;
+		}
+		break;
     case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
         int wmId = LOWORD(wParam);
