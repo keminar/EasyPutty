@@ -3,7 +3,9 @@
 #include "overview.h"
 
 #define IniName L".\\EasyPuTTY.ini"
+#define SECTION_NAME L"Settings"
 
+#define MAX_COMMAND_LEN 8190 //命令最大长度
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -68,7 +70,16 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 
 // 创建窗口
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
-	SendMessageW(hostWindow, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
+	wchar_t sessionsPath[MAX_PATH], credentialPath[MAX_PATH];
+	int sessionCount, credentialCount;
+	wchar_t** sessionFileList;
+	wchar_t** credentialFileList;
+	SessionInfo *sessionConfig;
+	CredentialInfo *credentialConfig;
+	wchar_t command[MAX_COMMAND_LEN] = { 0 };
+	int nItem = 0;
+	ConfigMap* credentialMap;
+
 
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
@@ -85,6 +96,9 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
 		return;
 	}
+	// 设置字体
+	SendMessageW(hListView, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
+
 	// 设置列表视图扩展样式
 	ListView_SetExtendedListViewStyle(hListView,
 		LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
@@ -98,53 +112,46 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	GetPrivateProfileStringW(L"Program", L"app1", L"", app1, MAX_PATH, IniName);
 	GetPrivateProfileStringW(L"Program", L"app2", L"", app2, MAX_PATH, IniName);
 
-	int i = 0;
 	// 添加示例数据
 	if (wcscmp(app1, L"") != 0) {
-		AddListViewItem(hListView, i, app1, 0);
-		AddListViewItem(hListView, i, L"putty", 1);
-		AddListViewItem(hListView, i, L"putty", 2);
-		AddListViewItem(hListView, i, L"1", 3);
-		i++;
-	}
-
-	if (wcscmp(app2, L"") != 0) {
-		AddListViewItem(hListView, i, app2, 0);
-		AddListViewItem(hListView, i, L"putty", 1);
-		AddListViewItem(hListView, i, L"putty", 2);
-		AddListViewItem(hListView, i, L"1", 3);
-		i++;
+		AddListViewItem(hListView, nItem, L"app1", L"自定义", app1, L"", L"", L"是");
+		nItem++;
+		AddListViewItem(hListView, nItem, L"app2", L"自定义", app2, L"", L"", L"是");
+		nItem++;
 	}
 
 
-	AddListViewItem(hListView, i, L"explorer .\\", 0);
-	AddListViewItem(hListView, i, L"资源管理器", 1);
-	AddListViewItem(hListView, i, L"其他", 2);
-	AddListViewItem(hListView, i, L"1", 3);
-	i++;
+	// 初始化
+	sessionConfig = (SessionInfo*)malloc(sizeof(SessionInfo));
+	credentialConfig = (CredentialInfo*)malloc(sizeof(CredentialInfo));
 
-	AddListViewItem(hListView, i, L"..\\..\\ProxyUI", 0);
-	AddListViewItem(hListView, i, L"ProxyUI", 1);
-	AddListViewItem(hListView, i, L"其他", 2);
-	AddListViewItem(hListView, i, L"1", 3);
-	i++;
+	GetPuttyCredentialPath(credentialPath, MAX_PATH);
+	credentialFileList = ListIniFiles(credentialPath, &credentialCount);
+	credentialMap = initConfigMap(credentialCount);
+	if (credentialMap) {
+		for (int i = 0; i < credentialCount; i++) {
+			if (credentialFileList[i] != NULL) {
+				ReadCredentialFromIni(credentialFileList[i], credentialConfig);
+				addConfig(credentialMap, credentialConfig->name, credentialConfig->userName, credentialConfig->password, credentialConfig->privateKey);
+			}
+		}
+	}
 
-	AddListViewItem(hListView, i, L"C:\\Program Files\\FileZilla FTP Client\\filezilla.exe", 0);
-	AddListViewItem(hListView, i, L"filezilla", 1);
-	AddListViewItem(hListView, i, L"其他", 2);
-	AddListViewItem(hListView, i, L"1", 3);
-	i++;
-
-	AddListViewItem(hListView, i, L"C:\\HA_EmEditor9x64\\emed106c64\\EmEditor10x64\\EmEditor.exe", 0);
-	AddListViewItem(hListView, i, L"EmEditor", 1);
-	AddListViewItem(hListView, i, L"其他", 2);
-	AddListViewItem(hListView, i, L"1", 3);
-	i++;
-
-	AddListViewItem(hListView, i, L"cmd", 0);
-	AddListViewItem(hListView, i, L"命令行", 1);
-	AddListViewItem(hListView, i, L"其他", 2);
-	AddListViewItem(hListView, i, L"1", 3);
+	GetPuttySessionsPath(sessionsPath, MAX_PATH);
+	sessionFileList = ListIniFiles(sessionsPath, &sessionCount);
+	for (int i = 0; i < sessionCount; i++) {
+		if (sessionFileList[i] != NULL) {
+			// 读取配置
+			ReadSessionFromIni(sessionFileList[i], sessionConfig);
+			credentialConfig = findConfigByName(credentialMap, sessionConfig->credential);
+			swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s@%s", L".\\putty.exe", credentialConfig->userName, sessionConfig->hostName);
+			AddListViewItem(hListView, nItem, sessionConfig->name, L"PuTTY", command, sessionConfig->tags, sessionConfig->credential, L"是");
+			nItem++;
+		}
+	}
+	FreeConfigMap(credentialMap);
+	FreeFileList(credentialFileList, credentialCount);
+	FreeFileList(sessionFileList, sessionCount);
 
 	// 子类化宿主窗口
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
@@ -154,52 +161,339 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 
 // 初始化列表视图列
 void InitializeListViewColumns(HWND hWndListView) {
-	LVCOLUMNW lvc = { 0 }; // 使用宽字符版本的结构体
-	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT; // 移除错误的 LVIF_TEXT
+	LVCOLUMNW lvc = { 0 };
+	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
 
-	// 第1列：
 	lvc.iSubItem = 0;
-	lvc.cx = 500;
-	lvc.pszText = (LPWSTR)L"命令";
-	ListView_InsertColumn(hWndListView, 0, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
-
-
-	// 第2列：
-	lvc.iSubItem = 1;
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)L"简称";
-	ListView_InsertColumn(hWndListView, 1, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
-	// 第3列：
+	lvc.iSubItem = 1;
+	lvc.cx = 110;
+	lvc.pszText = (LPWSTR)L"类型";
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
+
 	lvc.iSubItem = 2;
-	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"分类";
-	ListView_InsertColumn(hWndListView, 2, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 2, (LPARAM)&lvc);
+	lvc.cx = 500;
+	lvc.pszText = (LPWSTR)L"命令";
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
-	// 第4列：
 	lvc.iSubItem = 3;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"发送ctl+space";
-	ListView_InsertColumn(hWndListView, 3, &lvc);
-	//SendMessageW(hWndListView, LVM_INSERTCOLUMNW, 3, (LPARAM)&lvc);
+	lvc.pszText = (LPWSTR)L"标签";
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
-	//支持sftp，winscp等
+	lvc.iSubItem = 4;
+	lvc.cx = 200;
+	lvc.pszText = (LPWSTR)L"凭证";
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
+
+	lvc.iSubItem = 5;
+	lvc.cx = 200;
+	lvc.pszText = (LPWSTR)L"切换输入法";
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 }
 
 // 添加列表项
-void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* pszText, int nSubItem) {
-	if (nSubItem == 0) {
-		LVITEMW lvi = { 0 };
-		lvi.mask = LVIF_TEXT;
-		lvi.iItem = nItem;
-		lvi.iSubItem = nSubItem;
-		lvi.pszText = (LPWSTR)pszText;
-		ListView_InsertItem(hWndListView, &lvi);
+void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input) {
+	LVITEMW lvi = { 0 };
+	lvi.mask = LVIF_TEXT;
+	lvi.iItem = nItem;
+	lvi.iSubItem = 0;
+	lvi.pszText = (LPWSTR)name;
+	ListView_InsertItem(hWndListView, &lvi);
+	lvi.iSubItem++;
+
+	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)type);
+	lvi.iSubItem++;
+	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)command);
+	lvi.iSubItem++;
+	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)tags);
+	lvi.iSubItem++;
+	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)credential);
+	lvi.iSubItem++;
+	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)input);
+}
+
+void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
+	// 获取当前可执行文件的完整路径
+	GetModuleFileNameW(NULL, buffer, bufferSize);
+
+	// 查找最后一个反斜杠
+	wchar_t* lastSlash = wcsrchr(buffer, L'\\');
+	if (lastSlash) {
+		// 截断路径，只保留目录部分
+		*(lastSlash + 1) = L'\0';
 	}
-	else {
-		ListView_SetItemText(hWndListView, nItem, nSubItem, (LPWSTR)pszText);
+}
+
+void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize) {
+	GetCurrentDirectoryPath(buffer, bufferSize);
+	// 追加目标路径
+	wcscat_s(buffer, bufferSize, L"config\\putty\\sessions");
+}
+
+void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize) {
+	GetCurrentDirectoryPath(buffer, bufferSize);
+	// 追加目标路径
+	wcscat_s(buffer, bufferSize, L"config\\putty\\credential");
+}
+
+// 获取指定目录下的所有INI文件
+wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount) {
+	WIN32_FIND_DATAW findData;
+	HANDLE hFind;
+	wchar_t searchPath[MAX_PATH];
+	wchar_t** fileList = NULL;
+	int count = 0;
+	int capacity = 10;  // 初始容量
+
+	// 构建搜索路径
+	wcscpy_s(searchPath, MAX_PATH, directoryPath);
+	wcscat_s(searchPath, MAX_PATH, L"\\*.ini");
+
+	// 开始查找第一个匹配的文件
+	hFind = FindFirstFileW(searchPath, &findData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		*fileCount = 0;
+		return NULL;
 	}
+
+	// 分配初始内存
+	fileList = (wchar_t**)malloc(capacity * sizeof(wchar_t*));
+	if (fileList == NULL) {
+		FindClose(hFind);
+		*fileCount = 0;
+		return NULL;
+	}
+
+	// 枚举所有匹配的文件
+	do {
+		// 跳过 . 和 .. 目录
+		if (wcscmp(findData.cFileName, L".") == 0 ||
+			wcscmp(findData.cFileName, L"..") == 0) {
+			continue;
+		}
+
+		// 只处理文件，不处理目录
+		if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			// 计算完整路径长度
+			size_t pathLen = wcslen(directoryPath) + wcslen(findData.cFileName) + 2;
+
+			// 分配内存并构建完整路径
+			fileList[count] = (wchar_t*)malloc(pathLen * sizeof(wchar_t));
+			if (fileList[count] == NULL) {
+				// 内存分配失败，清理已分配的内存
+				for (int i = 0; i < count; i++) {
+					free(fileList[i]);
+				}
+				free(fileList);
+				FindClose(hFind);
+				*fileCount = 0;
+				return NULL;
+			}
+
+			wcscpy_s(fileList[count], pathLen, directoryPath);
+			wcscat_s(fileList[count], pathLen, L"\\");
+			wcscat_s(fileList[count], pathLen, findData.cFileName);
+
+			count++;
+
+			// 如果数组已满，扩展容量
+			if (count >= capacity) {
+				capacity *= 2;
+				wchar_t** newList = (wchar_t**)realloc(fileList, capacity * sizeof(wchar_t*));
+				if (newList == NULL) {
+					// 内存重新分配失败，清理已分配的内存
+					for (int i = 0; i < count; i++) {
+						free(fileList[i]);
+					}
+					free(fileList);
+					FindClose(hFind);
+					*fileCount = 0;
+					return NULL;
+				}
+				fileList = newList;
+			}
+		}
+	} while (FindNextFileW(hFind, &findData));
+
+	// 关闭查找句柄
+	FindClose(hFind);
+
+	// 返回文件数量和文件列表
+	*fileCount = count;
+	return fileList;
+}
+
+// 释放文件列表内存
+void FreeFileList(wchar_t** fileList, int fileCount) {
+	if (fileList != NULL) {
+		for (int i = 0; i < fileCount; i++) {
+			if (fileList[i] != NULL) {
+				free(fileList[i]);
+			}
+		}
+		free(fileList);
+	}
+}
+
+// 从INI文件读取配置信息
+void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
+	// 读取Name
+	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
+		config->name, sizeof(config->name) / sizeof(wchar_t),
+		filepath);
+
+	// 读取HostName
+	GetPrivateProfileStringW(SECTION_NAME, L"HostName", L"",
+		config->hostName, sizeof(config->hostName) / sizeof(wchar_t),
+		filepath);
+
+	// 读取Port
+	config->port = GetPrivateProfileIntW(SECTION_NAME, L"Port", 22, filepath);
+
+	// 读取ConnectType
+	GetPrivateProfileStringW(SECTION_NAME, L"ConnectType", L"",
+		config->connectType, sizeof(config->connectType) / sizeof(wchar_t),
+		filepath);
+
+	// 读取Credential
+	GetPrivateProfileStringW(SECTION_NAME, L"Credential", L"",
+		config->credential, sizeof(config->credential) / sizeof(wchar_t),
+		filepath);
+
+	// 读取Tags
+	GetPrivateProfileStringW(SECTION_NAME, L"Tags", L"",
+		config->tags, sizeof(config->tags) / sizeof(wchar_t),
+		filepath);
+}
+
+
+// 从INI文件读取配置信息
+void ReadCredentialFromIni(const wchar_t* filepath, CredentialInfo* config) {
+	// 初始化结构体
+	ZeroMemory(config, sizeof(CredentialInfo));
+
+	// 读取Name
+	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
+		config->name, sizeof(config->name) / sizeof(wchar_t),
+		filepath);
+
+	GetPrivateProfileStringW(SECTION_NAME, L"UserName", L"",
+		config->userName, sizeof(config->userName) / sizeof(wchar_t),
+		filepath);
+
+	GetPrivateProfileStringW(SECTION_NAME, L"Password", L"",
+		config->password, sizeof(config->password) / sizeof(wchar_t),
+		filepath);
+
+	GetPrivateProfileStringW(SECTION_NAME, L"PrivateKey", L"",
+		config->privateKey, sizeof(config->privateKey) / sizeof(wchar_t),
+		filepath);
+}
+
+// 计算字符串的哈希值
+unsigned int hash(const wchar_t* str, int capacity) {
+	unsigned int hashval = 0;
+	while (*str) {
+		hashval = (*str++) + (hashval << 6) + (hashval << 16) - hashval;
+	}
+	return hashval % capacity;
+}
+
+
+// 初始化配置映射表
+ConfigMap* initConfigMap(int capacity) {
+	ConfigMap* map = (ConfigMap*)malloc(sizeof(ConfigMap));
+	if (map == NULL) {
+		return NULL;
+	}
+
+	map->capacity = capacity;
+	map->table = (HashNode**)calloc(map->capacity, sizeof(HashNode*));
+	if (map->table == NULL) {
+		free(map);
+		return NULL;
+	}
+	map->count = 0;
+	return map;
+}
+
+// 添加配置项
+int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username,
+	const wchar_t* password, const wchar_t* privateKey) {
+	if (map == NULL || name == NULL) return -1;
+
+	// 计算哈希值
+	unsigned int index = hash(name, map->capacity);
+
+	// 检查是否已存在相同的键
+	HashNode* current = map->table[index];
+	while (current != NULL) {
+		if (wcscmp(current->key, name) == 0) {
+			// 更新已存在的项
+			wcscpy_s(current->value.userName, sizeof(current->value.userName) / sizeof(wchar_t), username);
+			wcscpy_s(current->value.password, sizeof(current->value.password) / sizeof(wchar_t), password);
+			wcscpy_s(current->value.privateKey, sizeof(current->value.privateKey) / sizeof(wchar_t), privateKey);
+			return 0;
+		}
+		current = current->next;
+	}
+
+	// 创建新节点
+	HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+	if (newNode == NULL) return -1;
+
+	wcscpy_s(newNode->key, sizeof(newNode->key) / sizeof(wchar_t), name);
+	wcscpy_s(newNode->value.name, sizeof(newNode->value.name) / sizeof(wchar_t), name);
+	wcscpy_s(newNode->value.userName, sizeof(newNode->value.userName) / sizeof(wchar_t), username);
+	wcscpy_s(newNode->value.password, sizeof(newNode->value.password) / sizeof(wchar_t), password);
+	wcscpy_s(newNode->value.privateKey, sizeof(newNode->value.privateKey) / sizeof(wchar_t), privateKey);
+
+	// 添加到链表头部
+	newNode->next = map->table[index];
+	map->table[index] = newNode;
+	map->count++;
+
+	return 0;
+}
+
+// 根据Name查找配置
+CredentialInfo* findConfigByName(ConfigMap* map, const wchar_t* name) {
+	if (map == NULL || name == NULL) return NULL;
+
+	// 计算哈希值
+	unsigned int index = hash(name, map->capacity);
+
+	// 在链表中查找
+	HashNode* current = map->table[index];
+	while (current != NULL) {
+		if (wcscmp(current->key, name) == 0) {
+			return &(current->value);
+		}
+		current = current->next;
+	}
+
+	return NULL;
+}
+
+// 释放配置映射表内存
+void FreeConfigMap(ConfigMap* map) {
+	if (map == NULL) return;
+
+	for (int i = 0; i < map->capacity; i++) {
+		HashNode* current = map->table[i];
+		while (current != NULL) {
+			HashNode* temp = current;
+			current = current->next;
+			free(temp);
+		}
+		map->table[i] = NULL;
+	}
+	// 释放桶数组
+	free(map->table);
+	// 释放哈希表结构体
+	free(map);
 }

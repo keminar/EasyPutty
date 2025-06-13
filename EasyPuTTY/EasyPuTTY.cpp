@@ -151,7 +151,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wchar_t fontPropertyVal[LF_FACESIZE];
 		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
 		// here we specify default properties of font shared by all editor instances
-		g_tabWindowsInfo.editorFontProperties.lfHeight = -17; // this height seems fine
+		g_tabWindowsInfo.editorFontProperties.lfHeight = -14; // this height seems fine
 		g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
 		g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
 		g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
@@ -164,7 +164,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		g_tabWindowsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 		g_tabWindowsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
 		g_tabWindowsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
-		wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
+		//wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
 		g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
 
 		// 创建工具条和标签
@@ -230,10 +230,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 				// tab焦点不能写在TabCtrl_GetCurSel前
 				if (tabCtrlItemInfo.attachWindowHandle) {
-					SetForegroundWindow(tabCtrlItemInfo.attachWindowHandle);
-				}
-				else {
 					SetForegroundWindow(tabCtrlItemInfo.hostWindowHandle);
+					for (int i = 0; i < 100; i++) {
+						if (tabCtrlItemInfo.hostWindowHandle == GetForegroundWindow()) {
+							break;
+						}
+					}
+					// 延迟一小段时间，确保窗口已完全激活
+					//Sleep(100);
+					SetForegroundWindow(tabCtrlItemInfo.attachWindowHandle);
+					for (int i = 0; i < 100; i++) {
+						if (tabCtrlItemInfo.attachWindowHandle == GetForegroundWindow()) {
+							// 设置焦点
+							SetFocus(tabCtrlItemInfo.attachWindowHandle);
+						}
+					}
 				}
 			}
 		}
@@ -428,19 +439,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
-}
-
-// 假设hWnd是你想要聚焦的窗口句柄
-void FocusWindow(HWND hWnd) {
-	if (!hWnd) {
-		return;
-	}
-	// 尝试将窗口带到前台并聚焦
-	if (!SetForegroundWindow(hWnd)) {
-		// 如果SetForegroundWindow失败，可以尝试其他方法
-		BringWindowToTop(hWnd);
-		SetFocus(hWnd);
-	}
 }
 
 int GetTitleBarHeightWithoutMenu(HWND hWnd) {
@@ -671,7 +669,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	TabCtrl_SetItemExtra(tabCtrlWinHandle, sizeof(TCCUSTOMITEM) - sizeof(TCITEMHEADER));
 
 	// Here we specify properties of font used in tab captions
-	tabCaptionFont.lfHeight = -17; // this height seems fine
+	tabCaptionFont.lfHeight = -14;
 	tabCaptionFont.lfWidth = 0;
 	tabCaptionFont.lfEscapement = 0;
 	tabCaptionFont.lfOrientation = 0;
