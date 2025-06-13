@@ -59,7 +59,8 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 // 执行命令在新标签打开
 void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 	wchar_t szText[256] = { 0 };
-	ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+	int column = 2;//第几列的值
+	ListView_GetItemText(hListView, selectedItem, column, szText, sizeof(szText));
 	// 通过发送自定义消息获取主窗口句柄
 	HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 	if (mainWindow) {
@@ -70,16 +71,20 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 
 // 创建窗口
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
-	wchar_t sessionsPath[MAX_PATH], credentialPath[MAX_PATH];
-	int sessionCount, credentialCount;
-	wchar_t** sessionFileList;
-	wchar_t** credentialFileList;
-	SessionInfo *sessionConfig;
-	CredentialInfo *credentialConfig;
+	wchar_t sessionsPath[MAX_PATH] = { 0 }, credentialPath[MAX_PATH] = { 0 };
+	int sessionCount = 0, credentialCount = 0;
+	wchar_t** sessionFileList = NULL;
+	wchar_t** credentialFileList = NULL;
+	SessionInfo sessionConfig = {0};
+	CredentialInfo credentialConfig = { 0 };
+	CredentialInfo* foundCredential = NULL;
+	ConfigMap* credentialMap = NULL;
 	wchar_t command[MAX_COMMAND_LEN] = { 0 };
 	int nItem = 0;
-	ConfigMap* credentialMap;
 
+	wchar_t app1[MAX_PATH] = { 0 };
+	wchar_t app2[MAX_PATH] = { 0 };
+	wchar_t putty[MAX_PATH] = { 0 };
 
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
@@ -106,49 +111,46 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	// 初始化列表视图列
 	InitializeListViewColumns(hListView);
 
-	WCHAR app1[256] = { 0 };
-	WCHAR app2[256] = { 0 };
-	//TCHAR app1[MAX_PATH] = { 0 };
+	// 自定义
+	GetPrivateProfileStringW(SECTION_NAME, L"putty", L"", putty, MAX_PATH, IniName);
 	GetPrivateProfileStringW(L"Program", L"app1", L"", app1, MAX_PATH, IniName);
 	GetPrivateProfileStringW(L"Program", L"app2", L"", app2, MAX_PATH, IniName);
 
-	// 添加示例数据
 	if (wcscmp(app1, L"") != 0) {
 		AddListViewItem(hListView, nItem, L"app1", L"自定义", app1, L"", L"", L"是");
 		nItem++;
+	}
+	if (wcscmp(app2, L"") != 0) {
 		AddListViewItem(hListView, nItem, L"app2", L"自定义", app2, L"", L"", L"是");
 		nItem++;
 	}
 
-
-	// 初始化
-	sessionConfig = (SessionInfo*)malloc(sizeof(SessionInfo));
-	credentialConfig = (CredentialInfo*)malloc(sizeof(CredentialInfo));
-
+	// 凭证
 	GetPuttyCredentialPath(credentialPath, MAX_PATH);
 	credentialFileList = ListIniFiles(credentialPath, &credentialCount);
 	credentialMap = initConfigMap(credentialCount);
 	if (credentialMap) {
 		for (int i = 0; i < credentialCount; i++) {
 			if (credentialFileList[i] != NULL) {
-				ReadCredentialFromIni(credentialFileList[i], credentialConfig);
-				addConfig(credentialMap, credentialConfig->name, credentialConfig->userName, credentialConfig->password, credentialConfig->privateKey);
+				ReadCredentialFromIni(credentialFileList[i], &credentialConfig);
+				addConfig(credentialMap, credentialConfig.name, credentialConfig.userName, credentialConfig.password, credentialConfig.privateKey);
 			}
 		}
 	}
-
+	// 会话
 	GetPuttySessionsPath(sessionsPath, MAX_PATH);
 	sessionFileList = ListIniFiles(sessionsPath, &sessionCount);
 	for (int i = 0; i < sessionCount; i++) {
 		if (sessionFileList[i] != NULL) {
 			// 读取配置
-			ReadSessionFromIni(sessionFileList[i], sessionConfig);
-			credentialConfig = findConfigByName(credentialMap, sessionConfig->credential);
-			swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s@%s", L".\\putty.exe", credentialConfig->userName, sessionConfig->hostName);
-			AddListViewItem(hListView, nItem, sessionConfig->name, L"PuTTY", command, sessionConfig->tags, sessionConfig->credential, L"是");
+			ReadSessionFromIni(sessionFileList[i], &sessionConfig);
+			foundCredential = findConfigByName(credentialMap, sessionConfig.credential);
+			swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s@%s", putty, foundCredential->userName, sessionConfig.hostName);
+			AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, L"是");
 			nItem++;
 		}
 	}
+	//释放内存
 	FreeConfigMap(credentialMap);
 	FreeFileList(credentialFileList, credentialCount);
 	FreeFileList(sessionFileList, sessionCount);
@@ -244,7 +246,7 @@ void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize) {
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount) {
 	WIN32_FIND_DATAW findData;
 	HANDLE hFind;
-	wchar_t searchPath[MAX_PATH];
+	wchar_t searchPath[MAX_PATH] = { 0 };
 	wchar_t** fileList = NULL;
 	int count = 0;
 	int capacity = 10;  // 初始容量
@@ -373,8 +375,6 @@ void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
 
 // 从INI文件读取配置信息
 void ReadCredentialFromIni(const wchar_t* filepath, CredentialInfo* config) {
-	// 初始化结构体
-	ZeroMemory(config, sizeof(CredentialInfo));
 
 	// 读取Name
 	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
