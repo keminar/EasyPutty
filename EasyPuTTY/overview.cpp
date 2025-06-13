@@ -144,8 +144,36 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 		if (sessionFileList[i] != NULL) {
 			// 读取配置
 			ReadSessionFromIni(sessionFileList[i], &sessionConfig);
+			if (sessionConfig.hostName[0] == L'\0') {
+				continue;
+			}
 			foundCredential = findConfigByName(credentialMap, sessionConfig.credential);
-			swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s@%s", putty, foundCredential->userName, sessionConfig.hostName);
+			if (foundCredential) {
+				if (foundCredential->userName[0] != L'\0') {
+					swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s@%s", putty, foundCredential->userName, sessionConfig.hostName);
+				}
+				else {
+					swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s", putty, sessionConfig.hostName);
+				}
+				if (foundCredential->privateKey[0] != L'\0') {
+					swprintf(command, MAX_COMMAND_LEN, L"%s -i %s", command, foundCredential->privateKey);
+				}
+				if (foundCredential->password[0] != L'\0') {
+					swprintf(command, MAX_COMMAND_LEN, L"%s -pw %s", command, foundCredential->password);
+				}
+			}
+			else {
+				swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s", putty, sessionConfig.hostName);
+			}
+			if (wcscmp(sessionConfig.connectType, L"SSHv1") == 0) {
+				swprintf(command, MAX_COMMAND_LEN, L"%s -1", command);
+			}
+			if (sessionConfig.port != 22) {
+				swprintf(command, MAX_COMMAND_LEN, L"%s -P %d", command, sessionConfig.port);
+			}
+			if (sessionConfig.otherParams[0] != L'\0') {
+				swprintf(command, MAX_COMMAND_LEN, L"%s %s", command, sessionConfig.otherParams);
+			}
 			AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, L"是");
 			nItem++;
 		}
@@ -343,6 +371,8 @@ void FreeFileList(wchar_t** fileList, int fileCount) {
 
 // 从INI文件读取配置信息
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
+	// 防止多次读取数据污染
+	ZeroMemory(config, sizeof(SessionInfo));
 	// 读取Name
 	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
 		config->name, sizeof(config->name) / sizeof(wchar_t),
@@ -370,12 +400,18 @@ void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
 	GetPrivateProfileStringW(SECTION_NAME, L"Tags", L"",
 		config->tags, sizeof(config->tags) / sizeof(wchar_t),
 		filepath);
+	// 自定义参数
+	GetPrivateProfileStringW(SECTION_NAME, L"OtherParams", L"",
+		config->otherParams, sizeof(config->otherParams) / sizeof(wchar_t),
+		filepath);
+	
 }
 
 
 // 从INI文件读取配置信息
 void ReadCredentialFromIni(const wchar_t* filepath, CredentialInfo* config) {
-
+	// 防止多次读取数据污染
+	ZeroMemory(config, sizeof(CredentialInfo));
 	// 读取Name
 	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
 		config->name, sizeof(config->name) / sizeof(wchar_t),
@@ -439,6 +475,7 @@ int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username,
 			wcscpy_s(current->value.privateKey, sizeof(current->value.privateKey) / sizeof(wchar_t), privateKey);
 			return 0;
 		}
+		// 索引键相同，但是非相同项，添加链表
 		current = current->next;
 	}
 

@@ -11,6 +11,7 @@ typedef struct {
 	int port;
 	wchar_t connectType[64];
 	wchar_t credential[256];
+	wchar_t otherParams[256];
 	wchar_t tags[256];
 } SessionInfo;
 
@@ -23,7 +24,7 @@ typedef struct {
 
 // ¹þÏ£±í½Úµã
 typedef struct HashNode {
-	wchar_t key[100];
+	wchar_t key[256];
 	CredentialInfo value;
 	struct HashNode* next;
 } HashNode;
