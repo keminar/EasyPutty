@@ -116,11 +116,14 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	GetPrivateProfileStringW(L"Program", L"app1", L"", app1, MAX_PATH, IniName);
 	GetPrivateProfileStringW(L"Program", L"app2", L"", app2, MAX_PATH, IniName);
 
-	if (wcscmp(app1, L"") != 0) {
+	if (putty[0] == L'\0') {
+		wcscpy_s(putty, MAX_PATH, L".\\putty.exe");
+	}
+	if (app1[0] != L'\0') {
 		AddListViewItem(hListView, nItem, L"app1", L"自定义", app1, L"", L"", L"是");
 		nItem++;
 	}
-	if (wcscmp(app2, L"") != 0) {
+	if (app2[0] != L'\0') {
 		AddListViewItem(hListView, nItem, L"app2", L"自定义", app2, L"", L"", L"是");
 		nItem++;
 	}
