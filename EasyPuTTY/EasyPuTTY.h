@@ -34,7 +34,6 @@ void selectTab(HWND tabCtrlWinHandle, int tabIndex);
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected);
 TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);
 HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i);
-void FocusWindow(HWND hWnd);
 HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
 RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
 HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow);

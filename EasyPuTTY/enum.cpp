@@ -4,14 +4,13 @@
 #include <vector>
 #include <psapi.h>
 #include <tlhelp32.h>
-#include <vector>
 
 // 链接所需库
 #pragma comment(lib, "psapi.lib")
 
 // 全局变量:
 WCHAR myWindowClass[256];            // 主窗口类名
-HWND enumWindow;
+HWND enumWindow;                     // 当前窗口句柄
 
 // 存储窗口信息的结构体
 struct WindowInfo {
