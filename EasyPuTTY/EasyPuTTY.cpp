@@ -149,9 +149,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		// application properties
 		wchar_t fontPropertyVal[LF_FACESIZE];
-		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
+		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Microsoft Sans Serif");
+		//StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
 		// here we specify default properties of font shared by all editor instances
-		g_tabWindowsInfo.editorFontProperties.lfHeight = -14; // this height seems fine
+		g_tabWindowsInfo.editorFontProperties.lfHeight = -16; //字体大小
 		g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
 		g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
 		g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
@@ -164,7 +165,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		g_tabWindowsInfo.editorFontProperties.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 		g_tabWindowsInfo.editorFontProperties.lfQuality = DEFAULT_QUALITY;
 		g_tabWindowsInfo.editorFontProperties.lfPitchAndFamily = DEFAULT_PITCH;
-		//wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
+		wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
 		g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
 
 		// 创建工具条和标签
@@ -680,7 +681,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	TabCtrl_SetItemExtra(tabCtrlWinHandle, sizeof(TCCUSTOMITEM) - sizeof(TCITEMHEADER));
 
 	// Here we specify properties of font used in tab captions
-	tabCaptionFont.lfHeight = -14;
+	tabCaptionFont.lfHeight = -16;
 	tabCaptionFont.lfWidth = 0;
 	tabCaptionFont.lfEscapement = 0;
 	tabCaptionFont.lfOrientation = 0;
