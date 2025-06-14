@@ -18,6 +18,8 @@
 #define IDD_ENUMWIN                     131
 #define IDC_BUTTON1                     1004
 #define IDC_REFRESH                     1004
+#define IDC_SYSLINK1                    1005
+#define IDC_SYSLINK2                    1006
 #define IDM_OPEN                        32772
 #define IDM_CLOSE                       32773
 #define ID_ENUM_WINDOW                  32774
@@ -33,6 +35,7 @@
 #define ID_Menu                         32784
 #define ID_DEATCH                       32785
 #define ID_TAB_DETACH                   32786
+#define ID_TODO                         32787
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -42,7 +45,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32788
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_CONTROL_VALUE         1007
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
