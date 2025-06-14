@@ -29,7 +29,7 @@ void selectedTabToLeftmost();
 void selectedTabToLeft();
 
 int GetTitleBarHeightWithoutMenu(HWND hWnd);
-BOOL setTabWindowPos(HWND overviewWinHandle, HWND attachWindowHandle, RECT rc);
+BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc);
 void selectTab(HWND tabCtrlWinHandle, int tabIndex);
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected);
 TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);

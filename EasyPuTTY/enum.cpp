@@ -1,7 +1,6 @@
 #pragma once
 
 #include "enum.h"
-#include <vector>
 #include <psapi.h>
 #include <tlhelp32.h>
 
@@ -11,15 +10,6 @@
 // 全局变量:
 WCHAR myWindowClass[256];            // 主窗口类名
 HWND enumWindow;                     // 当前窗口句柄
-
-// 存储窗口信息的结构体
-struct WindowInfo {
-	HWND hWnd;
-	wchar_t title[MAX_PATH];
-	DWORD processId;
-	wchar_t processName[MAX_PATH];
-	wchar_t processPath[MAX_PATH];
-};
 
 // 获取进程名称和路径
 BOOL GetProcessInfo(DWORD processId, wchar_t* processName, wchar_t* processPath, DWORD bufferSize) {
@@ -76,7 +66,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	GetWindowThreadProcessId(hWnd, &processId);
 
 	// 获取存储窗口信息的向量
-	std::vector<WindowInfo>* pWindows = reinterpret_cast<std::vector<WindowInfo>*>(lParam);
+	WindowVector* pWindows = (WindowVector*)lParam;
 
 	// 存储窗口信息
 	WindowInfo info = { 0 };
@@ -109,7 +99,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 		return TRUE;
 	}
 	
-	pWindows->push_back(info);
+	AddWindowVector(pWindows, &info);
 
 	return TRUE; // 继续枚举
 }
@@ -117,7 +107,8 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 // 创建窗口
 void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND parentWindow) {
 	RECT rc;
-	std::vector<WindowInfo> windows;
+	WindowVector* windows;
+	WindowInfo* info;
 
 	enumWindow = parentWindow;
 	GetClientRect(parentWindow, &rc);
@@ -147,25 +138,22 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 	LoadStringW(hInstance, IDC_EASYPUTTY, myWindowClass, sizeof(myWindowClass)/sizeof(wchar_t));
 	 
 	// 枚举所有窗口
-	EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&windows));
+	windows = InitWindowVector(10);
+	EnumWindows(EnumWindowsProc, (LPARAM)windows);
 
 	// 将窗口信息添加到ListView
 	wchar_t pidText[20];
 
-	for (size_t i = 0; i < windows.size(); i++) {
-		swprintf_s(pidText, L"%lu", windows[i].processId);
-		AddEnumItem(hListView, i, pidText, 0, windows[i].hWnd);
+	for (size_t i = 0; i < windows->size; i++) {
+		info = WindowVectorGet(windows, i);
+		swprintf_s(pidText, L"%lu", info->processId);
+		AddEnumItem(hListView, i, pidText, 0, info->hWnd);
 
-		AddEnumItem(hListView, i, windows[i].title, 1, windows[i].hWnd);
-		AddEnumItem(hListView, i, windows[i].processName, 2, windows[i].hWnd);
-		AddEnumItem(hListView, i, windows[i].processPath, 3, windows[i].hWnd);
+		AddEnumItem(hListView, i, info->title, 1, info->hWnd);
+		AddEnumItem(hListView, i, info->processName, 2, info->hWnd);
+		AddEnumItem(hListView, i, info->processPath, 3, info->hWnd);
 	}
-
-
-	// 子类化宿主窗口
-	//WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
-	// 存储原始窗口过程，用于后续调用
-	//SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
+	FreeWindowVector(windows);
 }
 
 // 初始化列表视图列
@@ -213,4 +201,66 @@ void AddEnumItem(HWND hWndListView, int nItem, const wchar_t* pszText, int nSubI
 	else {
 		ListView_SetItemText(hWndListView, nItem, nSubItem, (LPWSTR)pszText);
 	}
+}
+
+
+WindowVector* InitWindowVector(size_t capacity)
+{
+	WindowVector* vec = (WindowVector*)malloc(sizeof(WindowVector));
+	if (!vec) {
+		return NULL;
+	}
+	WindowInfo* data = (WindowInfo*)malloc(capacity * sizeof(WindowInfo));
+	if (!data) {
+		free(vec);
+		return NULL;
+	}
+	vec->data = data;
+	vec->size = 0;
+	vec->capacity = capacity;
+	return vec;
+}
+
+void FreeWindowVector(WindowVector* vec)
+{
+	if (vec) {
+		if (vec->data) free(vec->data);
+		free(vec);
+	}
+}
+
+// static 限制函数本文件可见，不在头文件定义
+static int resize(WindowVector* vec, size_t newCapacity)
+{
+	WindowInfo* newData = (WindowInfo*)realloc(vec->data, newCapacity * sizeof(WindowInfo));
+	if (!newData) return 0;
+
+	vec->data = newData;
+	vec->capacity = newCapacity;
+	return 1;
+}
+
+int AddWindowVector(WindowVector* vec, const WindowInfo* info)
+{
+	if (!vec) return 0;
+	if (vec->size >= vec->capacity) {
+		size_t newCapacity = vec->capacity ? vec->capacity * 2 : 10;
+		if (!resize(vec, newCapacity)) return 0;
+	}
+	memcpy(&vec->data[vec->size], info, sizeof(WindowInfo));
+	vec->size++;
+	return 1;
+}
+
+size_t WindowVectorSize(WindowVector* vec)
+{
+	if (!vec) return 0;
+	return vec->size;
+}
+
+WindowInfo* WindowVectorGet(WindowVector* vec, size_t index)
+{
+	if (!vec) return NULL;
+	if (index >= vec->size) return  NULL;
+	return &vec->data[index];
 }
