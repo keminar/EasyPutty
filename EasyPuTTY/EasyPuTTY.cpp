@@ -296,8 +296,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			selectedTabToRightmost();
 			return 0;
 		}
-		case ID_ENUM_WINDOW: {
+		case IDM_ENUM_WINDOW: {
 			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
+			break;
+		}
+		case IDM_SESSION: {
+			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_SESSION), hWnd, Session);
 			break;
 		}
         case IDM_ABOUT:
@@ -614,6 +618,30 @@ INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return (INT_PTR)FALSE;
 }
 
+INT_PTR CALLBACK Session(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK)
+		{
+			
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
 // “关于”框的消息处理程序。
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -657,12 +685,12 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"新建(&T)" },
 		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" },
-		{ -1, ID_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口" },
-		{ -1, ID_TODO,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置" },
-		{ -1, ID_TODO,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"会话" },
-		{ -1, ID_TODO,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"用户" },
-		{ -1, ID_TODO,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
-		{ -1, ID_TODO,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥" },
+		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口" },
+		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置" },
+		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"会话" },
+		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证" },
+		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
+		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥" },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
 

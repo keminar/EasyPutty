@@ -14,15 +14,26 @@
 #define IDR_MAINFRAME                   128
 #define IDR_MAIN_TOOLBAR                129
 #define IDD_DIALOG1                     131
-#define IDD_ATTACH                      131
-#define IDD_ENUMWIN                     131
+#define IDD_ATTACH                      132
+#define IDD_ENUMWIN                     133
+#define IDD_SESSION                     134
 #define IDC_BUTTON1                     1004
 #define IDC_REFRESH                     1004
 #define IDC_SYSLINK1                    1005
 #define IDC_SYSLINK2                    1006
+#define IDC_SESSION_NAME                1007
+#define IDC_SESSION_IP                  1008
+#define IDC_SESSION_PORT                1009
+#define IDC_SESSION_CONNECT             1010
+#define IDC_SESSION_CREDENTIAL          1011
+#define IDC_CREDENTIAL_ADD              1012
+#define IDC_EDIT4                       1013
+#define IDC_EDIT5                       1014
+#define IDC_EDIT6                       1015
+#define IDC_EDIT7                       1016
 #define IDM_OPEN                        32772
 #define IDM_CLOSE                       32773
-#define ID_ENUM_WINDOW                  32774
+#define IDM_ENUM_WINDOW                 32774
 #define ID_ENUM_VIEW                    32775
 #define ID_ENUM_ATTACH                  32776
 #define ID_LIST_VIEW                    32777
@@ -36,6 +47,11 @@
 #define ID_DEATCH                       32785
 #define ID_TAB_DETACH                   32786
 #define ID_TODO                         32787
+#define IDM_SETTING                     32788
+#define IDM_SESSION                     32789
+#define IDM_CREDENTIAL                  32790 
+#define IDM_PAGEANT                     32791
+#define IDM_PUTTYGEN                    32792
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
