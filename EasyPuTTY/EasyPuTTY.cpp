@@ -300,8 +300,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
 			break;
 		}
+		case IDM_SETTING: {
+			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_SETTING), hWnd, Session);
+			break;
+		}
 		case IDM_SESSION: {
 			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_SESSION), hWnd, Session);
+			break;
+		}
+		case IDM_CREDENTIAL: {
+			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, Session);
+			break;
+		}
+		case IDM_PAGEANT: {
+			startApp(L".\\pageant.exe", FALSE);
+			break;
+		}
+		case IDM_PUTTYGEN: {
+			startApp(L".\\puttygen.exe", TRUE);
 			break;
 		}
         case IDM_ABOUT:
@@ -1076,5 +1092,45 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	// 最后释放资源
 	if (tabCtrlItemInfo.hostWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+	}
+}
+
+int startApp(const wchar_t* appPath, BOOL show) {
+	// 进程启动信息
+	STARTUPINFO si = { 0 };
+	si.cb = sizeof(si);
+	if (!show) {
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE; // 隐藏窗口
+	}
+
+	// 进程信息
+	PROCESS_INFORMATION pi = { 0 };
+
+	// 创建新进程
+	if (CreateProcess(
+		appPath,            // 程序路径
+		NULL,               // 命令行参数
+		NULL,               // 进程安全属性
+		NULL,               // 线程安全属性
+		FALSE,              // 不继承句柄
+		CREATE_NO_WINDOW,   // 关键标志：创建无窗口的进程
+		NULL,               // 环境变量
+		NULL,               // 当前目录
+		&si,                // 启动信息
+		&pi                 // 进程信息
+	)) {
+
+		// 关闭进程和线程句柄
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+		if (!show) {
+			MessageBoxW(g_mainWindowHandle, L"启动成功", L"提示", MB_OK);
+		}
+		return 0;
+	}
+	else {
+		MessageBoxW(g_mainWindowHandle, L"启动失败", L"提示", MB_OK);
+		return 1;
 	}
 }

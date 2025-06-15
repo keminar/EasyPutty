@@ -40,3 +40,4 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow);
 void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd);
 void DetachTab(HWND tabCtrlWinHandle, int indexTab);
 INT_PTR CALLBACK Session(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+int startApp(const wchar_t* appPath, BOOL show);
