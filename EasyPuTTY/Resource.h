@@ -44,6 +44,8 @@
 #define IDC_PAGEANT                     1013
 #define IDC_PASSWORD                    1014
 #define IDC_PUTTYGEN                    1014
+#define IDC_EDIT1                       1014
+#define IDC_OTHER_PARAMS                1014
 #define IDC_NAME                        1015
 #define IDC_PPK                         1016
 #define IDM_OPEN                        32772
@@ -74,6 +76,7 @@
 #define ID_LIST_FILEZILLA               32797
 #define ID_LIST_EDIT                    32798
 #define ID_LIST_DEL                     32799
+#define ID_LIST_REFRESH                 32800
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -83,7 +86,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        137
 #define _APS_NEXT_COMMAND_VALUE         32797
-#define _APS_NEXT_CONTROL_VALUE         1013
+#define _APS_NEXT_CONTROL_VALUE         1015
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

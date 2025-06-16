@@ -92,7 +92,26 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			break;
 		}
 		case ID_LIST_DEL: {
-			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			wchar_t szText[MAX_COMMAND_LEN] = { 0 };
+			wchar_t dirPath[MAX_PATH] = { 0 };
+			wchar_t iniPath[MAX_PATH] = { 0 };
+
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				int column = 0;//第几列的值
+				ListView_GetItemText(hListView, selectedItem, column, szText, sizeof(szText));
+				GetPuttySessionsPath(dirPath, MAX_PATH);
+				PathCombine(iniPath, dirPath, szText);  // 合并目录和文件名
+				PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+				DeleteFile(iniPath);
+				SetListViewData(hListView);
+			}
+			break;
+		}
+		case ID_LIST_REFRESH: {
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			SetListViewData(hListView);
 			break;
 		}
 		case ID_LIST_WINSCP: {
@@ -127,21 +146,6 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 
 // 创建窗口
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
-	wchar_t sessionsPath[MAX_PATH] = { 0 }, credentialPath[MAX_PATH] = { 0 };
-	wchar_t iniPath[MAX_PATH] = { 0 }, programPath[MAX_PATH] = { 0 };
-	wchar_t putty[MAX_PATH] = { 0 }, putty_params[MAX_PATH] = { 0 };
-	int sessionCount = 0, credentialCount = 0, programCount = 0;
-	wchar_t** sessionFileList = NULL;
-	wchar_t** credentialFileList = NULL;
-	wchar_t** programFileList = NULL;
-	SessionInfo sessionConfig = { 0 };
-	ProgramInfo programConfig = { 0 };
-	CredentialInfo credentialConfig = { 0 };
-	CredentialInfo* foundCredential = NULL;
-	ConfigMap* credentialMap = NULL;
-	wchar_t command[MAX_COMMAND_LEN] = { 0 };
-	int nItem = 0;
-
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
 		L"",
@@ -168,6 +172,33 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 
 	// 初始化列表视图列
 	InitializeListViewColumns(hListView);
+
+	SetListViewData(hListView);
+
+	// 子类化宿主窗口
+	WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
+	// 存储原始窗口过程，用于后续调用
+	SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
+}
+
+void SetListViewData(HWND hListView) {
+	wchar_t sessionsPath[MAX_PATH] = { 0 }, credentialPath[MAX_PATH] = { 0 };
+	wchar_t iniPath[MAX_PATH] = { 0 }, programPath[MAX_PATH] = { 0 };
+	wchar_t putty[MAX_PATH] = { 0 }, putty_params[MAX_PATH] = { 0 };
+	int sessionCount = 0, credentialCount = 0, programCount = 0;
+	wchar_t** sessionFileList = NULL;
+	wchar_t** credentialFileList = NULL;
+	wchar_t** programFileList = NULL;
+	SessionInfo sessionConfig = { 0 };
+	ProgramInfo programConfig = { 0 };
+	CredentialInfo credentialConfig = { 0 };
+	CredentialInfo* foundCredential = NULL;
+	ConfigMap* credentialMap = NULL;
+	wchar_t command[MAX_COMMAND_LEN] = { 0 };
+	int nItem = 0;
+
+	// 先清掉数据
+	ListView_DeleteAllItems(hListView);
 
 	// putty路径
 	GetAppIni(iniPath, MAX_PATH);
@@ -250,11 +281,6 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	FreeConfigMap(credentialMap);
 	FreeFileList(credentialFileList, credentialCount);
 	FreeFileList(sessionFileList, sessionCount);
-
-	// 子类化宿主窗口
-	WNDPROC originalProc = (WNDPROC)SetWindowLongPtrW(hostWindow, GWLP_WNDPROC, (LONG_PTR)HostWindowProc);
-	// 存储原始窗口过程，用于后续调用
-	SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
 }
 
 // 初始化列表视图列
