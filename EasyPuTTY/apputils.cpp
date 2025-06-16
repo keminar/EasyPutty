@@ -15,6 +15,7 @@ BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
 	WCHAR path[MAX_PATH];
 	wcscpy_s(path, lpPath);
 
+	MessageBox(NULL, path, L"1", MB_OK);
 	// 转换斜杠并处理每个组件
 	for (WCHAR* p = path; *p; p++) {
 		if (*p == L'/' || *p == L'\\') {
@@ -22,11 +23,12 @@ BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
 
 			// 跳过连续斜杠
 			if (p > path && *(p - 1) == L'\\') continue;
+			// 跳过驱动器号后的冒号 (如 "C:")
+			if (p == path + 2 && *(p - 1) == L':') continue;
 
 			// 临时截断路径
 			WCHAR orig = *p;
 			*p = L'\0';
-
 			// 创建目录（忽略已存在错误）
 			if (!CreateDirectoryW(path, NULL)) {
 				DWORD err = GetLastError();
