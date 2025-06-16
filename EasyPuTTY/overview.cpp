@@ -2,10 +2,7 @@
 
 #include "overview.h"
 
-#define IniName L".\\EasyPuTTY.ini"
-#define SECTION_NAME L"Settings"
-
-#define MAX_COMMAND_LEN 8190 //命令最大长度
+static HINSTANCE g_appInstance;
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -47,9 +44,50 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					}
 				}
 			}
+			else if (pnmh->code == NM_RCLICK){
+				// 获取鼠标位置（屏幕坐标）
+				POINT pt;
+				GetCursorPos(&pt);
+
+				// 检查是否右键点击了某个项目
+				LVHITTESTINFO hitTestInfo;
+				hitTestInfo.pt = pt;
+				ScreenToClient(hListView, &hitTestInfo.pt);
+
+				// 测试点击位置
+				int itemIndex = ListView_HitTest(hListView, &hitTestInfo);
+
+				// 如果点击了某个项目，选中它
+				if (itemIndex != -1) {
+					ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED, LVIS_SELECTED);
+				}
+				// 加载菜单资源
+				HMENU hMenu = LoadMenu(g_appInstance, MAKEINTRESOURCE(IDR_SESSION));
+				HMENU hSubMenu = GetSubMenu(hMenu, 0);
+
+				// 显示右键菜单（TrackPopupMenu是阻塞函数，会等待用户选择菜单项）
+				TrackPopupMenu(hSubMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON,
+					pt.x, pt.y, 0, hwnd, NULL);
+
+				// 释放菜单资源
+				DestroyMenu(hMenu);
+			}
 		}
 		}
 		break;
+		case WM_COMMAND:{
+			switch (LOWORD(wParam)) {
+			case ID_RUN_COMMAND: {
+				HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+				int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+				if (selectedItem != -1) {
+					execCommand(hwnd, hListView, selectedItem);
+				}
+				break;
+			}
+			}
+			break;
+		}
 	}
 
 	// 其他消息交给原始窗口过程处理
@@ -72,19 +110,19 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 // 创建窗口
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
 	wchar_t sessionsPath[MAX_PATH] = { 0 }, credentialPath[MAX_PATH] = { 0 };
-	int sessionCount = 0, credentialCount = 0;
+	wchar_t iniPath[MAX_PATH] = { 0 }, programPath[MAX_PATH] = { 0 };
+	wchar_t putty[MAX_PATH] = { 0 }, putty_params[MAX_PATH] = { 0 };
+	int sessionCount = 0, credentialCount = 0, programCount = 0;
 	wchar_t** sessionFileList = NULL;
 	wchar_t** credentialFileList = NULL;
-	SessionInfo sessionConfig = {0};
+	wchar_t** programFileList = NULL;
+	SessionInfo sessionConfig = { 0 };
+	ProgramInfo programConfig = { 0 };
 	CredentialInfo credentialConfig = { 0 };
 	CredentialInfo* foundCredential = NULL;
 	ConfigMap* credentialMap = NULL;
 	wchar_t command[MAX_COMMAND_LEN] = { 0 };
 	int nItem = 0;
-
-	wchar_t app1[MAX_PATH] = { 0 };
-	wchar_t app2[MAX_PATH] = { 0 };
-	wchar_t putty[MAX_PATH] = { 0 };
 
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
@@ -101,6 +139,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
 		return;
 	}
+	g_appInstance = hInstance;
 	// 设置字体
 	SendMessageW(hListView, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
 
@@ -111,21 +150,28 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	// 初始化列表视图列
 	InitializeListViewColumns(hListView);
 
-	// 自定义
-	GetPrivateProfileStringW(SECTION_NAME, L"putty", L"", putty, MAX_PATH, IniName);
-	GetPrivateProfileStringW(L"Program", L"app1", L"", app1, MAX_PATH, IniName);
-	GetPrivateProfileStringW(L"Program", L"app2", L"", app2, MAX_PATH, IniName);
-
+	// putty路径
+	GetAppIni(iniPath, MAX_PATH);
+	GetPrivateProfileStringW(SECTION_NAME, L"Putty", L"", putty, MAX_PATH, iniPath);
 	if (putty[0] == L'\0') {
 		wcscpy_s(putty, MAX_PATH, L".\\putty.exe");
 	}
-	if (app1[0] != L'\0') {
-		AddListViewItem(hListView, nItem, L"app1", L"自定义", app1, L"", L"", L"是");
-		nItem++;
+	GetPrivateProfileStringW(SECTION_NAME, L"Putty_params", L"", putty_params, MAX_PATH, iniPath);
+	if (putty_params[0] != L'\0') {
+		swprintf(putty, MAX_COMMAND_LEN, L"%s %s", putty, putty_params);
 	}
-	if (app2[0] != L'\0') {
-		AddListViewItem(hListView, nItem, L"app2", L"自定义", app2, L"", L"", L"是");
-		nItem++;
+
+	// 自定义程序
+	GetProgramPath(programPath, MAX_PATH);
+	programFileList = ListIniFiles(programPath, &programCount);
+	for (int i = 0; i < programCount; i++) {
+		if (programFileList[i] != NULL) {
+			ReadProgramFromIni(programFileList[i], &programConfig);
+			if (programConfig.command[0] != L'\0') {
+				AddListViewItem(hListView, nItem, programConfig.name, L"自定义", programConfig.command, programConfig.tags, L"", L"是");
+				nItem++;
+			}
+		}
 	}
 
 	// 凭证
@@ -249,30 +295,6 @@ void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wc
 	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)input);
 }
 
-void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
-	// 获取当前可执行文件的完整路径
-	GetModuleFileNameW(NULL, buffer, bufferSize);
-
-	// 查找最后一个反斜杠
-	wchar_t* lastSlash = wcsrchr(buffer, L'\\');
-	if (lastSlash) {
-		// 截断路径，只保留目录部分
-		*(lastSlash + 1) = L'\0';
-	}
-}
-
-void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize) {
-	GetCurrentDirectoryPath(buffer, bufferSize);
-	// 追加目标路径
-	wcscat_s(buffer, bufferSize, L"config\\putty\\sessions");
-}
-
-void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize) {
-	GetCurrentDirectoryPath(buffer, bufferSize);
-	// 追加目标路径
-	wcscat_s(buffer, bufferSize, L"config\\putty\\credential");
-}
-
 // 获取指定目录下的所有INI文件
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount) {
 	WIN32_FIND_DATAW findData;
@@ -373,6 +395,27 @@ void FreeFileList(wchar_t** fileList, int fileCount) {
 }
 
 // 从INI文件读取配置信息
+void ReadProgramFromIni(const wchar_t* filepath, ProgramInfo* config) {
+	// 防止多次读取数据污染
+	ZeroMemory(config, sizeof(ProgramInfo));
+	// 读取Name
+	GetPrivateProfileStringW(SECTION_NAME, L"Name", L"",
+		config->name, sizeof(config->name) / sizeof(wchar_t),
+		filepath);
+
+	// 读取Command
+	GetPrivateProfileStringW(SECTION_NAME, L"Command", L"",
+		config->command, sizeof(config->command) / sizeof(wchar_t),
+		filepath);
+	 
+	// 读取Tags
+	GetPrivateProfileStringW(SECTION_NAME, L"Tags", L"",
+		config->tags, sizeof(config->tags) / sizeof(wchar_t),
+		filepath);
+	
+}
+
+// 从INI文件读取配置信息
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
 	// 防止多次读取数据污染
 	ZeroMemory(config, sizeof(SessionInfo));
@@ -407,9 +450,8 @@ void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
 	GetPrivateProfileStringW(SECTION_NAME, L"OtherParams", L"",
 		config->otherParams, sizeof(config->otherParams) / sizeof(wchar_t),
 		filepath);
-	
-}
 
+}
 
 // 从INI文件读取配置信息
 void ReadCredentialFromIni(const wchar_t* filepath, CredentialInfo* config) {

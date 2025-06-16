@@ -297,27 +297,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case IDM_ENUM_WINDOW: {
-			showDialogBox(g_appInstance,&g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
+			showDialogBox(g_appInstance,&g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUMProc);
 			break;
 		}
 		case IDM_SETTING: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SETTING), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SETTING), hWnd, SettingProc);
 			break;
 		}
 		case IDM_SESSION: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hWnd, SessionProc);
 			break;
 		}
 		case IDM_CREDENTIAL: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, CredentialProc);
 			break;
 		}
 		case IDM_PAGEANT: {
-			startApp(L".\\pageant.exe", FALSE);
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			wchar_t pageant[MAX_PATH] = { 0 };
+			// putty路径
+			GetAppIni(iniPath, MAX_PATH);
+			GetPrivateProfileStringW(SECTION_NAME, L"Pageant", L"", pageant, MAX_PATH, iniPath);
+			if (pageant[0] == L'\0') {
+				wcscpy_s(pageant, MAX_PATH, L".\\pageant.exe");
+			}
+			startApp(pageant, FALSE);
 			break;
 		}
 		case IDM_PUTTYGEN: {
-			startApp(L".\\puttygen.exe", TRUE);
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			wchar_t puttygen[MAX_PATH] = { 0 };
+			// putty路径
+			GetAppIni(iniPath, MAX_PATH);
+			GetPrivateProfileStringW(SECTION_NAME, L"Puttygen", L"", puttygen, MAX_PATH, iniPath);
+			if (puttygen[0] == L'\0') {
+				wcscpy_s(puttygen, MAX_PATH, L".\\puttygen.exe");
+			}
+			startApp(puttygen, TRUE);
 			break;
 		}
         case IDM_ABOUT:
@@ -617,12 +633,19 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"新建(&T)" },
 		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" },
-		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口" },
-		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置" },
-		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"会话" },
+		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口(&W)" },
+		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+		
+		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接(&C)" },
 		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证" },
 		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
 		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥" },
+		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+
+		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置" },
+		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他" },
+		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
 

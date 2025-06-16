@@ -4,7 +4,16 @@
 #include "apputils.h"
 
 
+#define MAX_COMMAND_LEN 8190 //命令最大长度
+
 // 存储配置信息的结构体
+
+typedef struct {
+	wchar_t name[256];
+	wchar_t command[MAX_COMMAND_LEN];
+	wchar_t tags[256];
+} ProgramInfo;
+
 typedef struct {
 	wchar_t name[256];
 	wchar_t hostName[256];
@@ -42,14 +51,12 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 void InitializeListViewColumns(HWND hWndListView);
 void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input);
 void execCommand(HWND hwnd, HWND hListView, int selectedItem);
-void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize);
-void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize);
+
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount);
 void FreeFileList(wchar_t** fileList, int fileCount);
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config);
-void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize);
 void ReadCredentialFromIni(const wchar_t* filepath, CredentialInfo* config);
-
+void ReadProgramFromIni(const wchar_t* filepath, ProgramInfo* config);
 
 unsigned int hash(const wchar_t* str, int capacity);
 // 初始化配置映射表
