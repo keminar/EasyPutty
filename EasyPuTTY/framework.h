@@ -20,5 +20,11 @@
 #include <strsafe.h>
 #include <string.h>
 #include <tlhelp32.h>
+#include <commdlg.h>
+#include <shlwapi.h>
+#include <shellapi.h>
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "comdlg32.lib")
+#pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "shell32.lib")

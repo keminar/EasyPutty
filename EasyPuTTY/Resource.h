@@ -19,26 +19,44 @@
 #define IDD_ENUMWIN                     133
 #define IDD_SESSION                     134
 #define IDD_SETTING                     135
+#define IDR_SESSION                     136
 #define IDC_BUTTON1                     1004
 #define IDC_REFRESH                     1004
+#define IDC_BROWSER_PUTTY               1004
 #define IDC_SYSLINK1                    1005
 #define IDC_BUTTON2                     1005
+#define IDC_BROWSER_WINSCP              1005
 #define IDC_SYSLINK2                    1006
 #define IDC_BUTTON3                     1006
+#define IDC_BROWSER_FILEZILLA           1006
 #define IDC_SESSION_NAME                1007
 #define IDC_EDIT1                       1007
+#define IDC_PUTTY                       1007
 #define IDC_SESSION_IP                  1008
 #define IDC_EDIT2                       1008
+#define IDC_WINSCP                      1008
 #define IDC_SESSION_PORT                1009
 #define IDC_EDIT3                       1009
+#define IDC_FILEZILLA                   1009
 #define IDC_SESSION_CONNECT             1010
 #define IDC_BUTTON4                     1010
+#define IDC_USERNAME                    1010
+#define IDC_BROWSER_PAGEANT             1010
 #define IDC_SESSION_CREDENTIAL          1011
+#define IDC_BROWSER                     1011
+#define IDC_BROWSER_PUTTYGEN            1011
 #define IDC_CREDENTIAL_ADD              1012
+#define IDC_PUTTY_PARAMS                1012
 #define IDC_EDIT4                       1013
+#define IDC_TAGS                        1013
+#define IDC_PAGEANT                     1013
 #define IDC_EDIT5                       1014
+#define IDC_PASSWORD                    1014
+#define IDC_PUTTYGEN                    1014
 #define IDC_EDIT6                       1015
+#define IDC_NAME                        1015
 #define IDC_EDIT7                       1016
+#define IDC_PPK                         1016
 #define IDM_OPEN                        32772
 #define IDM_CLOSE                       32773
 #define IDM_ENUM_WINDOW                 32774
@@ -56,10 +74,17 @@
 #define ID_TAB_DETACH                   32786
 #define ID_TODO                         32787
 #define IDM_SETTING                     32788
+#define ID_PUTTY_PUTTY                  32788
 #define IDM_SESSION                     32789
+#define ID_PUTTY_WINSCP                 32789
 #define IDM_CREDENTIAL                  32790
+#define ID_PUTTY_FILEZILLA              32790
 #define IDM_PAGEANT                     32791
+#define ID_PUTTY_32791                  32791
 #define IDM_PUTTYGEN                    32792
+#define ID_PUTTY_32792                  32792
+#define ID_PUTTY                        32793
+#define ID_RUN_COMMAND                  32794
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -67,9 +92,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        136
-#define _APS_NEXT_COMMAND_VALUE         32788
-#define _APS_NEXT_CONTROL_VALUE         1010
+#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_COMMAND_VALUE         32795
+#define _APS_NEXT_CONTROL_VALUE         1013
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
