@@ -1,7 +1,7 @@
 #pragma once
 
 #include "framework.h"
-#include "common.h"
+#include "apputils.h"
 
 
 // 存储配置信息的结构体

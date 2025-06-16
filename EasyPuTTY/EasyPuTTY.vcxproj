@@ -168,7 +168,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="attach.h" />
-    <ClInclude Include="common.h" />
+    <ClInclude Include="apputils.h" />
     <ClInclude Include="EasyPuTTY.h" />
     <ClInclude Include="enum.h" />
     <ClInclude Include="framework.h" />
@@ -178,7 +178,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="attach.cpp" />
-    <ClCompile Include="common.cpp" />
+    <ClCompile Include="apputils.cpp" />
     <ClCompile Include="EasyPuTTY.cpp" />
     <ClCompile Include="enum.cpp" />
     <ClCompile Include="overview.cpp" />

@@ -297,19 +297,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case IDM_ENUM_WINDOW: {
-			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
+			showDialogBox(g_appInstance,&g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUM);
 			break;
 		}
 		case IDM_SETTING: {
-			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_SETTING), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SETTING), hWnd, Session);
 			break;
 		}
 		case IDM_SESSION: {
-			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_SESSION), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hWnd, Session);
 			break;
 		}
 		case IDM_CREDENTIAL: {
-			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, Session);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, Session);
 			break;
 		}
 		case IDM_PAGEANT: {
@@ -321,7 +321,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
         case IDM_ABOUT:
-            DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
             break;
         case IDM_EXIT:
             DestroyWindow(hWnd);
@@ -592,90 +592,6 @@ void selectedTabToLeft() {
 	if (g_tabHitIndex > 0) {
 		moveTabToPosition(&g_tabWindowsInfo, g_tabHitIndex, g_tabHitIndex - 1);
 	}
-}
-
-// “枚举”框的消息处理程序。
-INT_PTR CALLBACK ENUM(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		createEnum(g_appInstance, &g_tabWindowsInfo, hDlg);
-		return (INT_PTR)TRUE;
-
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK)
-		{
-			HWND hListView = GetDlgItem(hDlg, ID_ENUM_VIEW);
-			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
-
-			// 检索HWND
-			LVITEM lvItem = { 0 };
-			lvItem.mask = LVIF_PARAM;
-			lvItem.iItem = selectedItem;
-			ListView_GetItem(hListView, &lvItem);
-			SendMessage(g_mainWindowHandle, WM_COMMAND, ID_ENUM_ATTACH, (LPARAM)lvItem.lParam);
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		else if (LOWORD(wParam) == IDC_REFRESH) {
-			HWND hListView = GetDlgItem(hDlg, ID_ENUM_VIEW);
-			DestroyWindow(hListView);
-			createEnum(g_appInstance, &g_tabWindowsInfo, hDlg);
-			return (INT_PTR)TRUE;
-		}
-		else if (LOWORD(wParam) == IDCANCEL) {
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
-}
-
-INT_PTR CALLBACK Session(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
-
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK)
-		{
-			
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		else if (LOWORD(wParam) == IDCANCEL) {
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
-}
-
-// “关于”框的消息处理程序。
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
 }
 
 // 创建 TabControl 控件
@@ -1092,45 +1008,5 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	// 最后释放资源
 	if (tabCtrlItemInfo.hostWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-	}
-}
-
-int startApp(const wchar_t* appPath, BOOL show) {
-	// 进程启动信息
-	STARTUPINFO si = { 0 };
-	si.cb = sizeof(si);
-	if (!show) {
-		si.dwFlags = STARTF_USESHOWWINDOW;
-		si.wShowWindow = SW_HIDE; // 隐藏窗口
-	}
-
-	// 进程信息
-	PROCESS_INFORMATION pi = { 0 };
-
-	// 创建新进程
-	if (CreateProcess(
-		appPath,            // 程序路径
-		NULL,               // 命令行参数
-		NULL,               // 进程安全属性
-		NULL,               // 线程安全属性
-		FALSE,              // 不继承句柄
-		CREATE_NO_WINDOW,   // 关键标志：创建无窗口的进程
-		NULL,               // 环境变量
-		NULL,               // 当前目录
-		&si,                // 启动信息
-		&pi                 // 进程信息
-	)) {
-
-		// 关闭进程和线程句柄
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-		if (!show) {
-			MessageBoxW(g_mainWindowHandle, L"启动成功", L"提示", MB_OK);
-		}
-		return 0;
-	}
-	else {
-		MessageBoxW(g_mainWindowHandle, L"启动失败", L"提示", MB_OK);
-		return 1;
 	}
 }
