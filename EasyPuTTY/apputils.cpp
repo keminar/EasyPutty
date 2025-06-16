@@ -15,7 +15,6 @@ BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
 	WCHAR path[MAX_PATH];
 	wcscpy_s(path, lpPath);
 
-	MessageBox(NULL, path, L"1", MB_OK);
 	// 转换斜杠并处理每个组件
 	for (WCHAR* p = path; *p; p++) {
 		if (*p == L'/' || *p == L'\\') {
