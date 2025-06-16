@@ -58,9 +58,14 @@ BOOL CreateDirectoryIfNotExists(LPCTSTR lpPathName) {
 	return (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
+// 获取当前可执行文件的完整路径
 void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
-	// 获取当前可执行文件的完整路径
-	GetModuleFileNameW(NULL, buffer, bufferSize);
+	// 用静态变量存起来，防止GetOpenFileName对话框切换目录影响
+	static wchar_t exeFile[MAX_PATH] = { 0 };
+	if (exeFile[0] == L'\0') {
+		GetModuleFileNameW(NULL, exeFile, MAX_PATH);
+	}
+	swprintf(buffer, bufferSize, L"%s", exeFile);
 
 	// 查找最后一个反斜杠
 	wchar_t* lastSlash = wcsrchr(buffer, L'\\');

@@ -171,6 +171,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 创建工具条和标签
 		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
+		//初始化exe运行目录
+		wchar_t tmp[MAX_PATH] = { 0 };
+		GetCurrentDirectoryPath(tmp, MAX_PATH);
 		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
 			MessageBoxW(NULL, L"创建工具条标签失败", L"提示", MB_OK);
 			return 0;
