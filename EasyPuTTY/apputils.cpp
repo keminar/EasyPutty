@@ -3,6 +3,7 @@
 #include "apputils.h"
 #include "enum.h"
 #include "overview.h"
+#include "EasyPuTTY.h"
 
 static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
@@ -195,6 +196,33 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return (INT_PTR)FALSE;
 }
 
+// 查找当前选择的会话行
+BOOL FindSelectedSession(wchar_t* name, int nameLen) {
+	// 当前标签
+	HWND tabCtrlWinHandle = (g_tabWindowsInfo)->tabCtrlWinHandle;
+	int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+	if (sel != -1) {
+		TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+		// 在overview标签上
+		if (!tabCtrlItemInfo.attachWindowHandle) {
+			wchar_t szType[256] = { 0 };
+			HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW);
+			if (!hListView) {
+				return FALSE;
+			}
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+				if (wcsstr(szType, L"PuTTY") != NULL) {
+					ListView_GetItemText(hListView, selectedItem, 0, name, nameLen);
+					return TRUE;
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
 // 会话管理
 INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -224,6 +252,14 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 				SendMessage(credentialComboBox, CB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
 			}
 		}
+
+		// 查找当前选择的会话行
+		wchar_t findName[MAX_PATH] = { 0 };
+		BOOL ret = FindSelectedSession(findName, MAX_PATH);
+		if (ret) {
+			MessageBox(NULL, findName, L"dd", MB_OK);
+		}
+
 		return (INT_PTR)TRUE;
 	}
 

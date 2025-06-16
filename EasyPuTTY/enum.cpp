@@ -98,6 +98,12 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	else if (wcsstr(info.processName, L"WeMail.exe") != NULL) {//微信邮件
 		return TRUE;
 	}
+	else if (wcsstr(info.processName, L"无法访问") != NULL) {
+		return TRUE;
+	}
+	else if (wcsstr(info.processName, L"未知") != NULL) {
+		return TRUE;
+	}
 	
 	AddWindowVector(pWindows, &info);
 

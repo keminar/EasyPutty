@@ -29,6 +29,7 @@ void GetAppIni(wchar_t* buffer, size_t bufferSize);
 void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize);
 void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize);
 void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize);
+BOOL FindSelectedSession(wchar_t* name, int nameLen);
 
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    ENUMProc(HWND, UINT, WPARAM, LPARAM);

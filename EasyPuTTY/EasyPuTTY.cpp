@@ -312,6 +312,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, CredentialProc);
 			break;
 		}
+		case IDM_PROGRAM: {
+			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			break;
+		}
 		case IDM_PAGEANT: {
 			wchar_t iniPath[MAX_PATH] = { 0 };
 			wchar_t pageant[MAX_PATH] = { 0 };
@@ -636,7 +640,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口(&W)" },
 		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
 
-		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接(&C)" },
+		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接" },
 		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证" },
 		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
 		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥" },

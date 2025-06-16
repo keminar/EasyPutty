@@ -3,6 +3,8 @@
 #include "overview.h"
 
 static HINSTANCE g_appInstance;
+static TabWindowsInfo* g_tabWindowsInfo = NULL;
+
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -85,6 +87,22 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			}
 			break;
 		}
+		case ID_LIST_EDIT: {
+			showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hwnd, SessionProc);
+			break;
+		}
+		case ID_LIST_DEL: {
+			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			break;
+		}
+		case ID_LIST_WINSCP: {
+			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			break;
+		}
+		case ID_LIST_FILEZILLA: {
+			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			break;
+		}
 		}
 		break;
 	}
@@ -96,7 +114,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 // 执行命令在新标签打开
 void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
-	wchar_t szText[256] = { 0 };
+	wchar_t szText[MAX_COMMAND_LEN] = { 0 };
 	int column = 2;//第几列的值
 	ListView_GetItemText(hListView, selectedItem, column, szText, sizeof(szText));
 	// 通过发送自定义消息获取主窗口句柄
@@ -140,6 +158,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 		return;
 	}
 	g_appInstance = hInstance;
+	g_tabWindowsInfo = tabWindowsInfo;
 	// 设置字体
 	SendMessageW(hListView, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
 
