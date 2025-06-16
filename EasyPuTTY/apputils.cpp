@@ -35,7 +35,7 @@ void GetProgramPath(wchar_t* buffer, size_t bufferSize) {
 	wcscat_s(buffer, bufferSize, L"config\\program");
 }
 
-void GetAppIni(wchar_t* buffer, size_t bufferSize){
+void GetAppIni(wchar_t* buffer, size_t bufferSize) {
 	GetCurrentDirectoryPath(buffer, bufferSize);
 	wcscat_s(buffer, bufferSize, L"EasyPuTTY.ini");
 }
@@ -214,7 +214,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)L"SSHv1");
 		SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
 
-		
+
 		credentialComboBox = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
 		GetPuttyCredentialPath(credentialPath, MAX_PATH);
 		credentialFileList = ListIniFiles(credentialPath, &credentialCount);
