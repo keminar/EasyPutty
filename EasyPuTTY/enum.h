@@ -1,7 +1,7 @@
 #pragma once
 
 #include "framework.h"
-#include "common.h"
+#include "apputils.h"
 
 typedef struct {
 	HWND hWnd;
