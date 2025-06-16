@@ -27,47 +27,47 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // 初始化通用控件库并启用视觉样式
+	// 初始化通用控件库并启用视觉样式
 	INITCOMMONCONTROLSEX icex;
 	// Initialize common controls.
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
 	icex.dwICC = ICC_TAB_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES;
 	InitCommonControlsEx(&icex);
 
-    // 初始化全局字符串
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_EASYPUTTY, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	// 初始化全局字符串
+	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadStringW(hInstance, IDC_EASYPUTTY, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
 
-    // 执行应用程序初始化:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	// 执行应用程序初始化:
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
 
 	// 注册快捷键来触发菜单命令
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EASYPUTTY));
+	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EASYPUTTY));
 
-    MSG msg;
+	MSG msg;
 
-    // 主消息循环:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+	// 主消息循环:
+	while (GetMessage(&msg, nullptr, 0, 0))
+	{
+		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
 
-    return (int) msg.wParam;
+	return (int)msg.wParam;
 }
 
 
@@ -79,27 +79,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
-    WNDCLASSEXW wcex;
+	WNDCLASSEXW wcex;
 
 	// since it is allocated on stack, we need to clear this memory before we use it
 	memset(&wcex, 0, sizeof(wcex));
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	// 支持双击消息
-    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-	wcex.hIcon          = (HICON)LoadImage(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 32, 32, 0);
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    //wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);//不显示菜单
-    wcex.lpszClassName  = szWindowClass;
-	wcex.hIconSm        = (HICON)LoadImageW(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 16, 16, 0);
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 32, 32, 0);
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	//wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);//不显示菜单
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = (HICON)LoadImageW(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 16, 16, 0);
 
-    return RegisterClassExW(&wcex);
+	return RegisterClassExW(&wcex);
 }
 
 //
@@ -118,17 +118,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	// 通过szWindowClass和前面注册的窗口类wcex关联起来
 	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
-   if (!g_mainWindowHandle)
-   {
-      return FALSE;
-   }
+	if (!g_mainWindowHandle)
+	{
+		return FALSE;
+	}
 
-   ShowWindow(g_mainWindowHandle, nCmdShow);
-   UpdateWindow(g_mainWindowHandle);
+	ShowWindow(g_mainWindowHandle, nCmdShow);
+	UpdateWindow(g_mainWindowHandle);
 
-   return TRUE;
+	return TRUE;
 }
 
 //
@@ -244,7 +244,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						// 很重要，当为前台窗口才能设置焦点
 						if (tabCtrlItemInfo.attachWindowHandle == GetForegroundWindow()) {
 							// 设置焦点
-							SetFocus(tabCtrlItemInfo.attachWindowHandle); 
+							SetFocus(tabCtrlItemInfo.attachWindowHandle);
 							break;
 						}
 						Sleep(30);
@@ -261,12 +261,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		break;
-    case WM_COMMAND: {
+	case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
-        int wmId = LOWORD(wParam);
-        // 分析菜单选择:
-        switch (wmId)
-        {
+		int wmId = LOWORD(wParam);
+		// 分析菜单选择:
+		switch (wmId)
+		{
 		case IDM_OPEN: {
 			AddNewOverview(&g_tabWindowsInfo);
 			break;
@@ -297,7 +297,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case IDM_ENUM_WINDOW: {
-			showDialogBox(g_appInstance,&g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUMProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUMProc);
 			break;
 		}
 		case IDM_SETTING: {
@@ -336,12 +336,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			startApp(puttygen, TRUE);
 			break;
 		}
-        case IDM_ABOUT:
+		case IDM_ABOUT:
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-            break;
-        case IDM_EXIT:
-            DestroyWindow(hWnd);
-            break;
+			break;
+		case IDM_EXIT:
+			DestroyWindow(hWnd);
+			break;
 		case WM_GETMAINWINDOW:
 			// 主窗口直接返回自身句柄
 			return (LRESULT)hWnd;
@@ -429,18 +429,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			return 0;
 		}
-        default:
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
 		break;
-    }
+	}
 	case WM_NOTIFY: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		if (((LPNMHDR)lParam)->hwndFrom == tabCtrlWinHandle) {
 			return processTabNotification(g_tabWindowsInfo.tabCtrlWinHandle, g_tabWindowsInfo.tabMenuHandle, g_mainWindowHandle, ((LPNMHDR)lParam)->code);
 		}
 		break;
-	}	
+	}
 	case WM_LBUTTONDBLCLK: {
 		// 处理鼠标双击事件(不包含标签上面的双击）
 		int x = LOWORD(lParam);
@@ -458,7 +458,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 获取最后一个标签项的矩形
 			RECT tabStripRect = { 0 };
 			RECT toolbarRect;
-			TabCtrl_GetItemRect(tabCtrlWinHandle, count-1, &tabStripRect);
+			TabCtrl_GetItemRect(tabCtrlWinHandle, count - 1, &tabStripRect);
 			// 获取工具栏的屏幕坐标
 			GetWindowRect(g_toolbarHandle, &toolbarRect);
 			// 将工具栏坐标转换为父窗口的客户区坐标
@@ -482,11 +482,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		PostQuitMessage(0);
 		break;
-	}	
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
+	}
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
 }
 
 int GetTitleBarHeightWithoutMenu(HWND hWnd) {
@@ -514,7 +514,7 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 		// 这个要用TRUE
 		MoveWindow(attachWindowHandle, 0, -captionHeight,
 			rc.right - rc.left, rc.bottom - rc.top + captionHeight, TRUE);
-		
+
 	}
 	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 }
@@ -526,9 +526,9 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 
 	switch (code) {
 	case TCN_SELCHANGING: {
-			// Return 0 to allow the selection to change.
-			return 0;
-		}
+		// Return 0 to allow the selection to change.
+		return 0;
+	}
 
 	case TCN_SELCHANGE: {
 		showWindowForSelectedTabItem(tabCtrlWinHandle, -1);
@@ -537,28 +537,28 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 		return 1;
 	}
 	case NM_RCLICK: {
-			GetCursorPos(&absCursorPos);
-			cursorPos = absCursorPos;
-			// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
-			ScreenToClient(tabCtrlWinHandle, &cursorPos);
-			tabControlHitTestInfo.pt = cursorPos;
-			int tabIndex = TabCtrl_HitTest(tabCtrlWinHandle, &tabControlHitTestInfo);
-			int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
-			g_tabHitIndex = tabIndex;
+		GetCursorPos(&absCursorPos);
+		cursorPos = absCursorPos;
+		// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
+		ScreenToClient(tabCtrlWinHandle, &cursorPos);
+		tabControlHitTestInfo.pt = cursorPos;
+		int tabIndex = TabCtrl_HitTest(tabCtrlWinHandle, &tabControlHitTestInfo);
+		int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
+		g_tabHitIndex = tabIndex;
 
-			TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, tabIndex);
+		TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, tabIndex);
 
-			// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
-			EnableMenuItem(tabMenuHandle, ID_TAB_DETACH, !(tabCtrlItemInfo.attachProcessId > 0));
-			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
-			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
-			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
-			EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHTMOST, !(tabIndex < (numTabs - 1)));
-		
-			TrackPopupMenu(tabMenuHandle, TPM_RIGHTBUTTON, absCursorPos.x, absCursorPos.y, 0, menuCommandProcessorWindowHandle, NULL);
+		// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
+		EnableMenuItem(tabMenuHandle, ID_TAB_DETACH, !(tabCtrlItemInfo.attachProcessId > 0));
+		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
+		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
+		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
+		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHTMOST, !(tabIndex < (numTabs - 1)));
 
-			return 1;
-		}
+		TrackPopupMenu(tabMenuHandle, TPM_RIGHTBUTTON, absCursorPos.x, absCursorPos.y, 0, menuCommandProcessorWindowHandle, NULL);
+
+		return 1;
+	}
 	}
 	return 0;
 }
@@ -635,7 +635,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" },
 		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口(&W)" },
 		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
-		
+
 		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接(&C)" },
 		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证" },
 		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
@@ -683,7 +683,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	tabCaptionFont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	tabCaptionFont.lfQuality = DEFAULT_QUALITY;
 	tabCaptionFont.lfPitchAndFamily = DEFAULT_PITCH;
-	wcscpy_s(tabCaptionFont.lfFaceName,_countof(tabCaptionFont.lfFaceName), L"MS Shell dlg"); // this font is used by dialog controls
+	wcscpy_s(tabCaptionFont.lfFaceName, _countof(tabCaptionFont.lfFaceName), L"MS Shell dlg"); // this font is used by dialog controls
 	tabCaptionFontHandle = CreateFontIndirectW(&tabCaptionFont);
 
 	SendMessageW(tabCtrlWinHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
@@ -715,7 +715,7 @@ void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	TCCUSTOMITEM tabCtrlItemInfo;
 	int newTabIndex;
 	HWND tabCtrlWinHandle;
-	
+
 	tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 
 	newTabIndex = AddNewTab(tabCtrlWinHandle, tabWindowsInfo->tabIncrementor + 1);
@@ -775,7 +775,7 @@ TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i) {
 	return tabCtrlItemInfo;
 }
 
- HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i) {
+HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i) {
 	TCCUSTOMITEM tabCtrlItemInfo;
 
 	tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
@@ -795,7 +795,7 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 
 	// 最后一个预览不删除
 	count = TabCtrl_GetItemCount(tabCtrlWinHandle);
-	if (count == 1 && tabCtrlItemInfo.attachProcessId==0) {
+	if (count == 1 && tabCtrlItemInfo.attachProcessId == 0) {
 		return;
 	}
 
@@ -983,7 +983,7 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 	setTabWindowPos(hostWindow, attachHwnd, rc);
 	//重绘，部分软件需要，如cmd
-	
+
 	//RedrawWindow(attachHwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
@@ -1023,7 +1023,7 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 		}
 		// 重新定位窗口，增加一些错位
 		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
-			rect.left+30, rect.top+50,
+			rect.left + 30, rect.top + 50,
 			rect.right - rect.left, rect.bottom - rect.top,
 			TRUE);
 	}

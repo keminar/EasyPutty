@@ -28,7 +28,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		LPNMHDR pnmh = (LPNMHDR)lParam;
 		HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 		if (pnmh->hwndFrom == hListView) {
-			if  (pnmh->code == NM_DBLCLK) {
+			if (pnmh->code == NM_DBLCLK) {
 				// 双击事件处理
 				LPNMITEMACTIVATE pnmia = (LPNMITEMACTIVATE)lParam;
 				if (pnmia->iItem != -1) {
@@ -44,7 +44,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					}
 				}
 			}
-			else if (pnmh->code == NM_RCLICK){
+			else if (pnmh->code == NM_RCLICK) {
 				// 获取鼠标位置（屏幕坐标）
 				POINT pt;
 				GetCursorPos(&pt);
@@ -73,21 +73,21 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				DestroyMenu(hMenu);
 			}
 		}
-		}
-		break;
-		case WM_COMMAND:{
-			switch (LOWORD(wParam)) {
-			case ID_RUN_COMMAND: {
-				HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
-				int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
-				if (selectedItem != -1) {
-					execCommand(hwnd, hListView, selectedItem);
-				}
-				break;
-			}
+	}
+					break;
+	case WM_COMMAND: {
+		switch (LOWORD(wParam)) {
+		case ID_RUN_COMMAND: {
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				execCommand(hwnd, hListView, selectedItem);
 			}
 			break;
 		}
+		}
+		break;
+	}
 	}
 
 	// 其他消息交给原始窗口过程处理
@@ -407,12 +407,12 @@ void ReadProgramFromIni(const wchar_t* filepath, ProgramInfo* config) {
 	GetPrivateProfileStringW(SECTION_NAME, L"Command", L"",
 		config->command, sizeof(config->command) / sizeof(wchar_t),
 		filepath);
-	 
+
 	// 读取Tags
 	GetPrivateProfileStringW(SECTION_NAME, L"Tags", L"",
 		config->tags, sizeof(config->tags) / sizeof(wchar_t),
 		filepath);
-	
+
 }
 
 // 从INI文件读取配置信息

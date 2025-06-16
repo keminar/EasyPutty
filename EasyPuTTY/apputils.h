@@ -14,9 +14,6 @@ struct TabWindowsInfo {
 	HFONT editorFontHandle;//逻辑字体句柄
 };
 
-
-#define IniName L".\\EasyPuTTY.ini"
-
 #define SECTION_NAME L"Settings"
 // 定义自定义消息
 #define WM_GETMAINWINDOW (WM_USER + 1)
