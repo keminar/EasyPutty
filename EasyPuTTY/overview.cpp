@@ -534,6 +534,7 @@ unsigned int hash(const wchar_t* str, int capacity) {
 
 // ≥ı ºªØ≈‰÷√”≥…‰±Ì
 ConfigMap* initConfigMap(int capacity) {
+	if (!capacity) return NULL;
 	ConfigMap* map = (ConfigMap*)malloc(sizeof(ConfigMap));
 	if (map == NULL) {
 		return NULL;
