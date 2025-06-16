@@ -10,33 +10,85 @@ static TabWindowsInfo* g_tabWindowsInfo = NULL;
 
 // 递归创建目录
 BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
+	// 参数检查
+	if (!lpPath || !*lpPath) {
+		SetLastError(ERROR_INVALID_PARAMETER);
+		return FALSE;
+	}
+
+	// 复制并规范化路径
 	WCHAR szPath[MAX_PATH];
-	wcscpy_s(szPath, MAX_PATH, lpPath);
+	wcscpy_s(szPath, lpPath);
+
+	// 转换斜杠为统一格式
+	for (WCHAR* p = szPath; *p; p++) {
+		if (*p == L'/') *p = L'\\';
+	}
+
+	// 处理 UNC 路径 (\\server\share)
+	BOOL isUncPath = (szPath[0] == L'\\' && szPath[1] == L'\\');
+	if (isUncPath) {
+		// 至少需要 \\server\share\ 格式
+		WCHAR* shareStart = wcschr(szPath + 2, L'\\');
+		if (!shareStart || !*(shareStart + 1)) {
+			SetLastError(ERROR_INVALID_NAME);
+			return FALSE;
+		}
+	}
+
+	// 跳过驱动器号或 UNC 前缀
 	WCHAR* p = szPath;
+	if (!isUncPath && wcslen(szPath) >= 2 && szPath[1] == L':') {
+		p += 2; // 跳过 "C:"
+		if (*p == L'\0') return FALSE; // 单独的驱动器号无效
+	}
+	else if (isUncPath) {
+		// 找到第三个反斜杠位置 (\\server\share\path)
+		int slashCount = 0;
+		p = szPath;
+		while (*p) {
+			if (*p == L'\\') slashCount++;
+			if (slashCount == 3) break;
+			p++;
+		}
+		if (slashCount < 3 || !*p) return FALSE;
+		p++; // 指向路径部分的起始
+	}
 
-	// 处理每个路径分隔符
-	while ((p = wcschr(p, L'\\')) != NULL) {
-		// 保存当前位置
-		WCHAR c = *p;
-		*p = L'\0';
+	// 处理每个路径组件
+	while (*p) {
+		// 找到下一个路径分隔符
+		WCHAR* nextSlash = wcschr(p, L'\\');
+		if (!nextSlash) break;
 
-		// 创建当前级别目录
+		// 临时截断路径
+		*nextSlash = L'\0';
+
+		// 创建目录 (如果不存在)
 		if (!CreateDirectoryW(szPath, NULL)) {
-			// 如果失败，检查是否因为目录已存在
-			if (GetLastError() != ERROR_ALREADY_EXISTS) {
+			DWORD error = GetLastError();
+			if (error != ERROR_ALREADY_EXISTS) {
+				// 特殊处理根目录 (C:\ 或 \\server\share)
+				if (error == ERROR_PATH_NOT_FOUND &&
+					(wcslen(szPath) == 3 && szPath[1] == L':') ||
+					(isUncPath && wcslen(szPath) > 2 && !wcschr(szPath + 2, L'\\'))) {
+					*nextSlash = L'\\'; // 恢复路径
+					p = nextSlash + 1;
+					continue;
+				}
 				return FALSE;
 			}
 		}
 
-		// 恢复路径
-		*p = c;
-		p++;
+		// 恢复路径并继续
+		*nextSlash = L'\\';
+		p = nextSlash + 1;
 	}
 
 	// 创建最终目录
 	if (!CreateDirectoryW(szPath, NULL)) {
-		// 如果失败，检查是否因为目录已存在
-		if (GetLastError() != ERROR_ALREADY_EXISTS) {
+		DWORD error = GetLastError();
+		if (error != ERROR_ALREADY_EXISTS) {
 			return FALSE;
 		}
 	}
@@ -60,12 +112,7 @@ BOOL CreateDirectoryIfNotExists(LPCTSTR lpPathName) {
 
 // 获取当前可执行文件的完整路径
 void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
-	// 用静态变量存起来，防止GetOpenFileName对话框切换目录影响
-	static wchar_t exeFile[MAX_PATH] = { 0 };
-	if (exeFile[0] == L'\0') {
-		GetModuleFileNameW(NULL, exeFile, MAX_PATH);
-	}
-	swprintf(buffer, bufferSize, L"%s", exeFile);
+	GetModuleFileNameW(NULL, buffer, bufferSize);
 
 	// 查找最后一个反斜杠
 	wchar_t* lastSlash = wcsrchr(buffer, L'\\');
