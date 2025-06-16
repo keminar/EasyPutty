@@ -48,10 +48,10 @@ typedef struct {
 
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow);
+void SetListViewData(HWND hListView);
 void InitializeListViewColumns(HWND hWndListView);
 void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input);
 void execCommand(HWND hwnd, HWND hListView, int selectedItem);
-
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount);
 void FreeFileList(wchar_t** fileList, int fileCount);
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config);
@@ -63,8 +63,7 @@ unsigned int hash(const wchar_t* str, int capacity);
 ConfigMap* initConfigMap(int capacity);
 
 // 添加配置项
-int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username,
-	const wchar_t* password, const wchar_t* privateKey);
+int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username, const wchar_t* password, const wchar_t* privateKey);
 
 // 根据Name查找配置
 CredentialInfo* findConfigByName(ConfigMap* map, const wchar_t* name);

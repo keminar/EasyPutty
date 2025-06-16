@@ -235,6 +235,12 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		wchar_t credentialPath[MAX_PATH] = { 0 };
 		int credentialCount = 0;
 		CredentialInfo credentialConfig = { 0 };
+		wchar_t dirPath[MAX_PATH] = { 0 };
+		wchar_t iniPath[MAX_PATH] = { 0 };
+		SessionInfo sessionConfig = { 0 };
+		HWND hEdit;
+		wchar_t findName[MAX_PATH] = { 0 };
+		wchar_t port[20];
 
 		hComboBox = GetDlgItem(hDlg, IDC_SESSION_CONNECT);
 		// 添加选项
@@ -253,11 +259,30 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			}
 		}
 
-		// 查找当前选择的会话行
-		wchar_t findName[MAX_PATH] = { 0 };
+		// 查找当前选择的会话行简称
 		BOOL ret = FindSelectedSession(findName, MAX_PATH);
 		if (ret) {
-			MessageBox(NULL, findName, L"dd", MB_OK);
+			// 构建路径
+			GetPuttySessionsPath(dirPath, MAX_PATH);
+			PathCombine(iniPath, dirPath, findName);  // 合并目录和文件名
+			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			ReadSessionFromIni(iniPath, &sessionConfig);
+			swprintf(port, 20, L"%d", sessionConfig.port);
+
+			hEdit = GetDlgItem(hDlg, IDC_SESSION_NAME);
+			SetWindowText(hEdit, sessionConfig.name);
+			hEdit = GetDlgItem(hDlg, IDC_SESSION_IP);
+			SetWindowText(hEdit, sessionConfig.hostName);
+			hEdit = GetDlgItem(hDlg, IDC_SESSION_PORT);
+			SetWindowText(hEdit, port);
+			hEdit = GetDlgItem(hDlg, IDC_SESSION_CONNECT);
+			SetWindowText(hEdit, sessionConfig.connectType);
+			hEdit = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
+			SetWindowText(hEdit, sessionConfig.credential);
+			hEdit = GetDlgItem(hDlg, IDC_TAGS);
+			SetWindowText(hEdit, sessionConfig.tags);
+			hEdit = GetDlgItem(hDlg, IDC_OTHER_PARAMS);
+			SetWindowText(hEdit, sessionConfig.otherParams);
 		}
 
 		return (INT_PTR)TRUE;
@@ -270,10 +295,11 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			wchar_t iniPath[MAX_PATH] = { 0 };
 			wchar_t name[MAX_PATH] = { 0 };
 			wchar_t hostname[MAX_PATH] = { 0 };
-			wchar_t port[MAX_PATH] = { 0 };
+			wchar_t port[20] = { 0 };
 			wchar_t connectType[MAX_PATH] = { 0 };
 			wchar_t credential[MAX_PATH] = { 0 };
 			wchar_t tags[MAX_PATH] = { 0 };
+			wchar_t otherParams[MAX_PATH] = { 0 };
 			HWND hEdit;
 
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_NAME);
@@ -288,6 +314,8 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			GetWindowText(hEdit, credential, MAX_PATH);
 			hEdit = GetDlgItem(hDlg, IDC_TAGS);
 			GetWindowText(hEdit, tags, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_OTHER_PARAMS);
+			GetWindowText(hEdit, otherParams, MAX_PATH);
 
 			if (name[0] == L'\0') {
 				MessageBoxW(hDlg, L"简称为必填", L"错误", MB_OK);
@@ -308,9 +336,21 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"ConnectType", connectType, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Credential", credential, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"OtherParams", otherParams, iniPath);
 			if (!result) {
 				showError(hDlg, L"添加失败");
 				return FALSE;
+			}
+
+			// 当前标签
+			HWND tabCtrlWinHandle = g_tabWindowsInfo->tabCtrlWinHandle;
+			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			if (sel != -1) {
+				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+				// 在overview标签上
+				if (!tabCtrlItemInfo.attachWindowHandle) {
+					SendMessage(tabCtrlItemInfo.hostWindowHandle, WM_COMMAND, ID_LIST_REFRESH, NULL);
+				}
 			}
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
