@@ -197,6 +197,8 @@ void SetListViewData(HWND hListView) {
 	wchar_t command[MAX_COMMAND_LEN] = { 0 };
 	int nItem = 0;
 
+	if (!hListView)
+		return;
 	// 先清掉数据
 	ListView_DeleteAllItems(hListView);
 

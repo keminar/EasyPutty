@@ -74,7 +74,9 @@
 #define IDM_PROGRAM                     32795
 #define ID_LIST_WINSCP                  32796
 #define ID_LIST_FILEZILLA               32797
+#define ID_TAB_32797                    32797
 #define ID_LIST_EDIT                    32798
+#define ID_TAB_REFRESH                  32798
 #define ID_LIST_DEL                     32799
 #define ID_LIST_REFRESH                 32800
 #define IDC_STATIC                      -1
@@ -85,7 +87,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         32797
+#define _APS_NEXT_COMMAND_VALUE         32799
 #define _APS_NEXT_CONTROL_VALUE         1015
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

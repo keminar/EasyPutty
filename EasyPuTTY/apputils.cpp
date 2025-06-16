@@ -289,7 +289,27 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	}
 
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK)
+		if (LOWORD(wParam) == ID_LIST_REFRESH) {
+			HWND credentialComboBox;
+			wchar_t** credentialFileList = NULL;
+			wchar_t credentialPath[MAX_PATH] = { 0 };
+			int credentialCount = 0;
+			CredentialInfo credentialConfig = { 0 };
+
+			credentialComboBox = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
+			if (credentialComboBox) {
+				ComboBox_ResetContent(credentialComboBox);
+				GetPuttyCredentialPath(credentialPath, MAX_PATH);
+				credentialFileList = ListIniFiles(credentialPath, &credentialCount);
+				for (int i = 0; i < credentialCount; i++) {
+					if (credentialFileList[i] != NULL) {
+						ReadCredentialFromIni(credentialFileList[i], &credentialConfig);
+						SendMessage(credentialComboBox, CB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
+					}
+				}
+			}
+		}
+		else if (LOWORD(wParam) == IDOK)
 		{
 			wchar_t dirPath[MAX_PATH] = { 0 };
 			wchar_t iniPath[MAX_PATH] = { 0 };
@@ -359,7 +379,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}
-		else if (LOWORD(wParam) == IDC_CREDENTIAL_ADD) {
+		else if (LOWORD(wParam) == IDC_CREDENTIAL_ADD) {//添加凭证
 			DialogBox(g_appInstance, MAKEINTRESOURCE(IDD_CREDENTIAL), hDlg, CredentialProc);
 			return (INT_PTR)TRUE;
 		}
@@ -367,6 +387,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	}
 	return (INT_PTR)FALSE;
 }
+
 
 // 设置管理
 INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -571,6 +592,8 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 				showError(hDlg, L"添加失败");
 				return FALSE;
 			}
+			HWND parent = GetParent(hDlg);
+			SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, NULL);
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}

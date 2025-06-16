@@ -280,6 +280,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex);
 			break;
 		}
+		case ID_TAB_REFRESH: {//右键刷新
+			TCCUSTOMITEM tabCtrlItemInfo;
+			tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
+			// retrieve information about tab control item with index i
+			TabCtrl_GetItem(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
+			if (!tabCtrlItemInfo.attachWindowHandle) {
+				HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW);
+				SetListViewData(hListView);
+			}
+			break;
+		}
 		case ID_TAB_MOVETOLEFT: {
 			selectedTabToLeft();
 			return 0;
@@ -516,7 +527,7 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 		MoveWindow(attachWindowHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
 		// 这个要用TRUE
-		MoveWindow(attachWindowHandle, 0, -captionHeight,
+		MoveWindow(attachWindowHandle, 0, -captionHeight+3,
 			rc.right - rc.left, rc.bottom - rc.top + captionHeight, TRUE);
 
 	}
@@ -554,6 +565,7 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 
 		// enabling/disabling popup menu entries depending on number of tabs and index of selected tab
 		EnableMenuItem(tabMenuHandle, ID_TAB_DETACH, !(tabCtrlItemInfo.attachProcessId > 0));
+		EnableMenuItem(tabMenuHandle, ID_TAB_REFRESH, (tabCtrlItemInfo.attachProcessId > 0));
 		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFT, !(tabIndex > 0));
 		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETOLEFTMOST, !(tabIndex > 0));
 		EnableMenuItem(tabMenuHandle, ID_TAB_MOVETORIGHT, !(tabIndex < (numTabs - 1)));
