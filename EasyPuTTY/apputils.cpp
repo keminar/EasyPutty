@@ -8,6 +8,56 @@
 static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
 
+// 递归创建目录
+BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
+	WCHAR szPath[MAX_PATH];
+	wcscpy_s(szPath, MAX_PATH, lpPath);
+	WCHAR* p = szPath;
+
+	// 处理每个路径分隔符
+	while ((p = wcschr(p, L'\\')) != NULL) {
+		// 保存当前位置
+		WCHAR c = *p;
+		*p = L'\0';
+
+		// 创建当前级别目录
+		if (!CreateDirectoryW(szPath, NULL)) {
+			// 如果失败，检查是否因为目录已存在
+			if (GetLastError() != ERROR_ALREADY_EXISTS) {
+				return FALSE;
+			}
+		}
+
+		// 恢复路径
+		*p = c;
+		p++;
+	}
+
+	// 创建最终目录
+	if (!CreateDirectoryW(szPath, NULL)) {
+		// 如果失败，检查是否因为目录已存在
+		if (GetLastError() != ERROR_ALREADY_EXISTS) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+// 检查目录是否存在，不存在则创建
+BOOL CreateDirectoryIfNotExists(LPCTSTR lpPathName) {
+	DWORD dwAttrib = GetFileAttributes(lpPathName);
+
+	// 如果目录不存在
+	if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
+		return CreateDirectoryRecursiveW(lpPathName) ||
+			(GetLastError() == ERROR_ALREADY_EXISTS);
+	}
+
+	// 如果路径存在，判断是否为目录
+	return (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
 void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
 	// 获取当前可执行文件的完整路径
 	GetModuleFileNameW(NULL, buffer, bufferSize);
@@ -347,6 +397,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			}
 			// 构建路径
 			GetPuttySessionsPath(dirPath, MAX_PATH);
+			CreateDirectoryIfNotExists(dirPath);
 			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
 			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
 
@@ -580,6 +631,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			}
 			// 构建路径
 			GetPuttyCredentialPath(dirPath, MAX_PATH);
+			CreateDirectoryIfNotExists(dirPath);
 			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
 			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
 

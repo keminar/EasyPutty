@@ -30,6 +30,8 @@ void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize);
 void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize);
 void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize);
 BOOL FindSelectedSession(wchar_t* name, int nameLen);
+BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath);
+BOOL CreateDirectoryIfNotExists(LPCTSTR lpPathName);
 
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    ENUMProc(HWND, UINT, WPARAM, LPARAM);
