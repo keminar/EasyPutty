@@ -149,14 +149,15 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 // 执行命令在新标签打开
 void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
-	wchar_t szText[MAX_COMMAND_LEN] = { 0 };
-	int column = 2;//第几列的值
-	ListView_GetItemText(hListView, selectedItem, column, szText, sizeof(szText));
+	NameCommand line = { 0 };
+	//第几列的值为启动命令
+	ListView_GetItemText(hListView, selectedItem, 2, line.command, sizeof(line.command));
+	ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
 	// 通过发送自定义消息获取主窗口句柄
 	HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 	if (mainWindow) {
 		// 转发按钮点击消息到主窗口
-		SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&szText[0]);
+		SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
 	}
 }
 
@@ -564,8 +565,8 @@ ConfigMap* initConfigMap(int capacity) {
 	}
 
 	map->capacity = capacity;
-	map->table = (HashNode**)calloc(map->capacity, sizeof(HashNode*));
-	if (map->table == NULL) {
+	map->buckets = (HashNode**)calloc(map->capacity, sizeof(HashNode*));
+	if (map->buckets == NULL) {
 		free(map);
 		return NULL;
 	}
@@ -582,7 +583,7 @@ int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username,
 	unsigned int index = hash(name, map->capacity);
 
 	// 检查是否已存在相同的键
-	HashNode* current = map->table[index];
+	HashNode* current = map->buckets[index];
 	while (current != NULL) {
 		if (wcscmp(current->key, name) == 0) {
 			// 更新已存在的项
@@ -606,8 +607,8 @@ int addConfig(ConfigMap* map, const wchar_t* name, const wchar_t* username,
 	wcscpy_s(newNode->value.privateKey, sizeof(newNode->value.privateKey) / sizeof(wchar_t), privateKey);
 
 	// 添加到链表头部
-	newNode->next = map->table[index];
-	map->table[index] = newNode;
+	newNode->next = map->buckets[index];
+	map->buckets[index] = newNode;
 	map->count++;
 
 	return 0;
@@ -621,7 +622,7 @@ CredentialInfo* findConfigByName(ConfigMap* map, const wchar_t* name) {
 	unsigned int index = hash(name, map->capacity);
 
 	// 在链表中查找
-	HashNode* current = map->table[index];
+	HashNode* current = map->buckets[index];
 	while (current != NULL) {
 		if (wcscmp(current->key, name) == 0) {
 			return &(current->value);
@@ -637,16 +638,16 @@ void FreeConfigMap(ConfigMap* map) {
 	if (map == NULL) return;
 
 	for (int i = 0; i < map->capacity; i++) {
-		HashNode* current = map->table[i];
+		HashNode* current = map->buckets[i];
 		while (current != NULL) {
 			HashNode* temp = current;
 			current = current->next;
 			free(temp);
 		}
-		map->table[i] = NULL;
+		map->buckets[i] = NULL;
 	}
 	// 释放桶数组
-	free(map->table);
+	free(map->buckets);
 	// 释放哈希表结构体
 	free(map);
 }

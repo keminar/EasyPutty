@@ -70,7 +70,7 @@ HWND createPuttyWindow(HINSTANCE hInstance, HWND hostWindow, const wchar_t* putt
 
 	// 等待PuTTY窗口创建（需要短暂延时）
 	HWND puttyHwnd = NULL;
-	for (int i = 0; i < 30 && !puttyHwnd; i++) {
+	for (int i = 0; i < 60 && !puttyHwnd; i++) {
 		puttyHwnd = FindPuttyWindow();
 		Sleep(100);
 	}

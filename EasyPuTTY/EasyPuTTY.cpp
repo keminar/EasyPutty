@@ -379,8 +379,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				TabCtrl_GetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 			}
 
-			wchar_t* inputText = (wchar_t*)lParam;
-			if (wcslen(inputText) == 0) {
+			NameCommand* selLine = (NameCommand*)lParam;
+			if (wcslen(selLine->command) == 0) {
 				MessageBoxW(g_mainWindowHandle, L"请输入命令", L"提示", MB_OK | MB_ICONINFORMATION);
 				return 0;
 			}
@@ -392,10 +392,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 			else {
-				// 创建新的PuTTY标签页
-				// 创建其他进程需要attachWinHandle打底，不然explorer测试有问题
-				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, newHostWinHandle, inputText);
-				// 修改选项卡标题
+				// 创建新的标签页，创建其他进程需要attachWinHandle打底，不然如explorer进程测试显示会有问题
+				HWND puttyWindowHandle = createPuttyWindow(g_appInstance, newHostWinHandle, selLine->command);
 				if (puttyWindowHandle && IsWindow(puttyWindowHandle)) {
 					if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 						DestroyWindow(tabCtrlItemInfo.hostWindowHandle); // 会自动销毁所有子控件
@@ -410,10 +408,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					// 要更新数据，窗口大小调整时才随动
 					TabCtrl_SetItem(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 
-					wchar_t attachTitle[256] = { 0 };
+					// 修改选项卡标题
 					wchar_t cutTitle[256] = { 0 };
-					GetWindowTextW(puttyWindowHandle, attachTitle, _countof(attachTitle));
-					TruncateString(attachTitle, cutTitle, 18);
+					TruncateString(selLine->name, cutTitle, 18);
 					TCITEM tie = { 0 };
 					tie.mask = TCIF_TEXT;
 					tie.pszText = cutTitle;
@@ -427,7 +424,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					//重绘，部分软件需要，如cmd
 					//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 
-					if (wcsstr(inputText, L"putty") != NULL) {
+					if (wcsstr(selLine->command, L"putty") != NULL) {
 						// 按下 Ctrl 键
 						keybd_event(VK_CONTROL, 0, 0, 0);
 						// 按下 Space 键

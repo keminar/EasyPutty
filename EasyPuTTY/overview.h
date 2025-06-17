@@ -41,11 +41,16 @@ typedef struct HashNode {
 
 // 哈希表
 typedef struct {
-	HashNode** table;
+	HashNode** buckets;
 	int count;//使用大小
 	int capacity;//总大小
 } ConfigMap;
 
+// 传递的命令
+typedef struct {
+	wchar_t name[256];
+	wchar_t command[MAX_COMMAND_LEN];
+} NameCommand;
 
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow);

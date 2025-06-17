@@ -151,7 +151,7 @@ int startApp(const wchar_t* appPath, BOOL show) {
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 		if (!show) {
-			MessageBoxW(NULL, L"启动成功", L"提示", MB_OK);
+			MessageBoxW(NULL, L"后台启动成功，请在任务栏查看", L"提示", MB_OK);
 		}
 		return 0;
 	}
@@ -312,7 +312,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			// 构建路径
 			GetPuttySessionsPath(dirPath, MAX_PATH);
 			PathCombine(iniPath, dirPath, findName);  // 合并目录和文件名
-			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 			ReadSessionFromIni(iniPath, &sessionConfig);
 			swprintf(port, 20, L"%d", sessionConfig.port);
 
@@ -396,7 +396,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			GetPuttySessionsPath(dirPath, MAX_PATH);
 			CreateDirectoryIfNotExists(dirPath);
 			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
-			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 
 			BOOL result = WritePrivateProfileString(SECTION_NAME, L"Name", name, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"HostName", hostname, iniPath);
@@ -631,7 +631,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			GetPuttyCredentialPath(dirPath, MAX_PATH);
 			CreateDirectoryIfNotExists(dirPath);
 			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
-			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 
 			BOOL result = WritePrivateProfileString(SECTION_NAME, L"Name", name, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"UserName", username, iniPath);
@@ -681,7 +681,7 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			// 构建路径
 			GetProgramPath(dirPath, MAX_PATH);
 			PathCombine(iniPath, dirPath, findName);  // 合并目录和文件名
-			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 			ReadProgramFromIni(iniPath, &programConfig);
 
 			hEdit = GetDlgItem(hDlg, IDC_PRO_NAME);
@@ -728,7 +728,7 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			GetProgramPath(dirPath, MAX_PATH);
 			CreateDirectoryIfNotExists(dirPath);
 			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
-			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 
 			BOOL result = WritePrivateProfileString(SECTION_NAME, L"Name", name, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Path", path, iniPath);
