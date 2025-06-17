@@ -10,7 +10,8 @@
 
 typedef struct {
 	wchar_t name[256];
-	wchar_t command[MAX_COMMAND_LEN];
+	wchar_t path[MAX_PATH];
+	wchar_t params[MAX_COMMAND_LEN];
 	wchar_t tags[256];
 } ProgramInfo;
 

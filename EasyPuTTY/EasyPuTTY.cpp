@@ -324,7 +324,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case IDM_PROGRAM: {
-			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PROGRAM), hWnd, ProgramProc);
 			break;
 		}
 		case IDM_PAGEANT: {

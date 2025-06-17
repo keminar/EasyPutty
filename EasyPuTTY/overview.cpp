@@ -88,20 +88,36 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			break;
 		}
 		case ID_LIST_EDIT: {
-			showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hwnd, SessionProc);
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				wchar_t szType[MAX_PATH] = { 0 };
+				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+				if (wcsstr(szType, L"PuTTY") != NULL) {
+					showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hwnd, SessionProc);
+				} else{
+					showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PROGRAM), hwnd, ProgramProc);
+				}
+			}
 			break;
 		}
 		case ID_LIST_DEL: {
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
-			wchar_t szText[MAX_COMMAND_LEN] = { 0 };
+			wchar_t szText[MAX_PATH] = { 0 };
+			wchar_t szType[MAX_PATH] = { 0 };
 			wchar_t dirPath[MAX_PATH] = { 0 };
 			wchar_t iniPath[MAX_PATH] = { 0 };
 
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
-				int column = 0;//第几列的值
-				ListView_GetItemText(hListView, selectedItem, column, szText, sizeof(szText));
-				GetPuttySessionsPath(dirPath, MAX_PATH);
+				ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+				if (wcsstr(szType, L"PuTTY") != NULL) {
+					GetPuttySessionsPath(dirPath, MAX_PATH);
+				}
+				else {
+					GetProgramPath(dirPath, MAX_PATH);
+				}
 				PathCombine(iniPath, dirPath, szText);  // 合并目录和文件名
 				PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
 				DeleteFile(iniPath);
@@ -173,6 +189,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	// 初始化列表视图列
 	InitializeListViewColumns(hListView);
 
+	// 填充数据
 	SetListViewData(hListView);
 
 	// 子类化宿主窗口
@@ -181,6 +198,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	SetWindowLongPtrW(hostWindow, GWLP_USERDATA, (LONG_PTR)originalProc);
 }
 
+// 填充数据
 void SetListViewData(HWND hListView) {
 	wchar_t sessionsPath[MAX_PATH] = { 0 }, credentialPath[MAX_PATH] = { 0 };
 	wchar_t iniPath[MAX_PATH] = { 0 }, programPath[MAX_PATH] = { 0 };
@@ -219,8 +237,9 @@ void SetListViewData(HWND hListView) {
 	for (int i = 0; i < programCount; i++) {
 		if (programFileList[i] != NULL) {
 			ReadProgramFromIni(programFileList[i], &programConfig);
-			if (programConfig.command[0] != L'\0') {
-				AddListViewItem(hListView, nItem, programConfig.name, L"自定义", programConfig.command, programConfig.tags, L"", L"是");
+			if (programConfig.path[0] != L'\0') {
+				swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
+				AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"是");
 				nItem++;
 			}
 		}
@@ -451,8 +470,12 @@ void ReadProgramFromIni(const wchar_t* filepath, ProgramInfo* config) {
 		filepath);
 
 	// 读取Command
-	GetPrivateProfileStringW(SECTION_NAME, L"Command", L"",
-		config->command, sizeof(config->command) / sizeof(wchar_t),
+	GetPrivateProfileStringW(SECTION_NAME, L"Path", L"",
+		config->path, sizeof(config->path) / sizeof(wchar_t),
+		filepath);
+
+	GetPrivateProfileStringW(SECTION_NAME, L"Params", L"",
+		config->params, sizeof(config->params) / sizeof(wchar_t),
 		filepath);
 
 	// 读取Tags
