@@ -19,6 +19,7 @@
 #define IDD_SESSION                     134
 #define IDD_SETTING                     135
 #define IDR_SESSION                     136
+#define IDD_PROGRAM                     137
 #define IDC_REFRESH                     1001
 #define IDC_BROWSER_PUTTY               1002
 #define IDC_SYSLINK1                    1003
@@ -46,8 +47,14 @@
 #define IDC_PUTTYGEN                    1014
 #define IDC_EDIT1                       1014
 #define IDC_OTHER_PARAMS                1014
+#define IDC_PRO_NAME                    1014
 #define IDC_NAME                        1015
+#define IDC_PRO_PATH                    1015
 #define IDC_PPK                         1016
+#define IDC_PRO_PARAM                   1016
+#define IDC_EDIT4                       1017
+#define IDC_PRO_TAGS                    1017
+#define IDC_BUTTON1                     1018
 #define IDM_OPEN                        32772
 #define IDM_CLOSE                       32773
 #define IDM_ENUM_WINDOW                 32774
@@ -86,9 +93,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_RESOURCE_VALUE        138
 #define _APS_NEXT_COMMAND_VALUE         32799
-#define _APS_NEXT_CONTROL_VALUE         1015
+#define _APS_NEXT_CONTROL_VALUE         1019
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

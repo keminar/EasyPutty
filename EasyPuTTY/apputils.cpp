@@ -263,11 +263,8 @@ BOOL FindSelectedSession(wchar_t* name, int nameLen) {
 			}
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
-				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
-				if (wcsstr(szType, L"PuTTY") != NULL) {
-					ListView_GetItemText(hListView, selectedItem, 0, name, nameLen);
-					return TRUE;
-				}
+				ListView_GetItemText(hListView, selectedItem, 0, name, nameLen);
+				return TRUE;
 			}
 		}
 	}
@@ -298,7 +295,6 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)L"SSHv2");
 		SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)L"SSHv1");
 		SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
-
 
 		credentialComboBox = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
 		GetPuttyCredentialPath(credentialPath, MAX_PATH);
@@ -597,6 +593,7 @@ void showError(HWND hwnd, const wchar_t* showMsg)
 	swprintf_s(fullError, 512, L"%s！错误代码: %lu\n%ls", showMsg, errorCode, errorMsg);
 	MessageBox(hwnd, fullError, L"错误", MB_ICONERROR);
 }
+
 // 认证凭证
 INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -645,6 +642,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 				showError(hDlg, L"添加失败");
 				return FALSE;
 			}
+			// 父窗口可能是 连接配置表单，刷新下拉
 			HWND parent = GetParent(hDlg);
 			SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, NULL);
 			EndDialog(hDlg, LOWORD(wParam));
@@ -656,6 +654,111 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
 			setBrowser(hDlg, L"PuTTY私钥.ppk\0*.ppk\0所有文件\0*.*\0", IDC_PPK);
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+
+// 快捷应用
+INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG: {
+		wchar_t dirPath[MAX_PATH] = { 0 };
+		wchar_t iniPath[MAX_PATH] = { 0 };
+		ProgramInfo programConfig = { 0 };
+		HWND hEdit;
+		wchar_t findName[MAX_PATH] = { 0 };
+
+		// 查找当前选择的会话行简称
+		BOOL ret = FindSelectedSession(findName, MAX_PATH);
+		if (ret) {
+			// 构建路径
+			GetProgramPath(dirPath, MAX_PATH);
+			PathCombine(iniPath, dirPath, findName);  // 合并目录和文件名
+			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+			ReadProgramFromIni(iniPath, &programConfig);
+
+			hEdit = GetDlgItem(hDlg, IDC_PRO_NAME);
+			SetWindowText(hEdit, programConfig.name);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_PATH);
+			SetWindowText(hEdit, programConfig.path);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_PARAM);
+			SetWindowText(hEdit, programConfig.params);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_TAGS);
+			SetWindowText(hEdit, programConfig.tags);
+		}
+		return (INT_PTR)TRUE;
+	}
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK)
+		{
+			wchar_t dirPath[MAX_PATH] = { 0 };
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			wchar_t name[MAX_PATH] = { 0 };
+			wchar_t path[MAX_PATH] = { 0 };
+			wchar_t params[MAX_PATH] = { 0 };
+			wchar_t tags[MAX_PATH] = { 0 };
+			HWND hEdit;
+
+			hEdit = GetDlgItem(hDlg, IDC_PRO_NAME);
+			GetWindowText(hEdit, name, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_PATH);
+			GetWindowText(hEdit, path, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_PARAM);
+			GetWindowText(hEdit, params, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_PRO_TAGS);
+			GetWindowText(hEdit, tags, MAX_PATH);
+
+			if (name[0] == L'\0') {
+				MessageBoxW(hDlg, L"名称为必填", L"错误", MB_OK);
+				return FALSE;
+			}
+			if (path[0] == L'\0') {
+				MessageBoxW(hDlg, L"路径为必填", L"错误", MB_OK);
+				return FALSE;
+			}
+			// 构建路径
+			GetProgramPath(dirPath, MAX_PATH);
+			CreateDirectoryIfNotExists(dirPath);
+			PathCombine(iniPath, dirPath, name);  // 合并目录和文件名
+			PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+
+			BOOL result = WritePrivateProfileString(SECTION_NAME, L"Name", name, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"Path", path, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"Params", params, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
+
+			if (!result) {
+				showError(hDlg, L"添加失败");
+				return FALSE;
+			}
+
+			// 当前标签
+			HWND tabCtrlWinHandle = g_tabWindowsInfo->tabCtrlWinHandle;
+			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			if (sel != -1) {
+				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+				// 在overview标签上
+				if (!tabCtrlItemInfo.attachWindowHandle) {
+					SendMessage(tabCtrlItemInfo.hostWindowHandle, WM_COMMAND, ID_LIST_REFRESH, NULL);
+				}
+			}
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDC_BROWSER) {
+			setBrowser(hDlg, L"可执行程序.exe\0*.exe\0所有文件\0*.*\0", IDC_PRO_PATH);
 			return (INT_PTR)TRUE;
 		}
 		break;
