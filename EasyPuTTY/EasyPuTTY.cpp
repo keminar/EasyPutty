@@ -191,8 +191,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (wParam == SIZE_MINIMIZED) {
 			return 0;
 		}
+
 		// 调整标签控件和按钮大小
 		if (g_toolbarHandle) {
+			// 控制窗口小的时候出横向滚动条
 			MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 			// 自动调整大小
 			SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
@@ -485,6 +487,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
+	case WM_CLOSE: {
+		// 当用户点击关闭按钮时会触发WM_CLOSE消息
+		int response = MessageBox(
+			hWnd,
+			L"确定要关闭所有标签内窗口吗，不关闭的请先分离?",
+			L"确认关闭",
+			MB_YESNO | MB_ICONQUESTION
+		);
+
+		if (response == IDYES) {
+			// 用户选择"是"，则销毁窗口
+			DestroyWindow(hWnd);
+		}
+		// 用户选择"否"则不执行任何操作，窗口保持打开状态
+		return 0;
+	}
 	case WM_DESTROY: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
@@ -714,8 +732,8 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	tabCtrlItemInfo.tcitemheader.iImage = -1;
 	tabCtrlItemInfo.tcitemheader.pszText = tabNameBuf;
 
-	tabCtrlItemInfo.hostWindowHandle = 0;
-	tabCtrlItemInfo.attachWindowHandle = 0;
+	tabCtrlItemInfo.hostWindowHandle = NULL;
+	tabCtrlItemInfo.attachWindowHandle = NULL;
 	tabCtrlItemInfo.attachProcessId = 0;
 
 	TabCtrl_InsertItem(tabCtrlWinHandle, count, &tabCtrlItemInfo);
@@ -818,9 +836,11 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	// 销毁窗体
 	if (tabCtrlItemInfo.hostWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+		tabCtrlItemInfo.hostWindowHandle = NULL;
 	}
 	if (tabCtrlItemInfo.attachWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
+		tabCtrlItemInfo.attachWindowHandle = NULL;
 	}
 	// 检查进程是否关闭，超时强杀进程
 	if (tabCtrlItemInfo.attachProcessId > 0) {
