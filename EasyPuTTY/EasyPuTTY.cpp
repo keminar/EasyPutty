@@ -258,9 +258,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ACTIVATE:
 		// 窗口切换激活，设置焦点
 		switch (LOWORD(wParam)) {
-		case WA_ACTIVE: //（非鼠标点击，鼠标点击激活焦点不能失去，否则主窗体功能没法用）
+		case WA_ACTIVE: { //（非鼠标点击，鼠标点击激活焦点不能失去，否则主窗体功能没法用）
+			// 将现有窗口设置为置顶
+			SetWindowPos(
+				hWnd,                    // 窗口句柄
+				HWND_TOPMOST,            // 置于所有非置顶窗口之上
+				0, 0, 0, 0,              // 不改变位置和大小
+				SWP_NOMOVE | SWP_NOSIZE  // 仅修改Z序
+			);
 			SetTimer(hWnd, TIMER_ID_FOCUS, 100, NULL);
 			break;
+		}
+		case WA_INACTIVE: {
+			// 取消窗口置顶
+			SetWindowPos(
+				hWnd,                    // 窗口句柄
+				HWND_NOTOPMOST,          // 置于普通窗口队列中
+				0, 0, 0, 0,              // 不改变位置和大小
+				SWP_NOMOVE | SWP_NOSIZE  // 仅修改Z序
+			);
+			break;
+		}
 		}
 		break;
 	case WM_COMMAND: {
@@ -677,6 +695,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他" },
 		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
 
+		{ -1, IDM_ABOUT,  TBSTATE_HIDDEN, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"帮助" },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
 
