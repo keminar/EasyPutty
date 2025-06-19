@@ -81,11 +81,11 @@
 #define IDM_PROGRAM                     32795
 #define ID_LIST_WINSCP                  32796
 #define ID_LIST_FILEZILLA               32797
-#define ID_TAB_32797                    32797
 #define ID_LIST_EDIT                    32798
-#define ID_TAB_REFRESH                  32798
-#define ID_LIST_DEL                     32799
-#define ID_LIST_REFRESH                 32800
+#define ID_TAB_REFRESH                  32799
+#define ID_LIST_DEL                     32780
+#define ID_LIST_REFRESH                 32801
+#define ID_TAB_AUTO                     32802
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
