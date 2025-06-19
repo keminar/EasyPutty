@@ -10,6 +10,8 @@ typedef struct tagTCCUSTOMITEM {
 	HWND hostWindowHandle;
 	HWND attachWindowHandle;
 	DWORD attachProcessId;
+	HANDLE processHandle;
+	HANDLE waitHandle;
 } TCCUSTOMITEM;
 
 
@@ -36,3 +38,6 @@ RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
 HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow);
 void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd);
 void DetachTab(HWND tabCtrlWinHandle, int indexTab);
+HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait);
+void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess);
+void CALLBACK ProcessEndCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
