@@ -537,7 +537,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 当用户点击关闭按钮时会触发WM_CLOSE消息
 		int response = MessageBox(
 			hWnd,
-			L"确定要关闭所有标签内窗口吗，不关闭的请先分离?",
+			L"确定要关闭所有标签内窗口吗？不关闭的请先分离！",
 			L"确认关闭",
 			MB_YESNO | MB_ICONQUESTION
 		);
