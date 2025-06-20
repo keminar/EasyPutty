@@ -92,6 +92,9 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	else if (wcsstr(info.processName, L"WindowsInternal.ComposableShell.Experiences.TextInput.InputApp.exe") != NULL) {
 		return TRUE;
 	}
+	else if (wcsstr(info.processName, L"SystemSettings.exe") != NULL) {
+		return TRUE;
+	}
 	else if (wcsstr(info.processName, L"MicrosoftEdge") != NULL) {
 		return TRUE;
 	}
