@@ -71,22 +71,26 @@ void GetCurrentDirectoryPath(wchar_t* buffer, size_t bufferSize) {
 	}
 }
 
+// putty配置文件目录
 void GetPuttySessionsPath(wchar_t* buffer, size_t bufferSize) {
 	GetCurrentDirectoryPath(buffer, bufferSize);
 	// 追加目标路径
 	wcscat_s(buffer, bufferSize, L"config\\putty\\sessions");
 }
 
+// 凭证目录
 void GetPuttyCredentialPath(wchar_t* buffer, size_t bufferSize) {
 	GetCurrentDirectoryPath(buffer, bufferSize);
 	wcscat_s(buffer, bufferSize, L"config\\putty\\credential");
 }
 
+// 其他程序目录
 void GetProgramPath(wchar_t* buffer, size_t bufferSize) {
 	GetCurrentDirectoryPath(buffer, bufferSize);
 	wcscat_s(buffer, bufferSize, L"config\\program");
 }
 
+// 主配置
 void GetAppIni(wchar_t* buffer, size_t bufferSize) {
 	GetCurrentDirectoryPath(buffer, bufferSize);
 	wcscat_s(buffer, bufferSize, L"EasyPuTTY.ini");
@@ -336,7 +340,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	}
 
 	case WM_COMMAND:
-		if (LOWORD(wParam) == ID_LIST_REFRESH) {
+		if (LOWORD(wParam) == ID_LIST_REFRESH) {//刷新凭证下拉
 			HWND credentialComboBox;
 			wchar_t** credentialFileList = NULL;
 			wchar_t credentialPath[MAX_PATH] = { 0 };
@@ -356,7 +360,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 				}
 			}
 		}
-		else if (LOWORD(wParam) == IDOK)
+		else if (LOWORD(wParam) == IDOK)//保存
 		{
 			wchar_t dirPath[MAX_PATH] = { 0 };
 			wchar_t iniPath[MAX_PATH] = { 0 };
@@ -410,7 +414,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 				return FALSE;
 			}
 
-			// 当前标签
+			// 给当前标签发送刷新
 			HWND tabCtrlWinHandle = g_tabWindowsInfo->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
@@ -600,11 +604,29 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
+	case WM_INITDIALOG: {
+		HWND listBox;
+		wchar_t** credentialFileList = NULL;
+		wchar_t credentialPath[MAX_PATH] = { 0 };
+		int credentialCount = 0;
+		CredentialInfo credentialConfig = { 0 };
 
+		listBox = GetDlgItem(hDlg, IDC_LIST_NAME);
+		if (listBox) {
+			ListBox_ResetContent(listBox);
+			GetPuttyCredentialPath(credentialPath, MAX_PATH);
+			credentialFileList = ListIniFiles(credentialPath, &credentialCount);
+			for (int i = 0; i < credentialCount; i++) {
+				if (credentialFileList[i] != NULL) {
+					ReadCredentialFromIni(credentialFileList[i], &credentialConfig);
+					SendMessage(listBox, LB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
+				}
+			}
+		}
+		return (INT_PTR)TRUE;
+	}
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK)
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDC_ADD)
 		{
 			wchar_t dirPath[MAX_PATH] = { 0 };
 			wchar_t iniPath[MAX_PATH] = { 0 };
@@ -642,15 +664,104 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 				showError(hDlg, L"添加失败");
 				return FALSE;
 			}
-			// 父窗口可能是 连接配置表单，刷新下拉
-			HWND parent = GetParent(hDlg);
-			SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, NULL);
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			if (LOWORD(wParam) == IDC_ADD) {
+				HWND hListBox = GetDlgItem(hDlg, IDC_LIST_NAME);
+				int count = SendMessageW(hListBox, LB_GETCOUNT, 0, 0);
+				BOOL exist = FALSE;
+				for (int i = 0; i < count; i++)
+				{
+					wchar_t existingText[256];
+					SendMessageW(hListBox, LB_GETTEXT, i, (LPARAM)existingText);
+					if (wcscmp(existingText, name) == 0) {
+						exist = TRUE;
+						break;
+					}
+				}
+				if (!exist) {
+					SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)name);
+				}
+				return FALSE;
+			}
+			else {
+				// 父窗口可能是 连接配置表单，刷新下拉
+				HWND parent = GetParent(hDlg);
+				SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, NULL);
+				EndDialog(hDlg, LOWORD(wParam));
+				return (INT_PTR)TRUE;
+			}
 		}
 		else if (LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDC_CLEAR) {//清空名称
+			HWND hEdit;
+			hEdit = GetDlgItem(hDlg, IDC_NAME);
+			SetWindowText(hEdit, L"");
+			return (INT_PTR) FALSE;
+		}
+		else if (LOWORD(wParam) == IDC_RESET) {//重置
+			HWND hEdit;
+			hEdit = GetDlgItem(hDlg, IDC_NAME);
+			SetWindowText(hEdit, L"");
+			hEdit = GetDlgItem(hDlg, IDC_USERNAME);
+			SetWindowText(hEdit, L"");
+			hEdit = GetDlgItem(hDlg, IDC_PASSWORD);
+			SetWindowText(hEdit, L"");
+			hEdit = GetDlgItem(hDlg, IDC_PPK);
+			SetWindowText(hEdit, L"");
+			return (INT_PTR)FALSE;
+		}
+		else if (LOWORD(wParam) == IDC_DEL) {// 删除选中项
+			wchar_t dirPath[MAX_PATH] = { 0 };
+			wchar_t iniPath[MAX_PATH] = { 0 };
+
+			HWND hListBox = GetDlgItem(hDlg, IDC_LIST_NAME);
+			int selIndex = SendMessage(hListBox, LB_GETCURSEL, 0, 0);
+			if (selIndex != LB_ERR)
+			{
+				wchar_t itemText[256];
+				SendMessage(hListBox, LB_GETTEXT, selIndex, (LPARAM)itemText);
+				GetPuttyCredentialPath(dirPath, MAX_PATH);
+				PathCombine(iniPath, dirPath, itemText);  // 合并目录和文件名
+				swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+				DeleteFile(iniPath);
+				SendMessage(hListBox, LB_DELETESTRING, selIndex, 0);
+			}
+			else
+			{
+				MessageBox(hDlg, L"请先选择一个项目", L"提示", MB_ICONINFORMATION);
+			}
+			return (INT_PTR)FALSE;
+		}
+		else if (LOWORD(wParam) == IDC_EDIT) {//编辑
+			wchar_t dirPath[MAX_PATH] = { 0 };
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			HWND hListBox = GetDlgItem(hDlg, IDC_LIST_NAME);
+			// 处理列表项选择变化
+			int selIndex = SendMessage(hListBox, LB_GETCURSEL, 0, 0);
+			if (selIndex != LB_ERR)
+			{
+				wchar_t itemText[256];
+				CredentialInfo config;
+				HWND hEdit;
+				SendMessage(hListBox, LB_GETTEXT, selIndex, (LPARAM)itemText);
+				// 构建路径
+				GetPuttyCredentialPath(dirPath, MAX_PATH);
+				PathCombine(iniPath, dirPath, itemText);  // 合并目录和文件名
+				swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+				ReadCredentialFromIni(iniPath, &config);
+
+				hEdit = GetDlgItem(hDlg, IDC_NAME);
+				SetWindowText(hEdit, config.name);
+				hEdit = GetDlgItem(hDlg, IDC_USERNAME);
+				SetWindowText(hEdit, config.userName);
+				hEdit = GetDlgItem(hDlg, IDC_PASSWORD);
+				SetWindowText(hEdit, config.password);
+				hEdit = GetDlgItem(hDlg, IDC_PPK);
+				SetWindowText(hEdit, config.privateKey);
+			}
+			return (INT_PTR)FALSE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
 			setBrowser(hDlg, L"PuTTY私钥.ppk\0*.ppk\0所有文件\0*.*\0", IDC_PPK);

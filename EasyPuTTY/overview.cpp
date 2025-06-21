@@ -75,11 +75,11 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				DestroyMenu(hMenu);
 			}
 		}
+		break;
 	}
-					break;
 	case WM_COMMAND: {
 		switch (LOWORD(wParam)) {
-		case ID_RUN_COMMAND: {
+		case ID_RUN_COMMAND: {//执行命令
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
@@ -87,7 +87,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			}
 			break;
 		}
-		case ID_LIST_EDIT: {
+		case ID_LIST_EDIT: {//编辑
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
@@ -101,7 +101,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			}
 			break;
 		}
-		case ID_LIST_DEL: {
+		case ID_LIST_DEL: {//删除
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			wchar_t szText[MAX_PATH] = { 0 };
 			wchar_t szType[MAX_PATH] = { 0 };
@@ -119,13 +119,13 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					GetProgramPath(dirPath, MAX_PATH);
 				}
 				PathCombine(iniPath, dirPath, szText);  // 合并目录和文件名
-				PathAddExtension(iniPath, L".ini");   // 添加 .ini 扩展
+				swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 				DeleteFile(iniPath);
 				SetListViewData(hListView);
 			}
 			break;
 		}
-		case ID_LIST_REFRESH: {
+		case ID_LIST_REFRESH: {//刷新
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			SetListViewData(hListView);
 			break;

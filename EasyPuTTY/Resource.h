@@ -24,6 +24,7 @@
 #define IDC_BROWSER_PUTTY               1002
 #define IDC_SYSLINK1                    1003
 #define IDC_BUTTON2                     1004
+#define IDC_EDIT                        1004
 #define IDC_BROWSER_WINSCP              1005
 #define IDC_SYSLINK2                    1006
 #define IDC_BROWSER_FILEZILLA           1006
@@ -55,6 +56,12 @@
 #define IDC_EDIT4                       1017
 #define IDC_PRO_TAGS                    1017
 #define IDC_BUTTON1                     1018
+#define IDC_DEL                         1018
+#define IDC_LIST_NAME                   1021
+#define IDC_CLEAR                       1022
+#define IDC_RESET                       1023
+#define IDC_BUTTON3                     1024
+#define IDC_ADD                         1024
 #define IDM_OPEN                        32772
 #define IDM_CLOSE                       32773
 #define IDM_ENUM_WINDOW                 32774
@@ -64,6 +71,7 @@
 #define ID_LIST_ATTACH                  32778
 #define ID_TAB_CLOSE                    32779
 #define ID_TAB_MOVETOLEFT               32780
+#define ID_LIST_DEL                     32780
 #define ID_TAB_MOVETORIGHT              32781
 #define ID_TAB_MOVETOLEFTMOST           32782
 #define ID_TAB_MOVETORIGHTMOST          32783
@@ -83,9 +91,12 @@
 #define ID_LIST_FILEZILLA               32797
 #define ID_LIST_EDIT                    32798
 #define ID_TAB_REFRESH                  32799
-#define ID_LIST_DEL                     32780
+#define ID_TAB_32800                    32800
 #define ID_LIST_REFRESH                 32801
+#define ID_TAB_32801                    32801
 #define ID_TAB_AUTO                     32802
+#define ID_TAB_32802                    32802
+#define ID_TAB_32803                    32803
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -93,9 +104,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        138
-#define _APS_NEXT_COMMAND_VALUE         32799
-#define _APS_NEXT_CONTROL_VALUE         1019
+#define _APS_NEXT_RESOURCE_VALUE        139
+#define _APS_NEXT_COMMAND_VALUE         32804
+#define _APS_NEXT_CONTROL_VALUE         1025
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
