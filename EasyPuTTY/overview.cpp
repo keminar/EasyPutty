@@ -153,6 +153,25 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 	//第几列的值为启动命令
 	ListView_GetItemText(hListView, selectedItem, 2, line.command, sizeof(line.command));
 	ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
+
+	// 获取凭证的密码
+	wchar_t type[128] = { 0 };
+	wchar_t credential[MAX_PATH] = { 0 };
+	wchar_t credentialPath[MAX_PATH] = { 0 };
+	wchar_t iniPath[MAX_PATH] = { 0 };
+	CredentialInfo credentialConfig = { 0 };
+	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	ListView_GetItemText(hListView, selectedItem, 4, credential, sizeof(credential));
+	if (wcscmp(type, L"PuTTY") == 0) {
+		GetPuttyCredentialPath(credentialPath, MAX_PATH);
+		PathCombine(iniPath, credentialPath, credential);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadCredentialFromIni(iniPath, &credentialConfig);
+		if (credentialConfig.password[0] != L'\0') {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s -pw %s", line.command, credentialConfig.password);
+		}
+	}
+	
 	// 通过发送自定义消息获取主窗口句柄
 	HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 	if (mainWindow) {
@@ -279,9 +298,7 @@ void SetListViewData(HWND hListView) {
 				if (foundCredential->privateKey[0] != L'\0') {
 					swprintf(command, MAX_COMMAND_LEN, L"%s -i %s", command, foundCredential->privateKey);
 				}
-				if (foundCredential->password[0] != L'\0') {
-					swprintf(command, MAX_COMMAND_LEN, L"%s -pw %s", command, foundCredential->password);
-				}
+				// 密码在命令中隐藏
 			}
 			else {
 				swprintf(command, MAX_COMMAND_LEN, L"%s -ssh %s", putty, sessionConfig.hostName);
