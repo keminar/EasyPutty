@@ -937,8 +937,9 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	}
 	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 	// 检查进程是否关闭，超时强杀进程
+	// todo chrome不能关闭进程pid会影响所有标签窗口
 	if (tabCtrlItemInfo.attachProcessId > 0) {
-		DWORD dwExitCode = 0;
+		/*DWORD dwExitCode = 0;
 		// 打开进程，获取句柄
 		HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
 		if (hProc != NULL) {
@@ -960,7 +961,7 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 				TerminateProcess(hProc, dwExitCode);//终止进程
 			}
 			CloseHandle(hProc);
-		}
+		}*/
 		tabCtrlItemInfo.attachProcessId = 0;
 	}
 
