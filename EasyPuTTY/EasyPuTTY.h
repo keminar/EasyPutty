@@ -12,12 +12,13 @@ typedef struct tagTCCUSTOMITEM {
 	DWORD attachProcessId;
 	HANDLE processHandle;
 	HANDLE waitHandle;
+	LPWSTR command;
 } TCCUSTOMITEM;
 
 
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle);
 int AddNewTab(HWND tabCtrlWinHandle, int suffix);
-void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
+int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
 void RemoveTab(HWND tabCtrlWinHandle, int currentTab, BOOL quit);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
 
@@ -31,7 +32,7 @@ int GetTitleBarHeightWithoutMenu(HWND hWnd);
 BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL refresh);
 void selectTab(HWND tabCtrlWinHandle, int tabIndex);
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected);
-TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);
+void getTabItemInfo(HWND tabCtrlWinHandle, int i, TCCUSTOMITEM* tabCtrlItemInfo);
 HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i);
 HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
 RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc);
@@ -41,3 +42,4 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab);
 HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait);
 void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess);
 void CALLBACK ProcessEndCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
+void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* command);
