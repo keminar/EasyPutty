@@ -18,7 +18,7 @@ typedef struct tagTCCUSTOMITEM {
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle);
 int AddNewTab(HWND tabCtrlWinHandle, int suffix);
 void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
-void RemoveTab(HWND tabCtrlWinHandle, int currentTab);
+void RemoveTab(HWND tabCtrlWinHandle, int currentTab, BOOL quit);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
 
 void moveTabToPosition(struct TabWindowsInfo *tabWindowsInfo, int tabIndex, int newPosition);
@@ -28,7 +28,7 @@ void selectedTabToLeftmost();
 void selectedTabToLeft();
 
 int GetTitleBarHeightWithoutMenu(HWND hWnd);
-BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc);
+BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL refresh);
 void selectTab(HWND tabCtrlWinHandle, int tabIndex);
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected);
 TCCUSTOMITEM getTabItemInfo(HWND tabCtrlWinHandle, int i);
