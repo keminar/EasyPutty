@@ -257,7 +257,8 @@ BOOL FindSelectedSession(wchar_t* name, int nameLen) {
 	HWND tabCtrlWinHandle = (g_tabWindowsInfo)->tabCtrlWinHandle;
 	int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 	if (sel != -1) {
-		TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+		TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+		getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 		// 在overview标签上
 		if (!tabCtrlItemInfo.attachWindowHandle) {
 			wchar_t szType[256] = { 0 };
@@ -418,7 +419,8 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			HWND tabCtrlWinHandle = g_tabWindowsInfo->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
-				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+				TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+				getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 				// 在overview标签上
 				if (!tabCtrlItemInfo.attachWindowHandle) {
 					SendMessage(tabCtrlItemInfo.hostWindowHandle, WM_COMMAND, ID_LIST_REFRESH, NULL);
@@ -855,7 +857,8 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			HWND tabCtrlWinHandle = g_tabWindowsInfo->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
-				TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
+				TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+				getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 				// 在overview标签上
 				if (!tabCtrlItemInfo.attachWindowHandle) {
 					SendMessage(tabCtrlItemInfo.hostWindowHandle, WM_COMMAND, ID_LIST_REFRESH, NULL);
