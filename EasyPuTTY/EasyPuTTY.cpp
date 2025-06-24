@@ -212,7 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 		if (sel != -1) {
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
-			getTabItemInfo(tabCtrlWinHandle, sel, tabCtrlItemInfo);
+			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 			if (tabCtrlItemInfo.attachWindowHandle) {//解决句柄为NULL + RDW_ALLCHILDREN时，两个进程调整一个大小另一个也会刷新的问题
 				RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 			}
@@ -290,6 +290,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex, FALSE);
 			break;
 		}
+		case ID_TAB_CLOSE_RIGHT: {
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			if (tabItemsCount <= g_tabHitIndex) {
+				return 0;
+			}
+			for (int i = tabItemsCount - 1; i > g_tabHitIndex; i--) {
+				RemoveTab(tabCtrlWinHandle, i, FALSE);
+			}
+			return 0;
+		}
+		case ID_TAB_CLOSE_OTHER: {
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			if (tabItemsCount < 1) {
+				return 0;
+			}
+			for (int i = tabItemsCount - 1; i >= 0; i--) {
+				if (i != g_tabHitIndex) {
+					RemoveTab(tabCtrlWinHandle, i, FALSE);
+				}
+			}
+			return 0;
+		}
+		case ID_TAB_CLOSE_ALL: {
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			if (tabItemsCount < 1) {
+				return 0;
+			}
+			for (int i = tabItemsCount - 1; i >= 0; i--) {
+				RemoveTab(tabCtrlWinHandle, i, FALSE);
+			}
+			return 0;
+		}
 		case ID_TAB_CLONE: {//克隆
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
@@ -310,10 +345,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
 			break;
 		}
-		case ID_TAB_RENAME: {//重新命名
-			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
-			getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
-			wchar_t* xxx = tabCtrlItemInfo.command;
+		case ID_TAB_RENAME: {//重命名弹窗
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_RENAME), hWnd, RenameProc);
+			break;
+		}
+		case ID_TAB_RENAME_GET: { // 获取旧标签名
+			TCITEM tie = { 0 };
+			tie.mask = TCIF_TEXT;         // 只获取文本属性
+			tie.cchTextMax = 256;         // 缓冲区最大长度
+			tie.pszText = (wchar_t*)lParam;   // 指向接收文本的缓冲区
+			SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
+			return 0;
+		}
+		case ID_TAB_RENAME_DO: {//确认修改标签名
+			wchar_t cutTitle[256] = { 0 };
+			TruncateString((wchar_t*)lParam, cutTitle, 18);
+			TCITEM tie = { 0 };
+			tie.mask = TCIF_TEXT;
+			tie.pszText = cutTitle;
+			SendMessage(tabCtrlWinHandle, TCM_SETITEM, g_tabHitIndex, (LPARAM)&tie);
 			break;
 		}
 		case ID_TAB_AUTO: { //attach进程自动关闭后回调更新标签
@@ -434,6 +484,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DetachTab(tabCtrlWinHandle, g_tabHitIndex);
 			return 0;
 		}
+		case ID_TAB_DETACH_ALL: {
+			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			if (tabItemsCount < 1) {
+				return 0;
+			}
+			for (int i = tabItemsCount - 1; i >=0; i--) {
+				DetachTab(tabCtrlWinHandle, i);
+			}
+			return 0;
+		}
 		case ID_LIST_ATTACH: { // 点击启动程序并嵌入标签
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			NameCommand* selLine = (NameCommand*)lParam;
@@ -507,8 +568,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
-		for (int i = 0; i < tabItemsCount; i++) {
-			RemoveTab(tabCtrlWinHandle, i, TRUE);
+		if (tabItemsCount >= 1) {
+			for (int i = tabItemsCount - 1; i >= 0; i--) {
+				RemoveTab(tabCtrlWinHandle, i, TRUE);
+			}
 		}
 
 		PostQuitMessage(0);
@@ -1179,6 +1242,9 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	getTabItemInfo(tabCtrlWinHandle, indexTab, &tabCtrlItemInfo);
+	if (tabCtrlItemInfo.attachProcessId == 0) {
+		return;
+	}
 
 	// 先关闭标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, indexTab);
