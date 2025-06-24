@@ -727,7 +727,7 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL 
 		MoveWindow(attachWindowHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
 		// 这个要用TRUE
-		MoveWindow(attachWindowHandle, 0, -captionHeight+3,
+		MoveWindow(attachWindowHandle, 0, -captionHeight+2,
 			rc.right - rc.left, rc.bottom - rc.top + captionHeight, refresh);
 
 	}
@@ -1263,13 +1263,14 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 		// 获取子窗口当前位置和大小
 		RECT rect;
 		GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
-		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
-
+		// 先修改样式，因为分离后设置样式可能无效导致部分软件显示异常
 		if (!IsConsoleWindow(tabCtrlItemInfo.attachWindowHandle)) {
 			LONG_PTR style = GetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
 			style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
 			SetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
 		}
+		// 最后分离
+		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
 		// 重新定位窗口，增加一些错位
 		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
 			rect.left + 30, rect.top + 50,
