@@ -208,14 +208,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		resizeTabControl(&g_tabWindowsInfo, rc);
 
 		// 刷新当前标签
-		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		/*HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 		if (sel != -1) {
 			TCCUSTOMITEM tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, sel);
 			if (tabCtrlItemInfo.attachWindowHandle) {//解决句柄为NULL + RDW_ALLCHILDREN时，两个进程调整一个大小另一个也会刷新的问题
 				RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 			}
-		}
+		}*/
 		// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
 		SetTimer(hWnd, TIMER_ID_FOCUS, 260, NULL);
 		return 0;
@@ -285,11 +285,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		case IDM_CLOSE: { // 关闭当前选中
 			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
-			RemoveTab(tabCtrlWinHandle, currentTab);
+			RemoveTab(tabCtrlWinHandle, currentTab, FALSE);
 			break;
 		}
 		case ID_TAB_CLOSE: {//右键关闭当前鼠标位置标签
-			RemoveTab(tabCtrlWinHandle, g_tabHitIndex);
+			RemoveTab(tabCtrlWinHandle, g_tabHitIndex, FALSE);
 			break;
 		}
 		case ID_TAB_AUTO: { //attach进程自动关闭后回调更新标签
@@ -468,7 +468,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					GetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
 					rc = getTabRect(&g_tabWindowsInfo, rc);
 					TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-					setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc);
+					setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc, TRUE);
 					//重绘，部分软件需要，如cmd
 					//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 
@@ -553,7 +553,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		for (int i = 0; i < tabItemsCount; i++) {
-			RemoveTab(tabCtrlWinHandle, i);
+			RemoveTab(tabCtrlWinHandle, i, TRUE);
 		}
 
 		PostQuitMessage(0);
@@ -596,7 +596,7 @@ HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait) {
 
 // 回收资源
 void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess) {
-	// Microsoft 官方文档 指出在调用 UnregisterWaitEx 之前，不要关闭等待的句柄
+	// Microsoft 官方文档 指出在调用 UnregisterWaitEx 之前，不要关闭等待的句柄,如hProcess
 	if (hWait) {
 		UnregisterWaitEx(hWait, INVALID_HANDLE_VALUE);
 	}
@@ -626,7 +626,7 @@ int GetTitleBarHeightWithoutMenu(HWND hWnd) {
 	return titleBarHeight;
 }
 
-BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
+BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL refresh) {
 	//不能使用SetWindowPos窗口刷新会有问题，MoveWindow也不重绘
 	// 新增：调整 PuTTY 窗口大小（若句柄有效）
 	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
@@ -635,12 +635,13 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc) {
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
 		// 这个要用TRUE
 		MoveWindow(attachWindowHandle, 0, -captionHeight+3,
-			rc.right - rc.left, rc.bottom - rc.top + captionHeight, TRUE);
+			rc.right - rc.left, rc.bottom - rc.top + captionHeight, refresh);
 
 	}
-	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, refresh);
 }
 
+// tab事件
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
 
 	POINT cursorPos, absCursorPos;
@@ -652,13 +653,13 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 		return 0;
 	}
 
-	case TCN_SELCHANGE: {
+	case TCN_SELCHANGE: {//选中标签
 		showWindowForSelectedTabItem(tabCtrlWinHandle, -1);
 
 		SetTimer(g_mainWindowHandle, TIMER_ID_FOCUS, 1, NULL);
 		return 1;
 	}
-	case NM_RCLICK: {
+	case NM_RCLICK: { //右键点击
 		GetCursorPos(&absCursorPos);
 		cursorPos = absCursorPos;
 		// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
@@ -863,7 +864,7 @@ void AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
 	rc = getTabRect(tabWindowsInfo, rc);
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-	setTabWindowPos(hostWindow, NULL, rc);
+	setTabWindowPos(hostWindow, NULL, rc, TRUE);
 	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
 }
@@ -909,7 +910,7 @@ HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i) {
 }
 
 // 删除标签
-void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
+void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 	int count;
 	int newSelectedTab;
 	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
@@ -919,15 +920,21 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	// retrieve information about tab control item with index i
 	TabCtrl_GetItem(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 
-	// 最后一个预览不删除
-	count = TabCtrl_GetItemCount(tabCtrlWinHandle);
-	if (count == 1 && tabCtrlItemInfo.attachProcessId == 0) {
-		return;
+	if (!quit) {
+		// 最后一个预览不删除
+		count = TabCtrl_GetItemCount(tabCtrlWinHandle);
+		if (count == 1 && tabCtrlItemInfo.attachProcessId == 0) {
+			return;
+		}
 	}
 
 	// 删除标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-
+	//如果有attach了cmd进程 ，退出执行会发生(ntdll.dll)处引发的异常: 0xC0000005: 写入位置 0xCCCCCCD4 时发生访问冲突
+	//暂时不知道如何解决，退出时注释掉
+	if (!quit) {
+		ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
+	}
 	// 销毁窗体
 	if (tabCtrlItemInfo.hostWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
@@ -935,9 +942,8 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 	if (tabCtrlItemInfo.attachWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
 	}
-	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 	// 检查进程是否关闭，超时强杀进程
-	// todo chrome不能关闭进程pid会影响所有标签窗口
+	// todo chrome不能关闭进程pid会影响所有标签窗口,vscode也有同样问题
 	if (tabCtrlItemInfo.attachProcessId > 0) {
 		/*DWORD dwExitCode = 0;
 		// 打开进程，获取句柄
@@ -963,6 +969,10 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab) {
 			CloseHandle(hProc);
 		}*/
 		tabCtrlItemInfo.attachProcessId = 0;
+	}
+
+	if (quit) {
+		return;
 	}
 
 	// 标签切换
@@ -1021,16 +1031,21 @@ HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 		SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
 		return E_FAIL;
 
-
+	int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+	
 	// 调整每个标签页内容窗口的位置
 	numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	for (i = 0; i < numTabs; i++) {
 		tabCtrlItemInfo = getTabItemInfo(tabCtrlWinHandle, i);
 
+		BOOL refresh = FALSE;
+		if (sel == i) {
+			refresh = TRUE;
+		}
 		// 使用 clientRect 作为标签页内容的位置和大小
 		setTabWindowPos(tabCtrlItemInfo.hostWindowHandle,
 			tabCtrlItemInfo.attachWindowHandle,
-			clientRect);
+			clientRect, refresh);
 	}
 
 	return S_OK;
@@ -1116,7 +1131,7 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
 	rc = getTabRect(tabWindowsInfo, rc);
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
-	setTabWindowPos(hostWindow, attachHwnd, rc);
+	setTabWindowPos(hostWindow, attachHwnd, rc, TRUE);
 	//重绘，部分软件需要，如cmd
 
 	//RedrawWindow(attachHwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
