@@ -879,3 +879,39 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	}
 	return (INT_PTR)FALSE;
 }
+
+
+// “重命名”框的消息处理程序。
+INT_PTR CALLBACK RenameProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG: {
+		HWND hEdit;
+		wchar_t name[MAX_PATH] = { 0 };
+		SendMessage(g_tabWindowsInfo->parentWinHandle, WM_COMMAND, ID_TAB_RENAME_GET, (LPARAM)&name);
+		hEdit = GetDlgItem(hDlg, IDC_TAG_NAME);
+		SetWindowText(hEdit, name);
+		return (INT_PTR)TRUE;
+	}
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK)
+		{
+			wchar_t name[MAX_PATH] = { 0 };
+			HWND hEdit;
+
+			hEdit = GetDlgItem(hDlg, IDC_TAG_NAME);
+			GetWindowText(hEdit, name, MAX_PATH);
+			SendMessage(g_tabWindowsInfo->parentWinHandle, WM_COMMAND, ID_TAB_RENAME_DO, (LPARAM)name);
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
