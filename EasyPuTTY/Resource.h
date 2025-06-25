@@ -49,6 +49,7 @@
 #define IDC_PASSWORD                    1024
 #define IDC_PUTTYGEN                    1025
 #define IDC_EDIT1                       1026
+#define IDC_PSFTP                       1026
 #define IDC_OTHER_PARAMS                1027
 #define IDC_PRO_NAME                    1028
 #define IDC_TAG_NAME                    1029
@@ -59,6 +60,7 @@
 #define IDC_EDIT4                       1034
 #define IDC_PRO_TAGS                    1035
 #define IDC_BUTTON1                     1036
+#define IDC_BROWSER_PSFTP               1036
 #define IDC_DEL                         1037
 #define IDC_LIST_NAME                   1038
 #define IDC_CLEAR                       1039
@@ -105,6 +107,7 @@
 #define ID_TAB_CLOSE_RIGHT              32808
 #define ID_TAB_CLOSE_OTHER              32809
 #define ID_TAB_CLOSE_ALL                32810
+#define ID_PUTTY_PSFTP                  32811
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -113,7 +116,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        140
-#define _APS_NEXT_COMMAND_VALUE         32811
+#define _APS_NEXT_COMMAND_VALUE         32812
 #define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
