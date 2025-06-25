@@ -31,4 +31,5 @@
 
 ## 第三方下载
 - [putty] http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html
-- [winscp] https://winscp.net/download/WinSCP-5.15.3-Automation.zip
+- [winscp] https://winscp.net/download/WinSCP-6.5.2-Portable.zip/download
+- [filezilla] https://filezilla-project.org/download.php

@@ -58,6 +58,8 @@ void SetListViewData(HWND hListView);
 void InitializeListViewColumns(HWND hWndListView);
 void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input);
 void execCommand(HWND hwnd, HWND hListView, int selectedItem);
+void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem);
+void winscpCommand(HWND hwnd, HWND hListView, int selectedItem);
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount);
 void FreeFileList(wchar_t** fileList, int fileCount);
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config);
