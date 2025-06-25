@@ -67,6 +67,8 @@
 #define IDC_RESET                       1040
 #define IDC_BUTTON3                     1041
 #define IDC_ADD                         1042
+#define ID_SEARCH_EDIT                  1043
+#define ID_SEARCH_BUTTON                1044
 #define IDM_OPEN                        32771
 #define IDM_CLOSE                       32772
 #define IDM_ENUM_WINDOW                 32773
@@ -117,7 +119,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        140
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         1043
+#define _APS_NEXT_CONTROL_VALUE         1045
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
