@@ -60,6 +60,7 @@ void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wc
 void execCommand(HWND hwnd, HWND hListView, int selectedItem);
 void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem);
 void winscpCommand(HWND hwnd, HWND hListView, int selectedItem);
+void psftpCommand(HWND hwnd, HWND hListView, int selectedItem);
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount);
 void FreeFileList(wchar_t** fileList, int fileCount);
 void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config);

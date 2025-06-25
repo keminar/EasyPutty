@@ -457,6 +457,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		wchar_t params[MAX_PATH] = { 0 };
 		wchar_t puttygen[MAX_PATH] = { 0 };
 		wchar_t pageant[MAX_PATH] = { 0 };
+		wchar_t psftp[MAX_PATH] = { 0 };
 		HWND hEdit;
 
 		GetAppIni(iniPath, MAX_PATH);
@@ -466,6 +467,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		GetPrivateProfileStringW(SECTION_NAME, L"Putty_params", L"", params, MAX_PATH, iniPath);
 		GetPrivateProfileStringW(SECTION_NAME, L"Puttygen", L"", puttygen, MAX_PATH, iniPath);
 		GetPrivateProfileStringW(SECTION_NAME, L"Pageant", L"", pageant, MAX_PATH, iniPath);
+		GetPrivateProfileStringW(SECTION_NAME, L"Psftp", L"", psftp, MAX_PATH, iniPath);
 
 		hEdit = GetDlgItem(hDlg, IDC_PUTTY);
 		SetWindowText(hEdit, putty);
@@ -479,6 +481,8 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		SetWindowText(hEdit, puttygen);
 		hEdit = GetDlgItem(hDlg, IDC_PAGEANT);
 		SetWindowText(hEdit, pageant);
+		hEdit = GetDlgItem(hDlg, IDC_PSFTP);
+		SetWindowText(hEdit, psftp);
 		return (INT_PTR)TRUE;
 	}
 
@@ -493,6 +497,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			wchar_t params[MAX_PATH] = { 0 };
 			wchar_t puttygen[MAX_PATH] = { 0 };
 			wchar_t pageant[MAX_PATH] = { 0 };
+			wchar_t psftp[MAX_PATH] = { 0 };
 			HWND hEdit;
 
 			hEdit = GetDlgItem(hDlg, IDC_PUTTY);
@@ -507,6 +512,8 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			GetWindowText(hEdit, puttygen, MAX_PATH);
 			hEdit = GetDlgItem(hDlg, IDC_PAGEANT);
 			GetWindowText(hEdit, pageant, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_PSFTP);
+			GetWindowText(hEdit, psftp, MAX_PATH);
 
 			//使用相对路径受GetOpenFileName影响，所以要用全路径
 			GetAppIni(iniPath, MAX_PATH);
@@ -517,6 +524,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Putty_params", params, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Puttygen", puttygen, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Pageant", pageant, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"Psftp", psftp, iniPath);
 			if (!result) {
 				showError(hDlg, L"添加失败");
 				return FALSE;
@@ -533,7 +541,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_WINSCP) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_WINSCP);
+			setBrowser(hDlg, L"可执行文件\0*.exe\0COM文件\0*.com\0所有文件\0*.*\0", IDC_WINSCP);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_FILEZILLA) {
@@ -546,6 +554,10 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PAGEANT) {
 			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PAGEANT);
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDC_BROWSER_PSFTP) {
+			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PSFTP);
 			return (INT_PTR)TRUE;
 		}
 		break;

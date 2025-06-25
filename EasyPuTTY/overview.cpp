@@ -130,6 +130,14 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			SetListViewData(hListView);
 			break;
 		}
+		case ID_PUTTY_PSFTP: {
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				psftpCommand(hwnd, hListView, selectedItem);
+			}
+			break;
+		}
 		case ID_LIST_WINSCP: {
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
@@ -241,6 +249,9 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s@%s", line.command, credentialConfig.userName, sessionConfig.hostName);
 			}
 		}
+		else {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s%s", line.command, sessionConfig.hostName);
+		}
 		if (sessionConfig.port > 0) {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s:%d", line.command, sessionConfig.port);
 		}
@@ -313,11 +324,90 @@ void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s@%s", line.command, credentialConfig.userName, sessionConfig.hostName);
 			}
 		}
+		else {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s%s", line.command, sessionConfig.hostName);
+		}
 		if (sessionConfig.port > 0 && sessionConfig.port != 22) {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s:%d", line.command, sessionConfig.port);
 		}
 		if (credentialConfig.privateKey[0] != L'\0') {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s /privatekey=\"%s\"", line.command, credentialConfig.privateKey);
+		}
+		// 通过发送自定义消息获取主窗口句柄
+		HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+		if (mainWindow) {
+			// 转发按钮点击消息到主窗口
+			SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
+		}
+	}
+	else {
+		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+	}
+
+}
+
+
+
+// 执行命令在新标签打开
+void psftpCommand(HWND hwnd, HWND hListView, int selectedItem) {
+	NameCommand line = { 0 };
+	wchar_t psftp[MAX_PATH] = { 0 };
+	// 获取凭证的密码
+	wchar_t type[128] = { 0 };
+	wchar_t credential[MAX_PATH] = { 0 };
+	wchar_t credentialPath[MAX_PATH] = { 0 };
+	wchar_t dirPath[MAX_PATH] = { 0 };
+	wchar_t iniPath[MAX_PATH] = { 0 };
+	SessionInfo sessionConfig = { 0 };
+	CredentialInfo credentialConfig = { 0 };
+	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	if (wcscmp(type, L"PuTTY") == 0) {
+		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
+		// psftp路径
+		GetAppIni(iniPath, MAX_PATH);
+		GetPrivateProfileStringW(SECTION_NAME, L"Psftp", L"", psftp, MAX_PATH, iniPath);
+		if (psftp[0] == L'\0') {
+			MessageBox(NULL, L"需要先配置psftp路径", L"提示", MB_OK);
+			return;
+		}
+
+		// 会话
+		GetPuttySessionsPath(dirPath, MAX_PATH);
+		PathCombine(iniPath, dirPath, line.name);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadSessionFromIni(iniPath, &sessionConfig);
+		if (sessionConfig.hostName[0] == L'\0') {
+			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			return;
+		}
+
+		ListView_GetItemText(hListView, selectedItem, 4, credential, sizeof(credential));
+		GetPuttyCredentialPath(credentialPath, MAX_PATH);
+		PathCombine(iniPath, credentialPath, credential);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadCredentialFromIni(iniPath, &credentialConfig);
+
+		/*
+		psftp [username@]host -P port -pw passwd -i "C:\path\to\key.ppk"
+		*/
+		swprintf(line.command, MAX_COMMAND_LEN, L"%s", psftp);
+
+		if (credentialConfig.userName[0] != L'\0') {
+			if (credentialConfig.password[0] != L'\0') {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s %s@%s -pw %s", line.command, credentialConfig.userName, sessionConfig.hostName, credentialConfig.password);
+			}
+			else {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s %s@%s", line.command, credentialConfig.userName, sessionConfig.hostName);
+			}
+		}
+		else {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s %s", line.command, sessionConfig.hostName);
+		}
+		if (sessionConfig.port > 0 && sessionConfig.port != 22) {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s -P %d", line.command, sessionConfig.port);
+		}
+		if (credentialConfig.privateKey[0] != L'\0') {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s -i \"%s\"", line.command, credentialConfig.privateKey);
 		}
 		// 通过发送自定义消息获取主窗口句柄
 		HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
