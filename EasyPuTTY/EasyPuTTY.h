@@ -43,3 +43,4 @@ HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait);
 void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess);
 void CALLBACK ProcessEndCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* command);
+void PerformSearch(HWND hWnd);

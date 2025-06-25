@@ -17,6 +17,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
 HWND g_toolbarHandle;                          // 工具条
 HWND g_mainWindowHandle;                       // 主窗体
 int g_tabHitIndex;                             // 标签右键触发索引
+HWND g_hsearchEdit; //搜索框
 
 // single global instance of TabWindowsInfo
 struct TabWindowsInfo g_tabWindowsInfo;
@@ -277,6 +278,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 分析菜单选择:
 		switch (wmId)
 		{
+		case ID_SEARCH_BUTTON://搜索
+			if (HIWORD(wParam) == BN_CLICKED) {
+				PerformSearch(hWnd);
+			}
+			break;
 		case IDM_OPEN: {//新增标签
 			AddNewOverview(&g_tabWindowsInfo);
 			break;
@@ -845,7 +851,6 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS,
 		0, 0, 0, 0, parentWinHandle, (HMENU)IDR_MAIN_TOOLBAR, g_appInstance, NULL
 	);
-
 	// 设置 ImageList
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 	// 定义按钮
@@ -868,12 +873,35 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_ABOUT,  TBSTATE_HIDDEN, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"帮助" },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
-
+	//必须在调用 TB_ADDBUTTONS 之前设置TB_BUTTONSTRUCTSIZE 传递结构体大小，否则工具栏可能无法正确解析按钮数据。
+	SendMessage(g_toolbarHandle, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
 	// 添加按钮
 	SendMessage(g_toolbarHandle, TB_ADDBUTTONS,
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
 	// 自动调整大小
 	SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+
+
+	// 创建搜索框和搜索按钮
+	g_hsearchEdit = CreateWindowEx(
+		WS_EX_CLIENTEDGE,
+		_T("EDIT"),
+		_T(""),
+		WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP | ES_WANTRETURN,
+		700, 1, 300, 30,
+		g_toolbarHandle, (HMENU)ID_SEARCH_EDIT,
+		g_appInstance, NULL
+	);
+
+	HWND searchButton = CreateWindowEx(
+		0,
+		_T("BUTTON"),
+		_T("搜索"),
+		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		1000, 1, 60, 30,
+		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
+		g_appInstance, NULL
+	);
 
 	// 创建标签控件
 	tabCtrlWinHandle = CreateWindowW(
@@ -907,6 +935,9 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	tabCaptionFontHandle = CreateFontIndirectW(&tabCaptionFont);
 
 	SendMessageW(tabCtrlWinHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(g_toolbarHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(g_hsearchEdit, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(searchButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 }
 
 // 添加新标签
@@ -1283,4 +1314,13 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
+}
+
+// 执行搜索功能的函数
+void PerformSearch(HWND hWnd) {
+	wchar_t buffer[256];
+	GetWindowText(g_hsearchEdit, buffer, 256);
+
+	// 这里可以添加实际的搜索逻辑
+	MessageBox(hWnd, buffer, _T("搜索内容"), MB_OK);
 }
