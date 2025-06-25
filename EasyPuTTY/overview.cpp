@@ -131,11 +131,19 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			break;
 		}
 		case ID_LIST_WINSCP: {
-			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				winscpCommand(hwnd, hListView, selectedItem);
+			}
 			break;
 		}
 		case ID_LIST_FILEZILLA: {
-			MessageBox(NULL, L"todo", L"提示", MB_OK);
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				filezillaCommand(hwnd, hListView, selectedItem);
+			}
 			break;
 		}
 		}
@@ -178,6 +186,150 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		// 转发按钮点击消息到主窗口
 		SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
 	}
+}
+
+
+// 执行命令在新标签打开
+void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
+	NameCommand line = { 0 };
+	wchar_t filezilla[MAX_PATH] = { 0 };
+	// 获取凭证的密码
+	wchar_t type[128] = { 0 };
+	wchar_t credential[MAX_PATH] = { 0 };
+	wchar_t credentialPath[MAX_PATH] = { 0 };
+	wchar_t dirPath[MAX_PATH] = { 0 };
+	wchar_t iniPath[MAX_PATH] = { 0 };
+	SessionInfo sessionConfig = { 0 };
+	CredentialInfo credentialConfig = { 0 };
+	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	if (wcscmp(type, L"PuTTY") == 0) {
+		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
+		// Filezilla路径
+		GetAppIni(iniPath, MAX_PATH);
+		GetPrivateProfileStringW(SECTION_NAME, L"Filezilla", L"", filezilla, MAX_PATH, iniPath);
+		if (filezilla[0] == L'\0') {
+			MessageBox(NULL, L"需要先配置Filezilla路径", L"提示", MB_OK);
+			return;
+		}
+
+		// 会话
+		GetPuttySessionsPath(dirPath, MAX_PATH);
+		PathCombine(iniPath, dirPath, line.name);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadSessionFromIni(iniPath, &sessionConfig);
+		if (sessionConfig.hostName[0] == L'\0') {
+			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			return;
+		}
+
+		ListView_GetItemText(hListView, selectedItem, 4, credential, sizeof(credential));
+		GetPuttyCredentialPath(credentialPath, MAX_PATH);
+		PathCombine(iniPath, credentialPath, credential);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadCredentialFromIni(iniPath, &credentialConfig);
+
+		/*
+		filezilla sftp://[user[:password]@]host[:port]
+		*/
+		swprintf(line.command, MAX_COMMAND_LEN, L"%s sftp://", filezilla);
+
+		if (credentialConfig.userName[0] != L'\0') {
+			if (credentialConfig.password[0] != L'\0') {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s:%s@%s", line.command, credentialConfig.userName, credentialConfig.password, sessionConfig.hostName);
+			}
+			else {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s@%s", line.command, credentialConfig.userName, sessionConfig.hostName);
+			}
+		}
+		if (sessionConfig.port > 0) {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s:%d", line.command, sessionConfig.port);
+		}
+		if (credentialConfig.privateKey[0] != L'\0') {
+			MessageBox(NULL, L"Filezilla不支持命令行携带私钥，如果无法连接，推荐使用WinSCP", L"提示", MB_OK);
+			//return;
+		}
+		// 通过发送自定义消息获取主窗口句柄
+		HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+		if (mainWindow) {
+			// 转发按钮点击消息到主窗口
+			SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
+		}
+	}
+	else {
+		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+	}
+
+}
+
+// 执行命令在新标签打开
+void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
+	NameCommand line = { 0 };
+	wchar_t winscp[MAX_PATH] = { 0 };
+	// 获取凭证的密码
+	wchar_t type[128] = { 0 };
+	wchar_t credential[MAX_PATH] = { 0 };
+	wchar_t credentialPath[MAX_PATH] = { 0 };
+	wchar_t dirPath[MAX_PATH] = { 0 };
+	wchar_t iniPath[MAX_PATH] = { 0 };
+	SessionInfo sessionConfig = { 0 };
+	CredentialInfo credentialConfig = { 0 };
+	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	if (wcscmp(type, L"PuTTY") == 0) {
+		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
+		// Winscp路径
+		GetAppIni(iniPath, MAX_PATH);
+		GetPrivateProfileStringW(SECTION_NAME, L"Winscp", L"", winscp, MAX_PATH, iniPath);
+		if (winscp[0] == L'\0') {
+			MessageBox(NULL, L"需要先配置Winscp路径", L"提示", MB_OK);
+			return;
+		}
+
+		// 会话
+		GetPuttySessionsPath(dirPath, MAX_PATH);
+		PathCombine(iniPath, dirPath, line.name);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadSessionFromIni(iniPath, &sessionConfig);
+		if (sessionConfig.hostName[0] == L'\0') {
+			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			return;
+		}
+
+		ListView_GetItemText(hListView, selectedItem, 4, credential, sizeof(credential));
+		GetPuttyCredentialPath(credentialPath, MAX_PATH);
+		PathCombine(iniPath, credentialPath, credential);  // 合并目录和文件名
+		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
+		ReadCredentialFromIni(iniPath, &credentialConfig);
+
+		/*
+		winscp sftp://username:password@host[:port] /privatekey="C:\path\to\key.ppk"
+		*/
+		swprintf(line.command, MAX_COMMAND_LEN, L"%s sftp://", winscp);
+
+		if (credentialConfig.userName[0] != L'\0') {
+			if (credentialConfig.password[0] != L'\0') {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s:%s@%s", line.command, credentialConfig.userName, credentialConfig.password, sessionConfig.hostName);
+			}
+			else {
+				swprintf(line.command, MAX_COMMAND_LEN, L"%s%s@%s", line.command, credentialConfig.userName, sessionConfig.hostName);
+			}
+		}
+		if (sessionConfig.port > 0 && sessionConfig.port != 22) {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s:%d", line.command, sessionConfig.port);
+		}
+		if (credentialConfig.privateKey[0] != L'\0') {
+			swprintf(line.command, MAX_COMMAND_LEN, L"%s /privatekey=\"%s\"", line.command, credentialConfig.privateKey);
+		}
+		// 通过发送自定义消息获取主窗口句柄
+		HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
+		if (mainWindow) {
+			// 转发按钮点击消息到主窗口
+			SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
+		}
+	}
+	else {
+		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+	}
+
 }
 
 // 创建窗口
