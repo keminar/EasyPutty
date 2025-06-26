@@ -278,9 +278,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 分析菜单选择:
 		switch (wmId)
 		{
-		case ID_SEARCH_BUTTON://搜索
+		case ID_SEARCH_BUTTON://搜索框清空
 			if (HIWORD(wParam) == BN_CLICKED) {
-				PerformSearch(hWnd);
+				SetWindowText(g_hsearchEdit, L"");
+				PerformSearch(g_hsearchEdit);
 			}
 			break;
 		case IDM_OPEN: {//新增标签
@@ -835,6 +836,29 @@ void selectedTabToLeft() {
 	}
 }
 
+// 子类化后的窗口过程函数
+LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	// 获取原始窗口过程
+	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+	switch (message) {
+	case WM_KEYUP:
+		if (wParam == VK_RETURN) {
+			// 处理回车键
+			MessageBox(hWnd, L"Edit 中按下了回车键!", L"提示", MB_OK);
+
+			// 若不想让回车符输入到 Edit 中，直接返回
+			return 0;
+		}
+		else {
+			PerformSearch(hWnd);
+		}
+		break;
+	}
+
+	// 调用原始窗口过程处理其他消息
+	return CallWindowProc(originalProc, hWnd, message, wParam, lParam);
+}
+
 // 创建 TabControl 控件
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle) {
 	HWND tabCtrlWinHandle;
@@ -892,11 +916,14 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		g_toolbarHandle, (HMENU)ID_SEARCH_EDIT,
 		g_appInstance, NULL
 	);
+	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
+	// 存储原始窗口过程，用于后续调用
+	SetWindowLongPtrW(g_hsearchEdit, GWLP_USERDATA, (LONG_PTR)originalProc);
 
 	HWND searchButton = CreateWindowEx(
 		0,
 		_T("BUTTON"),
-		_T("搜索"),
+		_T("清空"),
 		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 		1000, 1, 60, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
