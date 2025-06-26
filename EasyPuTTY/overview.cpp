@@ -4,7 +4,7 @@
 
 static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
-
+static HWND g_searchEdit;
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -423,7 +423,7 @@ void psftpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 }
 
 // 创建窗口
-void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow) {
+void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow, HWND searchEdit) {
 	HWND hListView = CreateWindowW(
 		WC_LISTVIEW,
 		L"",
@@ -441,6 +441,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	}
 	g_appInstance = hInstance;
 	g_tabWindowsInfo = tabWindowsInfo;
+	g_searchEdit = searchEdit;
 	// 设置字体
 	SendMessageW(hListView, WM_SETFONT, (WPARAM)(tabWindowsInfo->editorFontHandle), 0);
 
@@ -476,11 +477,15 @@ void SetListViewData(HWND hListView) {
 	ConfigMap* credentialMap = NULL;
 	wchar_t command[MAX_COMMAND_LEN] = { 0 };
 	int nItem = 0;
+	wchar_t searchWord[256] = { 0 };
 
 	if (!hListView)
 		return;
 	// 先清掉数据
 	ListView_DeleteAllItems(hListView);
+
+	// 搜索词
+	GetWindowText(g_searchEdit, searchWord, 256);
 
 	// putty路径
 	GetAppIni(iniPath, MAX_PATH);
@@ -500,9 +505,14 @@ void SetListViewData(HWND hListView) {
 		if (programFileList[i] != NULL) {
 			ReadProgramFromIni(programFileList[i], &programConfig);
 			if (programConfig.path[0] != L'\0') {
-				swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
-				AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"是");
-				nItem++;
+				if (searchWord[0] == L'\0'
+					|| wcsstr(programConfig.name, searchWord) != NULL
+					|| wcsstr(programConfig.tags, searchWord) != NULL
+					|| wcsstr(programConfig.path, searchWord) != NULL) {
+					swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
+					AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"是");
+					nItem++;
+				}
 			}
 		}
 	}
@@ -527,6 +537,17 @@ void SetListViewData(HWND hListView) {
 			// 读取配置
 			ReadSessionFromIni(sessionFileList[i], &sessionConfig);
 			if (sessionConfig.hostName[0] == L'\0') {
+				continue;
+			}
+			BOOL add = FALSE;
+			if (searchWord[0] == L'\0'
+				|| wcsstr(sessionConfig.name, searchWord) != NULL
+				|| wcsstr(sessionConfig.tags, searchWord) != NULL
+				|| wcsstr(sessionConfig.credential, searchWord) != NULL
+				|| wcsstr(sessionConfig.hostName, searchWord) != NULL) {
+				add = TRUE;
+			}
+			if (!add) {
 				continue;
 			}
 			foundCredential = findConfigByName(credentialMap, sessionConfig.credential);

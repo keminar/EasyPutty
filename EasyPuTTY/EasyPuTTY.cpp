@@ -979,7 +979,7 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
 		return -1;
 	}
-	InitOverview(g_appInstance, tabWindowsInfo, hostWindow);
+	InitOverview(g_appInstance, tabWindowsInfo, hostWindow, g_hsearchEdit);
 	// 先获取再更新
 	getTabItemInfo(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
@@ -1318,9 +1318,14 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 
 // 执行搜索功能的函数
 void PerformSearch(HWND hWnd) {
-	wchar_t buffer[256];
-	GetWindowText(g_hsearchEdit, buffer, 256);
+	HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 
-	// 这里可以添加实际的搜索逻辑
-	MessageBox(hWnd, buffer, _T("搜索内容"), MB_OK);
+	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+	getTabItemInfo(tabCtrlWinHandle, currentTab, &tabCtrlItemInfo);
+	if (tabCtrlItemInfo.attachProcessId > 0) {
+		return;
+	}
+	HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW);
+	SetListViewData(hListView);
 }
