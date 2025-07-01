@@ -146,6 +146,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
+	case WM_ERASEBKGND: {
+		// 直接返回TRUE表示我们已经处理了背景擦除
+		// 这样可以避免系统默认的背景擦除操作，减少putty关闭和标签切换时的闪烁
+		return TRUE;
+	}
 	case WM_CREATE:
 	{
 		// application properties
@@ -196,9 +201,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 调整标签控件和按钮大小
 		if (g_toolbarHandle) {
 			// 控制窗口小的时候出横向滚动条
-			MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+			//MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 			// 自动调整大小
-			SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+			//SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 		}
 		RECT rc;
 		// WM_SIZE params contain width and height of main window's client area
@@ -219,7 +224,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}*/
 		// 在处理  WM_SIZ 期间调用 SetForegroundWindow 会不能调整大小, 通过定时器实现
-		SetTimer(hWnd, TIMER_ID_FOCUS, 260, NULL);
+		SetTimer(hWnd, TIMER_ID_FOCUS, 500, NULL);
 		return 0;
 	}
 	case WM_TIMER:
@@ -735,7 +740,7 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL 
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
 		// 这个要用TRUE
 		MoveWindow(attachWindowHandle, 0, -captionHeight+2,
-			rc.right - rc.left, rc.bottom - rc.top + captionHeight, refresh);
+			(rc.right - rc.left), (rc.bottom - rc.top + captionHeight), refresh);
 
 	}
 	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, refresh);
@@ -870,9 +875,10 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	tabWindowsInfo->parentWinHandle = parentWinHandle;
 
 	// 创建 Toolbar
-	g_toolbarHandle = CreateWindowExW(
-		0, TOOLBARCLASSNAME, NULL,
-		WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS,
+	// 如果设置了TBSTYLE_FLAT，同时主窗体设置了WM_ERASEBKGND{return true;} 工具栏背景会变成黑色，所以不设置
+	g_toolbarHandle = CreateWindowW(
+		TOOLBARCLASSNAME, NULL,
+		WS_CHILD | WS_VISIBLE | TBSTYLE_TOOLTIPS,
 		0, 0, 0, 0, parentWinHandle, (HMENU)IDR_MAIN_TOOLBAR, g_appInstance, NULL
 	);
 	// 设置 ImageList
@@ -904,8 +910,6 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
 	// 自动调整大小
 	SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
-
-
 	// 创建搜索框和搜索按钮
 	g_hsearchEdit = CreateWindowEx(
 		WS_EX_CLIENTEDGE,
@@ -939,6 +943,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	if (tabCtrlWinHandle == NULL) {
 		return; // Error happened, and we don't handle it here, invoker should call GetLastError()
 	}
+
 	tabWindowsInfo->tabCtrlWinHandle = tabCtrlWinHandle;
 
 	// We are going to store custom application data associated with each tab item. To achieve that, we need to specify once how many bytes do we need for app data
@@ -1083,16 +1088,18 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 	// 删除标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
 	//如果有attach了cmd进程 ，退出执行会发生(ntdll.dll)处引发的异常: 0xC0000005: 写入位置 0xCCCCCCD4 时发生访问冲突
-	//暂时不知道如何解决，退出时注释掉
-	if (!quit) {
+	//暂时不知道如何解决，退出时if掉
+	//目前好像已经解决访问冲突问题，去掉if
+	//if (!quit) {
 		ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
-	}
+	//}
+
 	// 销毁窗体
-	if (tabCtrlItemInfo.hostWindowHandle) {
-		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-	}
 	if (tabCtrlItemInfo.attachWindowHandle) {
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
+	}
+	if (tabCtrlItemInfo.hostWindowHandle) {
+		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 	// 检查进程是否关闭，超时强杀进程
 	// todo chrome不能关闭进程pid会影响所有标签窗口,vscode也有同样问题
