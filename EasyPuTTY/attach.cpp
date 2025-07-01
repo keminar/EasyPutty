@@ -7,8 +7,8 @@ wchar_t commandLine[MAX_PATH];
 
 // 回调函数：用于查找PuTTY窗口
 BOOL CALLBACK EnumPuTTYWindows(HWND hwnd, LPARAM lParam) {
-	WCHAR szTitle[256] = { 0 };
-	GetWindowTextW(hwnd, szTitle, sizeof(szTitle) / sizeof(WCHAR));
+	wchar_t szTitle[256] = { 0 };
+	GetWindowTextW(hwnd, szTitle, sizeof(szTitle) / sizeof(wchar_t));
 	// 跳过空标题窗口
 	if (wcscmp(szTitle, L"") == 0) {
 		return TRUE;
