@@ -396,6 +396,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					break;
 				}
 			}
+			wchar_t szTitle[MAX_PATH] = { 0 };
+			TCITEM tie = { 0 };
+			tie.mask = TCIF_TEXT;         // 只获取文本属性
+			tie.cchTextMax = MAX_PATH;    // 缓冲区最大长度
+			tie.pszText = szTitle;   // 指向接收文本的缓冲区
+			SendMessage(tabCtrlWinHandle, TCM_GETITEM, deleteTab, (LPARAM)&tie);
+			swprintf_s(szTitle, _countof(szTitle), L"%s 窗口退出，标签自动关闭", szTitle);
+			MessageBox(hWnd, szTitle, L"标签提醒", MB_OK);
 
 			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
