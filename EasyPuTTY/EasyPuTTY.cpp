@@ -203,7 +203,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 控制窗口小的时候出横向滚动条
 			//MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 			// 自动调整大小
-			//SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+			SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 		}
 		RECT rc;
 		// WM_SIZE params contain width and height of main window's client area
@@ -857,8 +857,27 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_KEYUP:
 		if (wParam == VK_RETURN) {
 			// 处理回车键
-			MessageBox(hWnd, L"Edit 中按下了回车键!", L"提示", MB_OK);
+			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+			int selected = TabCtrl_GetCurSel((&g_tabWindowsInfo)->tabCtrlWinHandle);
+			getTabItemInfo((&g_tabWindowsInfo)->tabCtrlWinHandle, selected, &tabCtrlItemInfo);
+			if (tabCtrlItemInfo.attachProcessId == 0) {
+				// 获取 ListView 控件句柄
+				HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW); // 或者通过其他方式获取
 
+				// 获取行数
+				int itemCount = ListView_GetItemCount(hListView);
+
+				// 如果有项目，则选中第一行
+				if (itemCount > 0) {
+					// 设置第一行(索引0)为选中状态
+					ListView_SetItemState(hListView, 0, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+
+					// 确保选中的项可见
+					ListView_EnsureVisible(hListView, 0, FALSE);
+					SetFocus(hListView);
+				}
+
+			}
 			// 若不想让回车符输入到 Edit 中，直接返回
 			return 0;
 		}
