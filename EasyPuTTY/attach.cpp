@@ -81,7 +81,6 @@ HWND createPuttyWindow(HINSTANCE hInstance, HWND hostWindow, const wchar_t* putt
 	}
 	// 嵌入PuTTY窗口到宿主窗口
 	SetParent(puttyHwnd, hostWindow);
-
 	// cmd设置样式在detach时会有问题
 	if (!IsConsoleWindow(puttyHwnd)) {
 		// 调整PuTTY窗口样式
