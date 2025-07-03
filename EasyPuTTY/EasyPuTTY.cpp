@@ -8,6 +8,8 @@
 // 自定义定时
 #define TIMER_ID_FOCUS 101
 #define IDC_TABCONTROL 100
+// 自定义消息：通知主窗口 Attach窗口 被点击
+#define WM_ATTACH_CLICK (WM_USER + 1001)
 
 // 全局变量:
 HINSTANCE g_appInstance;                        // 当前实例
@@ -18,6 +20,8 @@ HWND g_toolbarHandle;                          // 工具条
 HWND g_mainWindowHandle;                       // 主窗体
 int g_tabHitIndex;                             // 标签右键触发索引
 HWND g_hsearchEdit; //搜索框
+
+HHOOK g_hMouseHook = NULL;  // 钩子句柄
 
 // single global instance of TabWindowsInfo
 struct TabWindowsInfo g_tabWindowsInfo;
@@ -132,6 +136,24 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	return TRUE;
 }
 
+// 全局低级鼠标钩子回调（WH_MOUSE_LL）
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode >= 0) {
+		// WH_MOUSE_LL 钩子的 lParam 是 MSLLHOOKSTRUCT*
+		MSLLHOOKSTRUCT* pMouse = (MSLLHOOKSTRUCT*)lParam;
+
+		// 1. 获取鼠标点击位置对应的窗口句柄
+		HWND hWndUnderMouse = WindowFromPoint(pMouse->pt);
+		 
+		if (hWndUnderMouse && wParam == WM_LBUTTONDOWN) {
+			DWORD dwThreadId = 0;
+			GetWindowThreadProcessId(hWndUnderMouse, &dwThreadId);
+			SendMessage(g_mainWindowHandle, WM_ATTACH_CLICK, wParam, (LPARAM)dwThreadId);
+		}
+	}
+	// 传递消息给下一个钩子
+	return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
+}
 //
 //  函数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -189,6 +211,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 添加初始标签
 			AddNewOverview(&g_tabWindowsInfo);
 		}
+
+		g_hMouseHook = SetWindowsHookEx(
+			WH_MOUSE_LL,        // 全局低级鼠标钩子
+			MouseHookProc,      // 回调函数
+			GetModuleHandle(NULL),  // 当前模块句柄（无需 DLL）
+			0                   // 0 表示监控所有线程
+		);
 		return 0;
 	}
 	case WM_SIZE:
@@ -227,7 +256,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		SetTimer(hWnd, TIMER_ID_FOCUS, 500, NULL);
 		return 0;
 	}
-	case WM_TIMER:
+	case WM_TIMER: {
 		if (wParam == TIMER_ID_FOCUS) {
 			KillTimer(hWnd, TIMER_ID_FOCUS); // 关闭计时器
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
@@ -251,21 +280,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		return 0;
-	case WM_ACTIVATE:
+	}	
+	case WM_ACTIVATE: {
 		// 窗口切换激活，设置焦点
 		switch (LOWORD(wParam)) {
 		case WA_ACTIVE: { //（非鼠标点击，鼠标点击激活焦点不能失去，否则主窗体功能没法用）
-			// 将现有窗口设置为置顶
-			SetWindowPos(
-				hWnd,                    // 窗口句柄
-				HWND_TOPMOST,            // 置于所有非置顶窗口之上
-				0, 0, 0, 0,              // 不改变位置和大小
-				SWP_NOMOVE | SWP_NOSIZE  // 仅修改Z序
-			);
+			// 将现有窗口设置先置顶再取消
+			SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+			SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			SetTimer(hWnd, TIMER_ID_FOCUS, 100, NULL);
 			break;
 		}
-		case WA_INACTIVE: {
+		/*case WA_INACTIVE: {
 			// 取消窗口置顶
 			SetWindowPos(
 				hWnd,                    // 窗口句柄
@@ -274,9 +300,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SWP_NOMOVE | SWP_NOSIZE  // 仅修改Z序
 			);
 			break;
-		}
+		}*/
 		}
 		break;
+	}	
+	case WM_ATTACH_CLICK: {//在attach程序上点击左键
+		DWORD PID = (DWORD)lParam;
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
+		if (sel != -1) {
+			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
+			HWND attach = tabCtrlItemInfo.attachWindowHandle;
+			HWND host = tabCtrlItemInfo.hostWindowHandle;
+			if (tabCtrlItemInfo.attachWindowHandle && tabCtrlItemInfo.attachProcessId == PID) {
+				//先置顶再取消
+				SetWindowPos(hWnd, HWND_TOPMOST,  0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+				SetWindowPos(hWnd, HWND_NOTOPMOST,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+			}
+		}
+		break;
+	}
 	case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int wmId = LOWORD(wParam);
@@ -586,6 +630,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 	case WM_DESTROY: {
+		if (g_hMouseHook) {
+			UnhookWindowsHookEx(g_hMouseHook);  // 必须卸载，否则可能导致进程崩溃
+		}
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (tabItemsCount >= 1) {

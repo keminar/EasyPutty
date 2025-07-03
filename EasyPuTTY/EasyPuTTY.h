@@ -21,6 +21,7 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix);
 int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);
 void RemoveTab(HWND tabCtrlWinHandle, int currentTab, BOOL quit);
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code);
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 
 void moveTabToPosition(struct TabWindowsInfo *tabWindowsInfo, int tabIndex, int newPosition);
 void selectedTabToRightmost();
