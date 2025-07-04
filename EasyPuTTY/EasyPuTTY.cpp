@@ -10,6 +10,7 @@
 #define IDC_TABCONTROL 100
 // 自定义消息：通知主窗口 Attach窗口 被点击
 #define WM_ATTACH_CLICK (WM_USER + 1001)
+#define WM_ATTACH_RCLICK (WM_USER + 1002)
 
 // 全局变量:
 HINSTANCE g_appInstance;                        // 当前实例
@@ -22,6 +23,8 @@ int g_tabHitIndex;                             // 标签右键触发索引
 HWND g_hsearchEdit; //搜索框
 
 HHOOK g_hMouseHook = NULL;  // 钩子句柄
+BOOL g_insideHook = FALSE;  // 标记是否正在处理钩子回调
+HWND g_mouseHookWnd = NULL; // 当前拦截的putty窗体
 
 // single global instance of TabWindowsInfo
 struct TabWindowsInfo g_tabWindowsInfo;
@@ -136,8 +139,37 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	return TRUE;
 }
 
+// 剪贴板长度检查函数
+int clipboardLen() {
+	// 打开剪贴板
+	if (!OpenClipboard(NULL)) {
+		return 0;
+	}
+
+	int len = 0;
+	// 检查剪贴板是否包含文本数据
+	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+		HANDLE hData = GetClipboardData(CF_UNICODETEXT);
+		if (hData) {
+			// 锁定内存并获取指针
+			wchar_t* pszText = (wchar_t*)GlobalLock(hData);
+			if (pszText) {
+				len = wcslen(pszText);
+				// 解锁内存
+				GlobalUnlock(hData);
+			}
+		}
+	}
+	// 关闭剪贴板
+	CloseClipboard();
+	return len;
+}
+
 // 全局低级鼠标钩子回调（WH_MOUSE_LL）
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (g_insideHook) {
+		return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
+	}
 	if (nCode >= 0) {
 		// WH_MOUSE_LL 钩子的 lParam 是 MSLLHOOKSTRUCT*
 		MSLLHOOKSTRUCT* pMouse = (MSLLHOOKSTRUCT*)lParam;
@@ -149,6 +181,17 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			DWORD dwThreadId = 0;
 			GetWindowThreadProcessId(hWndUnderMouse, &dwThreadId);
 			SendMessage(g_mainWindowHandle, WM_ATTACH_CLICK, wParam, (LPARAM)dwThreadId);
+		}
+		else if (hWndUnderMouse && wParam == WM_RBUTTONDOWN) {
+			wchar_t className[256] = { 0 };
+			if (GetClassNameW(hWndUnderMouse, className, 256)) {
+				// 比较类名是否为"PuTTY"（大小写敏感）
+				if (wcscmp(className, L"PuTTY") == 0) {
+					g_mouseHookWnd = hWndUnderMouse;
+					PostMessage(g_mainWindowHandle, WM_ATTACH_RCLICK, wParam, NULL);
+					return 1;
+				}
+			}
 		}
 	}
 	// 传递消息给下一个钩子
@@ -311,15 +354,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (sel != -1) {
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
-			HWND attach = tabCtrlItemInfo.attachWindowHandle;
-			HWND host = tabCtrlItemInfo.hostWindowHandle;
 			if (tabCtrlItemInfo.attachWindowHandle && tabCtrlItemInfo.attachProcessId == PID) {
 				//先置顶再取消
 				SetWindowPos(hWnd, HWND_TOPMOST,  0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 				SetWindowPos(hWnd, HWND_NOTOPMOST,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			}
 		}
-		break;
+		return 0;
+	}
+	case WM_ATTACH_RCLICK: {//putty右键粘贴
+		HWND hWndUnderMouse  = g_mouseHookWnd;
+		if (!hWndUnderMouse) {
+			return 0;
+		} 
+		int len = clipboardLen();
+		if (len <= 200) {
+			g_insideHook = TRUE;  // 开始模拟前设置标记
+			// 模拟发送右键按下消息
+			SendMessage(hWndUnderMouse, WM_RBUTTONDOWN, MK_RBUTTON, NULL);
+			// 发送右键释放消息（完成点击）
+			SendMessage(hWndUnderMouse, WM_RBUTTONUP, 0, NULL);
+			g_insideHook = FALSE; // 模拟完成后清除标记
+			return 0;
+		}
+
+		wchar_t msg[256];
+		swprintf(msg, 256, L"剪贴板内容较长（%d个字符），确定要粘贴吗?", len);
+		int result = MessageBox(hWndUnderMouse,
+			msg,
+			L"确认粘贴",
+			MB_OKCANCEL | MB_ICONQUESTION);
+
+		if (result == IDOK) {
+			g_insideHook = TRUE;  // 开始模拟前设置标记
+			// 模拟发送右键按下消息
+			SendMessage(hWndUnderMouse, WM_RBUTTONDOWN, MK_RBUTTON, NULL);
+			// 发送右键释放消息（完成点击）
+			SendMessage(hWndUnderMouse, WM_RBUTTONUP, 0, NULL);
+			g_insideHook = FALSE; // 模拟完成后清除标记
+		}
+		g_mouseHookWnd = NULL;
+		return 0;
 	}
 	case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;

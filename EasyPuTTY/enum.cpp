@@ -104,7 +104,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 	/*else if (wcsstr(info.processName, L"无法访问") != NULL) {
 		return TRUE;
 	}
-	else if (wcsstr(info.processName, L"未知") != NULL) {
+	else if (wcsstr(info.processName, L"未知") != NULL) {//win7一些进程会得到这个
 		return TRUE;
 	}*/
 	
