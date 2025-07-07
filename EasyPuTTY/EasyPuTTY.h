@@ -46,3 +46,6 @@ void CALLBACK ProcessEndCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* command);
 void PerformSearch(HWND hWnd);
 int clipboardLen();
+void registerAccel(HWND hWnd);
+void unRegisterAccel(HWND hWnd);
+void cloneTab(HWND tabCtrlWinHandle);
