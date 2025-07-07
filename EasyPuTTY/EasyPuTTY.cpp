@@ -60,19 +60,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	// 注册快捷键来触发菜单命令
-	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EASYPUTTY));
+	// 注册快捷键来触发菜单命令，对窗口焦点有要求不好用
+	//HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EASYPUTTY));
 
 	MSG msg;
 
 	// 主消息循环:
 	while (GetMessage(&msg, nullptr, 0, 0))
 	{
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-		{
+		//if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		//{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-		}
+		//}
 	}
 
 	return (int)msg.wParam;
@@ -110,7 +110,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassExW(&wcex);
 }
 
-//
+////
 //   函数: InitInstance(HINSTANCE, int)
 //
 //   目标: 保存实例句柄并创建主窗口
@@ -197,6 +197,25 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	// 传递消息给下一个钩子
 	return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
 }
+
+
+// 注册快捷键
+void registerAccel(HWND hWnd) {
+	RegisterHotKey(hWnd, ID_HOTKEY_NEW, MOD_ALT, 'T');//新建
+	RegisterHotKey(hWnd, ID_HOTKEY_CLOSE, MOD_ALT, 'D');//关闭
+	RegisterHotKey(hWnd, ID_HOTKEY_WINDOW, MOD_ALT, 'W');//窗口
+	RegisterHotKey(hWnd, ID_HOTKEY_SEARCH, MOD_ALT, 'F');//搜索
+	RegisterHotKey(hWnd, ID_HOTKEY_CLONE, MOD_ALT, 'V');//克隆
+}
+
+// 注销快捷键
+void unRegisterAccel(HWND hWnd) {
+	UnregisterHotKey(hWnd, ID_HOTKEY_NEW);
+	UnregisterHotKey(hWnd, ID_HOTKEY_CLOSE);
+	UnregisterHotKey(hWnd, ID_HOTKEY_WINDOW);
+	UnregisterHotKey(hWnd, ID_HOTKEY_SEARCH);
+	UnregisterHotKey(hWnd, ID_HOTKEY_CLONE);
+}
 //
 //  函数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -261,6 +280,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GetModuleHandle(NULL),  // 当前模块句柄（无需 DLL）
 			0                   // 0 表示监控所有线程
 		);
+
+		registerAccel(hWnd);
 		return 0;
 	}
 	case WM_SIZE:
@@ -355,7 +376,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 			if (tabCtrlItemInfo.attachWindowHandle && tabCtrlItemInfo.attachProcessId == PID) {
-				//先置顶再取消
+				//先置顶再取消，解决窗口层级问题
 				SetWindowPos(hWnd, HWND_TOPMOST,  0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 				SetWindowPos(hWnd, HWND_NOTOPMOST,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			}
@@ -395,6 +416,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		g_mouseHookWnd = NULL;
 		return 0;
+	}
+	case WM_HOTKEY: {
+		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+		// wParam为注册时的id，判断是哪个快捷键
+		switch (wParam) {
+		case ID_HOTKEY_NEW:
+			AddNewOverview(&g_tabWindowsInfo);
+			break;
+		case ID_HOTKEY_CLOSE: {
+			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			RemoveTab(tabCtrlWinHandle, currentTab, FALSE);
+			break;
+		}
+		case ID_HOTKEY_WINDOW:
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUMProc);
+			break;
+		case ID_HOTKEY_SEARCH:
+			SetFocus(g_hsearchEdit);
+			break;
+		case ID_HOTKEY_CLONE:
+			cloneTab(tabCtrlWinHandle);
+			break;
+		}
+		break;
 	}
 	case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
@@ -457,23 +502,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case ID_TAB_CLONE: {//克隆
-			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
-			getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
-
-			// 获取旧标签名
-			wchar_t receivedText[256] = { 0 };  // 预先分配足够大的缓冲区
-			TCITEM tie = { 0 };
-			tie.mask = TCIF_TEXT;         // 只获取文本属性
-			tie.cchTextMax = 256;         // 缓冲区最大长度
-			tie.pszText = receivedText;   // 指向接收文本的缓冲区
-			SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
-			// 新建标签
-			int newIndex = AddNewOverview(&g_tabWindowsInfo);
-			if (newIndex == -1) {
-				MessageBoxW(g_mainWindowHandle, L"克隆失败", L"提示", MB_OK | MB_ICONINFORMATION);
-				return 0;
-			}
-			openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
+			cloneTab(tabCtrlWinHandle);
 			break;
 		}
 		case ID_TAB_RENAME: {//重命名弹窗
@@ -582,15 +611,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case IDM_PAGEANT: {
-			wchar_t iniPath[MAX_PATH] = { 0 };
-			wchar_t pageant[MAX_PATH] = { 0 };
-			// putty路径
-			GetAppIni(iniPath, MAX_PATH);
-			GetPrivateProfileStringW(SECTION_NAME, L"Pageant", L"", pageant, MAX_PATH, iniPath);
-			if (pageant[0] == L'\0') {
-				wcscpy_s(pageant, MAX_PATH, L".\\pageant.exe");
-			}
-			startApp(pageant, FALSE);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PAGEANT), hWnd, Pageant);
 			break;
 		}
 		case IDM_PUTTYGEN: {
@@ -715,7 +736,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RemoveTab(tabCtrlWinHandle, i, TRUE);
 			}
 		}
-
+		unRegisterAccel(hWnd);
 		PostQuitMessage(0);
 		break;
 	}
@@ -723,6 +744,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
+}
+
+void cloneTab(HWND tabCtrlWinHandle) {
+	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+	getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
+
+	// 获取旧标签名
+	wchar_t receivedText[256] = { 0 };  // 预先分配足够大的缓冲区
+	TCITEM tie = { 0 };
+	tie.mask = TCIF_TEXT;         // 只获取文本属性
+	tie.cchTextMax = 256;         // 缓冲区最大长度
+	tie.pszText = receivedText;   // 指向接收文本的缓冲区
+	SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
+	// 新建标签
+	int newIndex = AddNewOverview(&g_tabWindowsInfo);
+	if (newIndex == -1) {
+		MessageBoxW(g_mainWindowHandle, L"克隆失败", L"提示", MB_OK | MB_ICONINFORMATION);
+		return;
+	}
+	openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
 }
 
 // 从overview新建立 或者克隆

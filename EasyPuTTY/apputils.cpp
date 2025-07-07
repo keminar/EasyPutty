@@ -150,13 +150,15 @@ int startApp(const wchar_t* appPath, BOOL show) {
 		&si,                // 启动信息
 		&pi                 // 进程信息
 	)) {
+		// 等待进程初始化完成
+		WaitForInputIdle(pi.hProcess, INFINITE);
 
 		// 关闭进程和线程句柄
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
-		if (!show) {
+		/*if (!show) {
 			MessageBoxW(NULL, L"后台启动成功，请在任务栏查看", L"提示", MB_OK);
-		}
+		}*/
 		return 0;
 	}
 	else {
@@ -247,6 +249,39 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
+	}
+	return (INT_PTR)FALSE;
+}
+
+
+INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG: {
+		// 在创建新进程前，检查Pageant是否已运行
+		HWND existingHwnd = FindWindow(NULL, L"Pageant");
+		if (existingHwnd == NULL) {
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			wchar_t pageant[MAX_PATH] = { 0 };
+			// putty路径
+			GetAppIni(iniPath, MAX_PATH);
+			GetPrivateProfileStringW(SECTION_NAME, L"Pageant", L"", pageant, MAX_PATH, iniPath);
+			if (pageant[0] == L'\0') {
+				wcscpy_s(pageant, MAX_PATH, L".\\pageant.exe");
+			}
+			startApp(pageant, FALSE);
+		}
+		return (INT_PTR)TRUE;
+	}
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
 	}
 	return (INT_PTR)FALSE;
 }

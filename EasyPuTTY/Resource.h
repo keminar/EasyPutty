@@ -22,6 +22,8 @@
 #define IDD_PROGRAM                     137
 #define IDD_DIALOG1                     138
 #define IDD_RENAME                      139
+#define IDD_DIALOG2                     141
+#define IDD_PAGEANT                     141
 #define IDC_REFRESH                     1001
 #define IDC_BROWSER_PUTTY               1002
 #define IDC_SYSLINK1                    1003
@@ -110,6 +112,11 @@
 #define ID_TAB_CLOSE_OTHER              32809
 #define ID_TAB_CLOSE_ALL                32810
 #define ID_PUTTY_PSFTP                  32811
+#define ID_HOTKEY_WINDOW                32812
+#define ID_HOTKEY_NEW                   32813
+#define ID_HOTKEY_CLOSE                 32814
+#define ID_HOTKEY_SEARCH                32815
+#define ID_HOTKEY_CLONE                 32816
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -117,8 +124,8 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        141
-#define _APS_NEXT_COMMAND_VALUE         32812
+#define _APS_NEXT_RESOURCE_VALUE        142
+#define _APS_NEXT_COMMAND_VALUE         32817
 #define _APS_NEXT_CONTROL_VALUE         1045
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
