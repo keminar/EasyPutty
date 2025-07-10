@@ -262,7 +262,9 @@ INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG: {
 		// 在创建新进程前，检查Pageant是否已运行
 		HWND existingHwnd = FindWindow(NULL, L"Pageant");
+		HWND status = GetDlgItem(hDlg, IDC_PAGEANT_STATUS);
 		if (existingHwnd == NULL) {
+			SetWindowText(status, L"启动中");
 			wchar_t iniPath[MAX_PATH] = { 0 };
 			wchar_t pageant[MAX_PATH] = { 0 };
 			// putty路径
@@ -272,6 +274,19 @@ INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				wcscpy_s(pageant, MAX_PATH, L".\\pageant.exe");
 			}
 			startApp(pageant, FALSE);
+			for (int i = 0; i < 50 && !existingHwnd; i++) {
+				existingHwnd = FindWindow(NULL, L"Pageant");
+				Sleep(100);
+			}
+			if (!existingHwnd) {
+				SetWindowText(status, L"未启动");
+			}
+			else {
+				SetWindowText(status, L"已启动");
+			}
+		}
+		else {
+			SetWindowText(status, L"已启动");
 		}
 		return (INT_PTR)TRUE;
 	}
@@ -377,6 +392,16 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == ID_LIST_REFRESH) {//刷新凭证下拉
+			HWND hEdit = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
+			wchar_t credential[MAX_PATH] = { 0 };
+			if (lParam){
+				wcscpy_s(credential, MAX_PATH, (wchar_t*)lParam);
+			}
+			if (credential[0] == '\0') {
+				// 上次值
+				GetWindowText(hEdit, credential, MAX_PATH);
+			}
+
 			HWND credentialComboBox;
 			wchar_t** credentialFileList = NULL;
 			wchar_t credentialPath[MAX_PATH] = { 0 };
@@ -395,6 +420,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 					}
 				}
 			}
+			SetWindowText(hEdit, credential);
 		}
 		else if (LOWORD(wParam) == IDOK)//保存
 		{
@@ -734,7 +760,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			else {
 				// 父窗口可能是 连接配置表单，刷新下拉
 				HWND parent = GetParent(hDlg);
-				SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, NULL);
+				SendMessage(parent, WM_COMMAND, ID_LIST_REFRESH, (LPARAM)name);
 				EndDialog(hDlg, LOWORD(wParam));
 				return (INT_PTR)TRUE;
 			}

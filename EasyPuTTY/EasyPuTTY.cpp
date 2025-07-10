@@ -746,10 +746,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+// 克隆标签
 void cloneTab(HWND tabCtrlWinHandle) {
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
-
+	// 检查克隆条件
+	if (tabCtrlItemInfo.attachProcessId == 0) {
+		return;
+	}
 	// 获取旧标签名
 	wchar_t receivedText[256] = { 0 };  // 预先分配足够大的缓冲区
 	TCITEM tie = { 0 };
@@ -1425,7 +1429,7 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 	return hostWindow;
 }
 
-
+// 附加窗口
 void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	RECT rc;
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
