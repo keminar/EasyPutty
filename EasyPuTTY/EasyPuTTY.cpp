@@ -126,7 +126,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	// 通过szWindowClass和前面注册的窗口类wcex关联起来
 	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+		CW_USEDEFAULT, CW_USEDEFAULT, 1400, 900, nullptr, nullptr, hInstance, nullptr);
 
 	if (!g_mainWindowHandle)
 	{
@@ -531,18 +531,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
-			int deleteTab;
+			int deleteTab = -1;
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			for (int i = 0; i < count; i++) {
 				 getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
 				if (tabCtrlItemInfo.processHandle == hProcess) {
-					if (tabCtrlItemInfo.hostWindowHandle) {
-						DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-					}
 					ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 					deleteTab = i;
+
+					// 因为标签没马上删除，先更新标签数据
+					tabCtrlItemInfo.processHandle = NULL;
+					tabCtrlItemInfo.attachProcessId = 0;
+					tabCtrlItemInfo.attachWindowHandle = NULL;
+					TabCtrl_SetItem(tabCtrlWinHandle, i, &tabCtrlItemInfo);
 					break;
 				}
+			}
+			if (deleteTab == -1) {
+				return 0;
 			}
 			wchar_t szTitle[MAX_PATH] = { 0 };
 			TCITEM tie = { 0 };
@@ -552,8 +558,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SendMessage(tabCtrlWinHandle, TCM_GETITEM, deleteTab, (LPARAM)&tie);
 			swprintf_s(szTitle, _countof(szTitle), L"%s 窗口退出，标签自动关闭", szTitle);
 			MessageBox(hWnd, szTitle, L"标签提醒", MB_OK);
-
+			// 销毁标签
+			getTabItemInfo(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
+			if (tabCtrlItemInfo.hostWindowHandle) {
+				DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+			}
+			// 释放内存
+			if (tabCtrlItemInfo.command != NULL) {
+				delete[] tabCtrlItemInfo.command;
+			}
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (count == 0) {
 				AddNewOverview(&g_tabWindowsInfo);
@@ -644,7 +658,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DetachTab(tabCtrlWinHandle, g_tabHitIndex);
 			return 0;
 		}
-		case ID_TAB_DETACH_ALL: {
+		case ID_TAB_DETACH_ALL: {//全分离
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (tabItemsCount < 1) {
@@ -1530,9 +1544,10 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 		}
 		// 最后分离
 		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
+		int diff = indexTab % 10 * 30;
 		// 重新定位窗口，增加一些错位
 		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
-			rect.left + 30, rect.top + 50,
+			rect.left + 30 + diff, rect.top + 50 + diff,
 			rect.right - rect.left, rect.bottom - rect.top,
 			TRUE);
 	}
