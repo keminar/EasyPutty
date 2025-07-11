@@ -540,6 +540,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					deleteTab = i;
 
 					// 因为标签没马上删除，先更新标签数据
+					tabCtrlItemInfo.waitHandle = NULL;
 					tabCtrlItemInfo.processHandle = NULL;
 					tabCtrlItemInfo.attachProcessId = 0;
 					tabCtrlItemInfo.attachWindowHandle = NULL;
