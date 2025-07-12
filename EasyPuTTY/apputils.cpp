@@ -517,8 +517,14 @@ bool IsModifierKey(WPARAM vkCode) {
 // 获取按键名称的辅助函数
 const wchar_t* GetKeyName(WPARAM vkCode) {
 	switch (vkCode) {
-	case VK_LWIN:     return L"Left Win";
-	case VK_RWIN:     return L"Right Win";
+	case VK_LCONTROL: return L"Ctrl";
+	case VK_RCONTROL: return L"Ctrl";
+	case VK_LSHIFT:   return L"Shift";
+	case VK_RSHIFT:   return L"Shift";
+	case VK_LMENU:    return L"Alt";
+	case VK_RMENU:    return L"Alt";
+	case VK_LWIN:     return L"Win";
+	case VK_RWIN:     return L"Win";
 	case VK_LEFT:     return L"Left";
 	case VK_UP:       return L"Up";
 	case VK_RIGHT:    return L"Right";
@@ -550,159 +556,94 @@ const wchar_t* GetKeyName(WPARAM vkCode) {
 	}
 }
 
-// 低级键盘钩子处理函数 - 主要处理Ctrl+Space
+// 低级键盘钩子处理函数
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
-	static bool winKeyDown = false; // 跟踪Win键状态
+	static bool modifierStates[256] = { 0 }; // 跟踪每个按键的状态
 
 	if (nCode >= 0) {
 		KBDLLHOOKSTRUCT* kb = (KBDLLHOOKSTRUCT*)lParam;
 		WPARAM vkCode = kb->vkCode;
 
-		// 更新Win键状态
+		// 更新按键状态
 		if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-			if (vkCode == VK_LWIN || vkCode == VK_RWIN) {
-				winKeyDown = true;
-			}
+			modifierStates[vkCode] = true;
 		}
 		else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-			if (vkCode == VK_LWIN || vkCode == VK_RWIN) {
-				winKeyDown = false;
-			}
+			modifierStates[vkCode] = false;
 		}
 
-		// 处理按键按下事件
+		// 只处理按键按下事件
 		if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-			// 检测所有可能的修饰键状态
-			bool ctrl = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0 ||
-				(GetAsyncKeyState(VK_RCONTROL) & 0x8000) != 0;
-			bool shift = (GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0 ||
-				(GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0;
-			bool alt = (GetAsyncKeyState(VK_LMENU) & 0x8000) != 0 ||
-				(GetAsyncKeyState(VK_RMENU) & 0x8000) != 0;
-			bool win = winKeyDown; // 使用跟踪的Win键状态
-
 			// 清空之前的快捷键字符串
 			memset(g_hotkeyString, 0, sizeof(g_hotkeyString));
 
-			// 处理Win键组合
-			if (win) {
-				wcscpy_s(g_hotkeyString, _countof(g_hotkeyString), L"Win");
+			// 检测所有可能的修饰键状态，避免重复计算
+			bool ctrl = modifierStates[VK_LCONTROL] || modifierStates[VK_RCONTROL];
+			bool shift = modifierStates[VK_LSHIFT] || modifierStates[VK_RSHIFT];
+			bool alt = modifierStates[VK_LMENU] || modifierStates[VK_RMENU];
+			bool win = modifierStates[VK_LWIN] || modifierStates[VK_RWIN];
 
-				if (ctrl) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"+Ctrl");
-				if (shift) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"+Shift");
-				if (alt) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"+Alt");
-
-				// 如果Win键与其他非修饰键组合
-				if (!IsModifierKey(vkCode)) {
-					wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"+");
-
-					// 获取按键名称
-					const wchar_t* keyName = GetKeyName(vkCode);
-					wchar_t keyNameBuffer[128] = { 0 };
-
-					if (keyName) {
-						// 使用预定义的按键名称
-						wcscpy_s(keyNameBuffer, _countof(keyNameBuffer), keyName);
-					}
-					else {
-						// 对于字母键，显示大写形式
-						if (vkCode >= 'A' && vkCode <= 'Z') {
-							keyNameBuffer[0] = (wchar_t)vkCode;
-						}
-						// 对于数字键，直接显示数字
-						else if (vkCode >= '0' && vkCode <= '9') {
-							keyNameBuffer[0] = (wchar_t)vkCode;
-						}
-						// 其他键使用系统函数获取名称
-						else {
-							UINT scanCode = kb->scanCode;
-							GetKeyNameTextW(scanCode << 16, keyNameBuffer, _countof(keyNameBuffer));
-
-							// 如果获取失败，使用虚拟键码的十六进制表示
-							if (wcslen(keyNameBuffer) == 0) {
-								swprintf_s(keyNameBuffer, _countof(keyNameBuffer), L"0x%02X", (UINT)vkCode);
-							}
-						}
-					}
-
-					// 添加按键名称
-					wcscat_s(g_hotkeyString, _countof(g_hotkeyString), keyNameBuffer);
-				}
-
-				// 更新编辑框文本
-				if (g_hEdit) SendMessageW(g_hEdit, WM_SETTEXT, 0, (LPARAM)g_hotkeyString);
-
-				// 拦截Win键组合，防止系统默认行为
-				return 1;
-			}
-
-			// 对于修饰键，只在它们与其他键组合时才显示
-			if (IsModifierKey(vkCode)) {
-				// 但如果是Ctrl+Alt+Shift这种组合，我们需要特别处理
-				// 这里我们只拦截修饰键的组合，不单独处理修饰键
-				int modifierCount = 0;
-				if (ctrl) modifierCount++;
-				if (shift) modifierCount++;
-				if (alt) modifierCount++;
-
-				// 如果有多个修饰键同时按下，记录它们的组合
-				if (modifierCount >= 2) {
-					if (ctrl) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Ctrl+");
-					if (shift) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Shift+");
-					if (alt) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Alt");
-
-					// 更新编辑框文本
-					if (g_hEdit) SendMessageW(g_hEdit, WM_SETTEXT, 0, (LPARAM)g_hotkeyString);
-
-					// 拦截此消息
-					return 1;
-				}
-
-				// 否则让系统处理修饰键
-				return CallNextHookEx(g_hook, nCode, wParam, lParam);
-			}
-
-			// 构建修饰键部分
+			// 构建修饰键部分（按 Ctrl+Shift+Alt+Win 顺序）
 			if (ctrl) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Ctrl+");
 			if (shift) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Shift+");
 			if (alt) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Alt+");
+			if (win) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Win+");
 
-			// 获取按键名称
-			const wchar_t* keyName = GetKeyName(vkCode);
-			wchar_t keyNameBuffer[128] = { 0 };
+			// 如果是修饰键本身被按下，且没有其他修饰键，则只显示该修饰键
+			if (IsModifierKey(vkCode) && !(ctrl && !IsModifierKey(VK_LCONTROL) && !IsModifierKey(VK_RCONTROL)) &&
+				!(shift && !IsModifierKey(VK_LSHIFT) && !IsModifierKey(VK_RSHIFT)) &&
+				!(alt && !IsModifierKey(VK_LMENU) && !IsModifierKey(VK_RMENU)) &&
+				!(win && !IsModifierKey(VK_LWIN) && !IsModifierKey(VK_RWIN))) {
 
-			if (keyName) {
-				// 使用预定义的按键名称
-				wcscpy_s(keyNameBuffer, _countof(keyNameBuffer), keyName);
+				const wchar_t* keyName = GetKeyName(vkCode);
+				if (keyName) {
+					wcscpy_s(g_hotkeyString, _countof(g_hotkeyString), keyName);
+				}
 			}
+			// 否则获取按键名称
 			else {
-				// 对于字母键，显示大写形式
-				if (vkCode >= 'A' && vkCode <= 'Z') {
-					keyNameBuffer[0] = (wchar_t)vkCode;
-				}
-				// 对于数字键，直接显示数字
-				else if (vkCode >= '0' && vkCode <= '9') {
-					keyNameBuffer[0] = (wchar_t)vkCode;
-				}
-				// 其他键使用系统函数获取名称
-				else {
-					UINT scanCode = kb->scanCode;
-					GetKeyNameTextW(scanCode << 16, keyNameBuffer, _countof(keyNameBuffer));
+				const wchar_t* keyName = GetKeyName(vkCode);
+				wchar_t keyNameBuffer[128] = { 0 };
 
-					// 如果获取失败，使用虚拟键码的十六进制表示
-					if (wcslen(keyNameBuffer) == 0) {
-						swprintf_s(keyNameBuffer, _countof(keyNameBuffer), L"0x%02X", (UINT)vkCode);
+				if (keyName) {
+					// 使用预定义的按键名称
+					wcscpy_s(keyNameBuffer, _countof(keyNameBuffer), keyName);
+				}
+				else {
+					// 对于字母键，显示大写形式
+					if (vkCode >= 'A' && vkCode <= 'Z') {
+						keyNameBuffer[0] = (wchar_t)vkCode;
+					}
+					// 对于数字键，直接显示数字
+					else if (vkCode >= '0' && vkCode <= '9') {
+						keyNameBuffer[0] = (wchar_t)vkCode;
+					}
+					// 其他键使用系统函数获取名称
+					else {
+						UINT scanCode = kb->scanCode;
+						GetKeyNameTextW(scanCode << 16, keyNameBuffer, _countof(keyNameBuffer));
+
+						// 如果获取失败，使用虚拟键码的十六进制表示
+						if (wcslen(keyNameBuffer) == 0) {
+							swprintf_s(keyNameBuffer, _countof(keyNameBuffer), L"0x%02X", (UINT)vkCode);
+						}
 					}
 				}
+
+				// 添加按键名称
+				wcscat_s(g_hotkeyString, _countof(g_hotkeyString), keyNameBuffer);
 			}
 
-			// 添加按键名称
-			wcscat_s(g_hotkeyString, _countof(g_hotkeyString), keyNameBuffer);
+			// 如果最后一个字符是加号，则移除它
+			size_t len = wcslen(g_hotkeyString);
+			if (len > 0 && g_hotkeyString[len - 1] == L'+') {
+				g_hotkeyString[len - 1] = L'\0';
+			}
 
 			// 更新编辑框文本
 			if (g_hEdit) SendMessageW(g_hEdit, WM_SETTEXT, 0, (LPARAM)g_hotkeyString);
 
-			// 拦截所有非修饰键的按键事件
+			// 拦截所有按键事件
 			return 1;
 		}
 	}
