@@ -504,8 +504,8 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 }
 // 全局变量用于存储当前快捷键
 wchar_t g_hotkeyString[256] = { 0 };
-HHOOK g_hook = NULL;
-HWND g_hEdit = NULL; // 存储编辑框句柄的全局变量
+HHOOK g_hookInput = NULL;
+HWND g_hEditInputHotkey = NULL; // 存储编辑框句柄的全局变量
 // 判断是否为修饰键
 bool IsModifierKey(WPARAM vkCode) {
 	return (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL ||
@@ -564,6 +564,23 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		KBDLLHOOKSTRUCT* kb = (KBDLLHOOKSTRUCT*)lParam;
 		WPARAM vkCode = kb->vkCode;
 
+		// 检查当前焦点是否在目标 Edit Control 中
+		// 获取当前有焦点的窗口
+		HWND focusedWnd = GetForegroundWindow();
+		if (focusedWnd) {
+			// 获取焦点窗口中的子控件（如果有）
+			HWND focusedCtrl = GetFocus();
+			// 判断焦点是否在目标 Edit 控件（g_hEdit）
+			if (focusedCtrl != g_hEditInputHotkey) {
+				// 焦点不在目标 Edit，不处理，直接交给系统
+				return CallNextHookEx(g_hookInput, nCode, wParam, lParam);
+			}
+		}
+		else {
+			// 无焦点窗口，不处理
+			return CallNextHookEx(g_hookInput, nCode, wParam, lParam);
+		}
+
 		// 更新按键状态
 		if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
 			modifierStates[vkCode] = true;
@@ -590,14 +607,19 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			if (win) wcscat_s(g_hotkeyString, _countof(g_hotkeyString), L"Win+");
 
 			// 如果是修饰键本身被按下，且没有其他修饰键，则只显示该修饰键
-			if (IsModifierKey(vkCode) && !(ctrl && !IsModifierKey(VK_LCONTROL) && !IsModifierKey(VK_RCONTROL)) &&
-				!(shift && !IsModifierKey(VK_LSHIFT) && !IsModifierKey(VK_RSHIFT)) &&
-				!(alt && !IsModifierKey(VK_LMENU) && !IsModifierKey(VK_RMENU)) &&
-				!(win && !IsModifierKey(VK_LWIN) && !IsModifierKey(VK_RWIN))) {
+			if (IsModifierKey(vkCode)) {
+				// 检查是否有其他同类型的修饰键被按下
+				bool hasOtherCtrl = ctrl && (vkCode != VK_LCONTROL && vkCode != VK_RCONTROL);
+				bool hasOtherShift = shift && (vkCode != VK_LSHIFT && vkCode != VK_RSHIFT);
+				bool hasOtherAlt = alt && (vkCode != VK_LMENU && vkCode != VK_RMENU);
+				bool hasOtherWin = win && (vkCode != VK_LWIN && vkCode != VK_RWIN);
 
-				const wchar_t* keyName = GetKeyName(vkCode);
-				if (keyName) {
-					wcscpy_s(g_hotkeyString, _countof(g_hotkeyString), keyName);
+				// 如果没有其他同类型的修饰键，则只显示该修饰键
+				if (!hasOtherCtrl && !hasOtherShift && !hasOtherAlt && !hasOtherWin) {
+					const wchar_t* keyName = GetKeyName(vkCode);
+					if (keyName) {
+						wcscpy_s(g_hotkeyString, _countof(g_hotkeyString), keyName);
+					}
 				}
 			}
 			// 否则获取按键名称
@@ -641,7 +663,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			}
 
 			// 更新编辑框文本
-			if (g_hEdit) SendMessageW(g_hEdit, WM_SETTEXT, 0, (LPARAM)g_hotkeyString);
+			if (g_hEditInputHotkey) SendMessageW(g_hEditInputHotkey, WM_SETTEXT, 0, (LPARAM)g_hotkeyString);
 
 			// 拦截所有按键事件
 			return 1;
@@ -649,7 +671,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	}
 
 	// 其他消息交给系统处理
-	return CallNextHookEx(g_hook, nCode, wParam, lParam);
+	return CallNextHookEx(g_hookInput, nCode, wParam, lParam);
 }
 // 设置管理
 INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -660,17 +682,17 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	{
 		// 在对话框销毁时卸载钩子
 	case WM_DESTROY:
-		if (g_hook) {
-			UnhookWindowsHookEx(g_hook);
-			g_hook = NULL;
+		if (g_hookInput) {
+			UnhookWindowsHookEx(g_hookInput);
+			g_hookInput = NULL;
 		}
 		break;
 	case WM_INITDIALOG: {
 		// 安装键盘钩子
-		g_hook = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandleW(NULL), 0);
-		if (!g_hook) {
+		g_hookInput = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandleW(NULL), 0);
+		/*if (!g_hookInput) {
 			MessageBoxW(hDlg, L"无法安装键盘钩子!", L"错误", MB_ICONERROR);
-		}
+		}*/
 
 		wchar_t iniPath[MAX_PATH] = { 0 };
 		wchar_t putty[MAX_PATH] = { 0 };
@@ -710,7 +732,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
 		hEdit = GetDlgItem(hDlg, IDC_INPUT);
 		SetWindowText(hEdit, inputHotkey);
-		g_hEdit = hEdit;
+		g_hEditInputHotkey = hEdit;
 		return (INT_PTR)TRUE;
 	}
 
