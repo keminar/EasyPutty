@@ -748,6 +748,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			wchar_t puttygen[MAX_PATH] = { 0 };
 			wchar_t pageant[MAX_PATH] = { 0 };
 			wchar_t psftp[MAX_PATH] = { 0 };
+			wchar_t inputHotkey[MAX_PATH] = { 0 };
 			HWND hEdit;
 
 			hEdit = GetDlgItem(hDlg, IDC_PUTTY);
@@ -764,6 +765,8 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			GetWindowText(hEdit, pageant, MAX_PATH);
 			hEdit = GetDlgItem(hDlg, IDC_PSFTP);
 			GetWindowText(hEdit, psftp, MAX_PATH);
+			hEdit = GetDlgItem(hDlg, IDC_INPUT);
+			GetWindowText(hEdit, inputHotkey, MAX_PATH);
 
 			//使用相对路径受GetOpenFileName影响，所以要用全路径
 			GetAppIni(iniPath, MAX_PATH);
@@ -775,6 +778,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Puttygen", puttygen, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Pageant", pageant, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Psftp", psftp, iniPath);
+			WritePrivateProfileString(SECTION_NAME, L"Input_hotkey", inputHotkey, iniPath);
 			if (!result) {
 				showError(hDlg, L"添加失败");
 				return FALSE;

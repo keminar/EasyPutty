@@ -124,9 +124,25 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	g_appInstance = hInstance; // 将实例句柄存储在全局变量中
 
+	// 获取屏幕分辨率
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);  // 屏幕宽度
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN); // 屏幕高度
+
+	int windowWidth = (int)(screenWidth * 0.8);
+	int windowHeight = (int)(screenHeight * 0.8);
+	if (windowWidth > 2 * windowHeight) {
+		windowWidth = 1.5*windowHeight;
+	}
+	else if (windowWidth < windowHeight) {
+		windowHeight = windowWidth;
+	}
+
+	// 计算窗口左上角位置（居中显示）
+	int windowX = (screenWidth - windowWidth) / 2;
+	int windowY = (screenHeight - windowHeight) / 2;
 	// 通过szWindowClass和前面注册的窗口类wcex关联起来
 	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
-		CW_USEDEFAULT, CW_USEDEFAULT, 1400, 900, nullptr, nullptr, hInstance, nullptr);
+		windowX, windowY, windowWidth, windowHeight, nullptr, nullptr, hInstance, nullptr);
 
 	if (!g_mainWindowHandle)
 	{
