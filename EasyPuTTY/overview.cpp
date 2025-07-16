@@ -300,7 +300,7 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		}
 	}
 	else {
-		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+		MessageBox(NULL, L"当前行非PuTTY配置不支持ftp操作", L"提示", MB_OK);
 	}
 
 }
