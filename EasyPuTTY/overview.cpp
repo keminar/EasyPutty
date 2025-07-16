@@ -34,7 +34,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				// 双击事件处理
 				LPNMITEMACTIVATE pnmia = (LPNMITEMACTIVATE)lParam;
 				if (pnmia->iItem != -1) {
-					execCommand(hwnd, hListView, pnmia->iItem);
+					execCommand(hwnd, hListView, pnmia->iItem, TRUE);
 				}
 			}
 			else if (pnmh->code == LVN_KEYDOWN) {
@@ -42,7 +42,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				if (pnmlvkd->wVKey == VK_RETURN) {  // 回车键
 					int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 					if (selectedItem != -1) {
-						execCommand(hwnd, hListView, selectedItem);
+						execCommand(hwnd, hListView, selectedItem, TRUE);
 					}
 				}
 			}
@@ -83,7 +83,15 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
-				execCommand(hwnd, hListView, selectedItem);
+				execCommand(hwnd, hListView, selectedItem, TRUE);
+			}
+			break;
+		}
+		case ID_WINDOW_COMMAND: {
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				execCommand(hwnd, hListView, selectedItem, FALSE);
 			}
 			break;
 		}
@@ -164,7 +172,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 }
 
 // 执行命令在新标签打开
-void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
+void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab) {
 	NameCommand line = { 0 };
 	//第几列的值为启动命令
 	ListView_GetItemText(hListView, selectedItem, 2, line.command, sizeof(line.command));
@@ -187,7 +195,32 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem) {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s -pw %s", line.command, credentialConfig.password);
 		}
 	}
-	
+	if (!tab) {
+		// 启动进程
+		STARTUPINFO si = { sizeof(si) };
+		PROCESS_INFORMATION pi;
+
+		if (!CreateProcessW(
+			NULL,
+			line.command,
+			NULL,
+			NULL,
+			FALSE,
+			CREATE_NEW_CONSOLE,
+			NULL,
+			NULL,
+			&si,
+			&pi
+		)) {
+			MessageBoxW(NULL, L"无法启动进程", L"错误", MB_OK | MB_ICONERROR);
+			return;
+		}
+
+		// 关闭进程和线程句柄
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+		return;
+	}
 	// 通过发送自定义消息获取主窗口句柄
 	HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
 	if (mainWindow) {

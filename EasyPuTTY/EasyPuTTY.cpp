@@ -131,7 +131,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	int windowWidth = (int)(screenWidth * 0.8);
 	int windowHeight = (int)(screenHeight * 0.8);
 	if (windowWidth > 2 * windowHeight) {
-		windowWidth = 1.5*windowHeight;
+		windowWidth = (int)1.5*windowHeight;
 	}
 	else if (windowWidth < windowHeight) {
 		windowHeight = windowWidth;
@@ -578,7 +578,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 销毁标签
 			getTabItemInfo(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-			if (tabCtrlItemInfo.hostWindowHandle) {
+			if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 				DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 			}
 			// 释放内存
@@ -1312,47 +1312,49 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 
 	// 删除标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-	//如果有attach了cmd进程 ，退出执行会发生(ntdll.dll)处引发的异常: 0xC0000005: 写入位置 0xCCCCCCD4 时发生访问冲突
-	//暂时不知道如何解决，退出时if掉
-	//目前好像已经解决访问冲突问题，去掉if
-	//if (!quit) {
+	if (tabCtrlItemInfo.attachWindowHandle && IsWindow(tabCtrlItemInfo.attachWindowHandle)) {
+		//如果有attach了cmd进程 ，退出执行会发生(ntdll.dll)处引发的异常: 0xC0000005: 写入位置 0xCCCCCCD4 时发生访问冲突
+		//暂时不知道如何解决，退出时if掉
+		//目前好像已经解决访问冲突问题，去掉if
+		//if (!quit) {
 		ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
-	//}
+		//}
 
-	// 销毁窗体
-	if (tabCtrlItemInfo.attachWindowHandle) {
+		// 销毁窗体
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
-	}
-	if (tabCtrlItemInfo.hostWindowHandle) {
-		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-	}
-	// 检查进程是否关闭，超时强杀进程
-	// todo chrome不能关闭进程pid会影响所有标签窗口,vscode也有同样问题
-	if (tabCtrlItemInfo.attachProcessId > 0) {
-		/*DWORD dwExitCode = 0;
-		// 打开进程，获取句柄
-		HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
-		if (hProc != NULL) {
-			BOOL stoped = FALSE;
-			int i;
-			for (i = 0; i < 3; i++) {
-				if (WaitForSingleObject(hProc, 50) == WAIT_OBJECT_0) {
-					// 进程已结束
-					stoped = TRUE;
-					break;
+
+		// 检查进程是否关闭，超时强杀进程
+		// todo chrome不能关闭进程pid会影响所有标签窗口,vscode也有同样问题
+		if (tabCtrlItemInfo.attachProcessId > 0) {
+			/*DWORD dwExitCode = 0;
+			// 打开进程，获取句柄
+			HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
+			if (hProc != NULL) {
+				BOOL stoped = FALSE;
+				int i;
+				for (i = 0; i < 3; i++) {
+					if (WaitForSingleObject(hProc, 50) == WAIT_OBJECT_0) {
+						// 进程已结束
+						stoped = TRUE;
+						break;
+					}
 				}
-			}
-			int j = i;
-			if (!stoped) {
-				//exe文件采用这种可以关闭
-				DWORD dwExitCode = 0;
-				// 获取子进程的退出码 
-				GetExitCodeProcess(hProc, &dwExitCode);
-				TerminateProcess(hProc, dwExitCode);//终止进程
-			}
-			CloseHandle(hProc);
-		}*/
-		tabCtrlItemInfo.attachProcessId = 0;
+				int j = i;
+				if (!stoped) {
+					//exe文件采用这种可以关闭
+					DWORD dwExitCode = 0;
+					// 获取子进程的退出码
+					GetExitCodeProcess(hProc, &dwExitCode);
+					TerminateProcess(hProc, dwExitCode);//终止进程
+				}
+				CloseHandle(hProc);
+			}*/
+			tabCtrlItemInfo.attachProcessId = 0;
+		}
+	}
+
+	if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
+		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
 	// 释放内存
 	if (tabCtrlItemInfo.command != NULL) {
@@ -1535,6 +1537,9 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	if (tabCtrlItemInfo.attachProcessId == 0) {
 		return;
 	}
+	if (!tabCtrlItemInfo.attachWindowHandle || !IsWindow(tabCtrlItemInfo.attachWindowHandle)) {
+		return;
+	}
 
 	// 先关闭标签
 	TabCtrl_DeleteItem(tabCtrlWinHandle, indexTab);
@@ -1549,31 +1554,30 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	}
 
 	// 后分离窗口，这样新窗口在前台
-	if (tabCtrlItemInfo.attachWindowHandle) {
-		// 获取子窗口当前位置和大小
-		RECT rect;
-		GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
-		// 先修改样式，因为分离后设置样式可能无效导致部分软件显示异常
-		if (!IsConsoleWindow(tabCtrlItemInfo.attachWindowHandle)) {
-			LONG_PTR style = GetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
-			style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-			SetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
-		}
-		// 最后分离
-		SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
-		int diff = indexTab % 10 * 30;
-		// 重新定位窗口，增加一些错位
-		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
-			rect.left + 30 + diff, rect.top + 50 + diff,
-			rect.right - rect.left, rect.bottom - rect.top,
-			TRUE);
+	RECT rect;
+	// 获取子窗口当前位置和大小
+	GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
+	// 先修改样式，因为分离后设置样式可能无效导致部分软件显示异常
+	if (!IsConsoleWindow(tabCtrlItemInfo.attachWindowHandle)) {
+		LONG_PTR style = GetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
+		style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+		SetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
 	}
+	// 去掉回调函数
+	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
+	// 最后分离
+	SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
+	int diff = indexTab % 10 * 30;
+	// 重新定位窗口，增加一些错位
+	MoveWindow(tabCtrlItemInfo.attachWindowHandle,
+		rect.left + 30 + diff, rect.top + 50 + diff,
+		rect.right - rect.left, rect.bottom - rect.top,
+		TRUE);
 
 	// 最后释放资源
-	if (tabCtrlItemInfo.hostWindowHandle) {
+	if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
-	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 }
 
 // 执行搜索功能的函数
