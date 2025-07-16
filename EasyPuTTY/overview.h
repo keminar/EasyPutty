@@ -57,7 +57,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 void SetListViewData(HWND hListView);
 void InitializeListViewColumns(HWND hWndListView);
 void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input);
-void execCommand(HWND hwnd, HWND hListView, int selectedItem);
+void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab);
 void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem);
 void winscpCommand(HWND hwnd, HWND hListView, int selectedItem);
 void psftpCommand(HWND hwnd, HWND hListView, int selectedItem);

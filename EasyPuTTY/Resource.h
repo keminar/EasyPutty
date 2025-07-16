@@ -71,7 +71,6 @@
 #define ID_SEARCH_EDIT                  1043
 #define ID_SEARCH_BUTTON                1044
 #define IDC_PAGEANT_STATUS              1045
-#define IDC_EDIT2                       1046
 #define IDC_INPUT                       1046
 #define IDM_OPEN                        32771
 #define IDM_CLOSE                       32772
@@ -119,6 +118,8 @@
 #define ID_HOTKEY_CLOSE                 32814
 #define ID_HOTKEY_SEARCH                32815
 #define ID_HOTKEY_CLONE                 32816
+#define ID_PUTTY_32817                  32817
+#define ID_WINDOW_COMMAND               32818
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -127,7 +128,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        142
-#define _APS_NEXT_COMMAND_VALUE         32817
+#define _APS_NEXT_COMMAND_VALUE         32819
 #define _APS_NEXT_CONTROL_VALUE         1047
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
