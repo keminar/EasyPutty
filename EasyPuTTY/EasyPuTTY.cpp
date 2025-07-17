@@ -131,7 +131,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	int windowWidth = (int)(screenWidth * 0.8);
 	int windowHeight = (int)(screenHeight * 0.8);
 	if (windowWidth > 2 * windowHeight) {
-		windowWidth = (int)1.5*windowHeight;
+		windowWidth = (int)(1.5*windowHeight);
 	}
 	else if (windowWidth < windowHeight) {
 		windowHeight = windowWidth;
@@ -857,18 +857,9 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 			rc = getTabRect(&g_tabWindowsInfo, rc);
 			TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 			setTabWindowPos(tabCtrlItemInfo.hostWindowHandle, puttyWindowHandle, rc, TRUE);
-			//重绘，部分软件需要，如cmd
-			//RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 
 			if (wcsstr(command, L"putty") != NULL) {
-				// 按下 Ctrl 键
-				keybd_event(VK_CONTROL, 0, 0, 0);
-				// 按下 Space 键
-				keybd_event(VK_SPACE, 0, 0, 0);
-				// 释放 Space 键
-				keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
-				// 释放 Ctrl 键
-				keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+				sendInputHotkey();
 			}
 		}
 		else {

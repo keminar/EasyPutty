@@ -15,7 +15,6 @@ typedef struct tagTCCUSTOMITEM {
 	LPWSTR command;
 } TCCUSTOMITEM;
 
-
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle);
 int AddNewTab(HWND tabCtrlWinHandle, int suffix);
 int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo);

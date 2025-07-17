@@ -511,6 +511,7 @@ void SetListViewData(HWND hListView) {
 	wchar_t command[MAX_COMMAND_LEN] = { 0 };
 	int nItem = 0;
 	wchar_t searchWord[256] = { 0 };
+	wchar_t input_hotkey[256] = { 0 };
 
 	if (!hListView)
 		return;
@@ -530,6 +531,7 @@ void SetListViewData(HWND hListView) {
 	if (putty_params[0] != L'\0') {
 		swprintf(putty, MAX_COMMAND_LEN, L"%s %s", putty, putty_params);
 	}
+	GetPrivateProfileStringW(SECTION_NAME, L"Input_hotkey", L"", input_hotkey, 256, iniPath);
 
 	// 自定义程序
 	GetProgramPath(programPath, MAX_PATH);
@@ -543,7 +545,7 @@ void SetListViewData(HWND hListView) {
 					|| wcsstr(programConfig.tags, searchWord) != NULL
 					|| wcsstr(programConfig.path, searchWord) != NULL) {
 					swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
-					AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"是");
+					AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"无");
 					nItem++;
 				}
 			}
@@ -608,7 +610,13 @@ void SetListViewData(HWND hListView) {
 			if (sessionConfig.otherParams[0] != L'\0') {
 				swprintf(command, MAX_COMMAND_LEN, L"%s %s", command, sessionConfig.otherParams);
 			}
-			AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, L"是");
+
+			if (input_hotkey[0] != L'\0') {
+				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, input_hotkey);
+			}
+			else {
+				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, L"无");
+			}
 			nItem++;
 		}
 	}
@@ -650,7 +658,7 @@ void InitializeListViewColumns(HWND hWndListView) {
 
 	lvc.iSubItem = 5;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"切换输入法";
+	lvc.pszText = (LPWSTR)L"输入法";
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 }
 

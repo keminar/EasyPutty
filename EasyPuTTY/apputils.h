@@ -17,6 +17,8 @@ struct TabWindowsInfo {
 #define SECTION_NAME L"Settings"
 // 定义自定义消息
 #define WM_GETMAINWINDOW (WM_USER + 1)
+// 快捷键长度
+#define MAX_KEYS 16
 
 void TruncateString(const wchar_t* src, wchar_t* dest, size_t maxLength);
 INT_PTR showDialogBox(HINSTANCE appInstance, TabWindowsInfo* tabWindowsInfo, LPCWSTR lpTemplateName, HWND hWndParent, DLGPROC lpDialogFunc);
@@ -44,3 +46,7 @@ INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 const wchar_t* GetKeyName(WPARAM vkCode);
 bool IsModifierKey(WPARAM vkCode);
+WORD GetKeyVk(const wchar_t* name);
+BOOL parseShortcut(const wchar_t* shortcut, WORD* vkList, int* count);
+void simulateKeys(WORD* vkList, int count);
+void sendInputHotkey();

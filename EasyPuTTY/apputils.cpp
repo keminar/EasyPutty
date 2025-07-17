@@ -8,6 +8,11 @@
 static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
 
+// 全局变量用于存储当前快捷键
+wchar_t g_hotkeyString[256] = { 0 };
+HHOOK g_hookInput = NULL;
+HWND g_hEditInputHotkey = NULL; // 存储编辑框句柄的全局变量
+
 // 递归创建目录
 BOOL CreateDirectoryRecursiveW(LPCWSTR lpPath) {
 	if (!lpPath || !*lpPath) return FALSE;
@@ -502,10 +507,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	}
 	return (INT_PTR)FALSE;
 }
-// 全局变量用于存储当前快捷键
-wchar_t g_hotkeyString[256] = { 0 };
-HHOOK g_hookInput = NULL;
-HWND g_hEditInputHotkey = NULL; // 存储编辑框句柄的全局变量
+
 // 判断是否为修饰键
 bool IsModifierKey(WPARAM vkCode) {
 	return (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL ||
@@ -554,6 +556,132 @@ const wchar_t* GetKeyName(WPARAM vkCode) {
 	case VK_F12:      return L"F12";
 	default:          return NULL;
 	}
+}
+
+// 根据名称获取虚拟键码
+// 根据宽字符名称获取虚拟键码
+WORD GetKeyVk(const wchar_t* name) {
+	if (wcscmp(name, L"CTRL") == 0) return VK_CONTROL;
+	if (wcscmp(name, L"SHIFT") == 0) return VK_SHIFT;
+	if (wcscmp(name, L"ALT") == 0) return VK_MENU;
+	if (wcscmp(name, L"WIN") == 0) return VK_LWIN;
+	if (wcscmp(name, L"LEFT") == 0) return VK_LEFT;
+	if (wcscmp(name, L"UP") == 0) return VK_UP;
+	if (wcscmp(name, L"RIGHT") == 0) return VK_RIGHT;
+	if (wcscmp(name, L"DOWN") == 0) return VK_DOWN;
+	if (wcscmp(name, L"ENTER") == 0) return VK_RETURN;
+	if (wcscmp(name, L"ESC") == 0) return VK_ESCAPE;
+	if (wcscmp(name, L"SPACE") == 0) return VK_SPACE;
+	if (wcscmp(name, L"TAB") == 0) return VK_TAB;
+	if (wcscmp(name, L"BACKSPACE") == 0) return VK_BACK;
+	if (wcscmp(name, L"DELETE") == 0) return VK_DELETE;
+	if (wcscmp(name, L"INSERT") == 0) return VK_INSERT;
+	if (wcscmp(name, L"HOME") == 0) return VK_HOME;
+	if (wcscmp(name, L"END") == 0) return VK_END;
+	if (wcscmp(name, L"PAGEUP") == 0) return VK_PRIOR;
+	if (wcscmp(name, L"PAGEDOWN") == 0) return VK_NEXT;
+	if (wcscmp(name, L"F1") == 0) return VK_F1;
+	if (wcscmp(name, L"F2") == 0) return VK_F2;
+	if (wcscmp(name, L"F3") == 0) return VK_F3;
+	if (wcscmp(name, L"F4") == 0) return VK_F4;
+	if (wcscmp(name, L"F5") == 0) return VK_F5;
+	if (wcscmp(name, L"F6") == 0) return VK_F6;
+	if (wcscmp(name, L"F7") == 0) return VK_F7;
+	if (wcscmp(name, L"F8") == 0) return VK_F8;
+	if (wcscmp(name, L"F9") == 0) return VK_F9;
+	if (wcscmp(name, L"F10") == 0) return VK_F10;
+	if (wcscmp(name, L"F11") == 0) return VK_F11;
+	if (wcscmp(name, L"F12") == 0) return VK_F12;
+	return 0;
+}
+
+// 解析快捷键字符串
+BOOL parseShortcut(const wchar_t* shortcut, WORD* vkList, int* count) {
+	wchar_t temp[256] = { 0 };
+	wcsncpy_s(temp, shortcut, _TRUNCATE);
+
+	wchar_t* context = NULL;
+	wchar_t* token = wcstok_s(temp, L"+", &context);
+	*count = 0;
+
+	while (token != NULL && *count < MAX_KEYS) {
+		// 转换为大写
+		for (int i = 0; token[i]; i++) {
+			token[i] = towupper(token[i]);
+		}
+
+		// 尝试查找预定义键名
+		WORD vk = GetKeyVk(token);
+		if (vk != 0) {
+			vkList[(*count)++] = vk;
+		}
+		else {
+			// 处理单个字符键
+			if (wcslen(token) == 1) {
+				char ansiChar[2] = { 0 };
+				WideCharToMultiByte(CP_ACP, 0, token, 1, ansiChar, 1, NULL, NULL);
+				vk = VkKeyScanA(ansiChar[0]) & 0xFF;
+				vkList[(*count)++] = vk;
+			}
+			else {
+				return FALSE;
+			}
+		}
+
+		token = wcstok_s(NULL, L"+", &context);
+	}
+
+	return (*count > 0);
+}
+
+
+// 模拟按键
+void simulateKeys(WORD* vkList, int count) {
+	INPUT inputs[MAX_KEYS * 2] = { 0 };
+	int inputCount = 0;
+
+	// 按下所有按键
+	for (int i = 0; i < count; i++) {
+		inputs[inputCount].type = INPUT_KEYBOARD;
+		inputs[inputCount].ki.wVk = vkList[i];
+		inputCount++;
+	}
+
+	// 释放所有按键（顺序相反）
+	for (int i = count - 1; i >= 0; i--) {
+		inputs[inputCount].type = INPUT_KEYBOARD;
+		inputs[inputCount].ki.wVk = vkList[i];
+		inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
+		inputCount++;
+	}
+
+	// 发送输入
+	SendInput(inputCount, inputs, sizeof(INPUT));
+}
+
+// 发送输入法切换
+void sendInputHotkey() {
+	wchar_t shortcut[256] = { 0 };// 长度和录制时一样
+	WORD vkList[MAX_KEYS];
+	int keyCount = 0;
+
+	// 读取INI文件
+	wchar_t iniPath[MAX_PATH] = { 0 };
+	GetAppIni(iniPath, MAX_PATH);
+	GetPrivateProfileStringW(SECTION_NAME, L"Input_hotkey", L"", shortcut, 256, iniPath);
+
+	// 没设置快捷键
+	if (shortcut[0] == L'\0') {
+		return;
+	}
+
+	// 解析快捷键
+	if (!parseShortcut(shortcut, vkList, &keyCount)) {
+		return;
+	}
+
+	// 模拟按键
+	simulateKeys(vkList, keyCount);
 }
 
 // 低级键盘钩子处理函数
@@ -673,6 +801,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	// 其他消息交给系统处理
 	return CallNextHookEx(g_hookInput, nCode, wParam, lParam);
 }
+
 // 设置管理
 INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -788,6 +917,11 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		}
 		else if (LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		else if (LOWORD(wParam) == IDC_CLEAN) {
+			HWND hEdit = GetDlgItem(hDlg, IDC_INPUT);
+			SetWindowText(hEdit, L"");
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PUTTY) {
