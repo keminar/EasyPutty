@@ -28,6 +28,7 @@
 #define IDC_SYSLINK1                    1003
 #define IDC_BUTTON2                     1004
 #define IDC_EDIT                        1004
+#define IDC_CLEAN                       1004
 #define IDC_BROWSER_WINSCP              1005
 #define IDC_SYSLINK2                    1006
 #define IDC_BROWSER_FILEZILLA           1007
