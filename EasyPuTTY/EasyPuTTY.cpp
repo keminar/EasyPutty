@@ -371,19 +371,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SetTimer(hWnd, TIMER_ID_FOCUS, 100, NULL);
 			break;
 		}
-		/*case WA_INACTIVE: {
-			// 取消窗口置顶
-			SetWindowPos(
-				hWnd,                    // 窗口句柄
-				HWND_NOTOPMOST,          // 置于普通窗口队列中
-				0, 0, 0, 0,              // 不改变位置和大小
-				SWP_NOMOVE | SWP_NOSIZE  // 仅修改Z序
-			);
-			break;
-		}*/
 		}
 		break;
-	}	
+	}
 	case WM_ATTACH_CLICK: {//在attach程序上点击左键
 		DWORD PID = (DWORD)lParam;
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
@@ -1101,22 +1091,19 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 	// 定义按钮
 	TBBUTTON tbButtons[] = {
-		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"新建(&T)" },
-		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭(&D)" },
-		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口(&W)" },
-		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"  新建  |" },
+		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭  |" },
+		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口  |" },
 
-		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接" },
-		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证" },
-		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理" },
-		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥" },
-		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接  |" },
+		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证  |" },
+		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理  |" },
+		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥  |" },
 
-		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置" },
-		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他" },
-		{0, 0, TBSTATE_ENABLED, TBSTYLE_SEP, 0, 0, 0},
+		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置  |" },
+		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他  |" },
 
-		{ -1, IDM_ABOUT,  TBSTATE_HIDDEN, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"帮助" },
+		{ -1, IDM_ABOUT,  TBSTATE_HIDDEN, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"帮助  |" },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
 	//必须在调用 TB_ADDBUTTONS 之前设置TB_BUTTONSTRUCTSIZE 传递结构体大小，否则工具栏可能无法正确解析按钮数据。
