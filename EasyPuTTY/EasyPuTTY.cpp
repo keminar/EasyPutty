@@ -535,19 +535,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_TAB_AUTO: { //attach进程自动关闭后回调更新标签
 			HANDLE hProcess = (HANDLE)lParam;
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
-			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			int currentTab;
 			int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			int deleteTab = -1;
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			for (int i = 0; i < count; i++) {
 				 getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
 				if (tabCtrlItemInfo.processHandle == hProcess) {
-					ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 					deleteTab = i;
 
-					// 因为标签没马上删除，先更新标签数据
+					ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
+					// 先释放内存
+					if (tabCtrlItemInfo.command != NULL) {
+						delete[] tabCtrlItemInfo.command;
+						tabCtrlItemInfo.command = NULL;
+					}
+					// 因为标签没马上删除，先更新标签数据, processHandle 下面判断还有用，先保留;
 					tabCtrlItemInfo.waitHandle = NULL;
-					tabCtrlItemInfo.processHandle = NULL;
 					tabCtrlItemInfo.attachProcessId = 0;
 					tabCtrlItemInfo.attachWindowHandle = NULL;
 					TabCtrl_SetItem(tabCtrlWinHandle, i, &tabCtrlItemInfo);
@@ -557,30 +561,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (deleteTab == -1) {
 				return 0;
 			}
+			// 获取标签名
 			wchar_t szTitle[MAX_PATH] = { 0 };
 			TCITEM tie = { 0 };
-			tie.mask = TCIF_TEXT;         // 只获取文本属性
-			tie.cchTextMax = MAX_PATH;    // 缓冲区最大长度
-			tie.pszText = szTitle;   // 指向接收文本的缓冲区
+			tie.mask = TCIF_TEXT;
+			tie.cchTextMax = MAX_PATH;
+			tie.pszText = szTitle;
 			SendMessage(tabCtrlWinHandle, TCM_GETITEM, deleteTab, (LPARAM)&tie);
 			swprintf_s(szTitle, _countof(szTitle), L"%s 窗口退出，标签自动关闭", szTitle);
 			MessageBox(hWnd, szTitle, L"标签提醒", MB_OK);
-			// 销毁标签
-			getTabItemInfo(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
-			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-			if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
-				DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+			// 销毁标签, 因为删除标签后索引值会变化，所以用之前获取的deleteTab删除多个标签时先删除前面的
+			// 再删除后面的此时索引值已经变化，会导致删除失败。解决办法是重新循环标签查询，总数也重新算
+			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
+			for (int i = 0; i < count; i++) {
+				getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
+				if (tabCtrlItemInfo.processHandle == hProcess) {
+					deleteTab = i;
+					TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
+					if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
+						DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+					}
+					break;
+				}
 			}
-			// 释放内存
-			if (tabCtrlItemInfo.command != NULL) {
-				delete[] tabCtrlItemInfo.command;
-			}
+			// 获取最新标签数据并修改
+			currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (count == 0) {
 				AddNewOverview(&g_tabWindowsInfo);
 			}
-			else if (deleteTab == currentTab) { //如果删除项非选中项，不切换选中
-				// if last item was removed, select previous item, otherwise select next item
+			else if (deleteTab == currentTab) {
 				int newSelectedTab = (currentTab == count) ? (currentTab - 1) : currentTab;
 				selectTab(tabCtrlWinHandle, newSelectedTab);
 			}
