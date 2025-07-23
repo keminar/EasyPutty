@@ -577,15 +577,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
 				if (tabCtrlItemInfo.processHandle == hProcess) {
 					deleteTab = i;
-					TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
-					if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
-						DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
-					}
 					break;
 				}
 			}
-			// 获取最新标签数据并修改
+			if (deleteTab == -1) {
+				return 0;
+			}
+			// 要在删除前再获取一次当前选中值
 			currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
+			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
+			if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
+				DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+			}
+			// 获取最新标签总数
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (count == 0) {
 				AddNewOverview(&g_tabWindowsInfo);
