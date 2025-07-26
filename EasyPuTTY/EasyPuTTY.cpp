@@ -21,6 +21,7 @@ HWND g_toolbarHandle;                          // 工具条
 HWND g_mainWindowHandle;                       // 主窗体
 int g_tabHitIndex;                             // 标签右键触发索引
 HWND g_hsearchEdit; //搜索框
+int g_hsearchLastWordLen = 0;
 
 HHOOK g_hMouseHook = NULL;  // 钩子句柄
 BOOL g_insideHook = FALSE;  // 标记是否正在处理钩子回调
@@ -1044,11 +1045,18 @@ void selectedTabToLeft() {
 
 // 子类化后的窗口过程函数
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	wchar_t searchWord[256] = { 0 };
 	// 获取原始窗口过程
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
 	switch (message) {
-	case WM_KEYUP:
+	case WM_KEYUP: {
+		GetWindowText(g_hsearchEdit, searchWord, 256);
 		if (wParam == VK_RETURN) {
+			// 小狼毫输入法回车上屏
+			if (g_hsearchLastWordLen != lstrlen(searchWord)) {
+				g_hsearchLastWordLen = lstrlen(searchWord);
+				PerformSearch(hWnd);
+			}
 			// 处理回车键
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			int selected = TabCtrl_GetCurSel((&g_tabWindowsInfo)->tabCtrlWinHandle);
@@ -1075,9 +1083,12 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		else {
+			// 不管长度是否改变，都搜索
+			g_hsearchLastWordLen = lstrlen(searchWord);
 			PerformSearch(hWnd);
 		}
 		break;
+	}	
 	}
 
 	// 调用原始窗口过程处理其他消息

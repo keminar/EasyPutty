@@ -366,12 +366,8 @@ void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		if (credentialConfig.privateKey[0] != L'\0') {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s /privatekey=\"%s\"", line.command, credentialConfig.privateKey);
 		}
-		// 通过发送自定义消息获取主窗口句柄
-		HWND mainWindow = (HWND)SendMessage(hwnd, WM_GETMAINWINDOW, 0, 0);
-		if (mainWindow) {
-			// 转发按钮点击消息到主窗口
-			SendMessage(mainWindow, WM_COMMAND, ID_LIST_ATTACH, (LPARAM)&line);
-		}
+		//winscp有个输入密码的前置窗口，不在标签打开
+		startApp(line.command, TRUE);
 	}
 	else {
 		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
