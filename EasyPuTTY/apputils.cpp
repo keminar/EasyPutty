@@ -134,27 +134,26 @@ int startApp(const wchar_t* appPath, BOOL show) {
 	// 进程启动信息
 	STARTUPINFO si = { 0 };
 	si.cb = sizeof(si);
+	// 进程信息
+	PROCESS_INFORMATION pi = { 0 };
 	if (!show) {
 		si.dwFlags = STARTF_USESHOWWINDOW;
 		si.wShowWindow = SW_HIDE; // 隐藏窗口
 	}
-
-	// 进程信息
-	PROCESS_INFORMATION pi = { 0 };
-
+	BOOL ret = CreateProcessW(
+		NULL,
+		(LPWSTR)appPath,               // 程序路径
+		NULL,                          // 命令行参数（若需传递参数，需单独构造）
+		NULL,                          // 进程安全属性
+		FALSE,                         // 不继承句柄
+		show ? CREATE_NEW_CONSOLE : CREATE_NO_WINDOW, // 根据显示选项设置标志
+		NULL,                          // 环境变量（使用父进程环境）
+		NULL,                          // 当前目录（使用父进程当前目录）
+		&si,                           // 启动信息
+		&pi                            // 进程信息
+	);
 	// 创建新进程
-	if (CreateProcess(
-		appPath,            // 程序路径
-		NULL,               // 命令行参数
-		NULL,               // 进程安全属性
-		NULL,               // 线程安全属性
-		FALSE,              // 不继承句柄
-		CREATE_NO_WINDOW,   // 关键标志：创建无窗口的进程
-		NULL,               // 环境变量
-		NULL,               // 当前目录
-		&si,                // 启动信息
-		&pi                 // 进程信息
-	)) {
+	if (ret) {
 		// 等待进程初始化完成
 		WaitForInputIdle(pi.hProcess, INFINITE);
 
