@@ -833,6 +833,9 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 			GetWindowThreadProcessId(puttyWindowHandle, &dwThreadId);
 			hProcess = ProcessRegisterClose(dwThreadId, &hWait);
 
+			// 输出调试日志
+			LOG_INFO(L"当前hostWindow: %p", newHostWinHandle);
+
 			tabCtrlItemInfo.hostWindowHandle = newHostWinHandle;
 			tabCtrlItemInfo.attachWindowHandle = puttyWindowHandle;
 			tabCtrlItemInfo.attachProcessId = dwThreadId;

@@ -39,6 +39,9 @@
     <ClInclude Include="apputils.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="logs.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EasyPuTTY.cpp">
@@ -54,6 +57,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="apputils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="logs.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
