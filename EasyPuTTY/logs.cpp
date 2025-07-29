@@ -1,5 +1,7 @@
 #include "logs.h"
 
+HWND hDebugEdit = NULL;
+
 // 转换日志级别到宽字符串
 static const wchar_t* LogLevelToStringW(LogLevel level) {
 	switch (level) {
@@ -59,13 +61,33 @@ void LogW(LogLevel level, const wchar_t* file, int line, const wchar_t* format, 
 
 			// 输出到调试器
 			OutputDebugStringW(fullMessage);
-
-			// 同时输出到控制台（如果需要）
-			// wprintf(L"%s", fullMessage);
+			DebugPrint(fullMessage);
 
 			LocalFree(fullMessage);
 		}
 		LocalFree(msgBuffer);
 	}
 	va_end(args);
+}
+
+void setEditHwnd(HWND h) {
+	hDebugEdit = h;
+}
+
+// 向调试窗口添加文本
+void DebugPrint(LPCTSTR text)
+{
+	if (hDebugEdit == NULL) return;
+
+	// 获取当前文本长度
+	int length = GetWindowTextLength(hDebugEdit);
+
+	// 移动到文本末尾
+	SendMessage(hDebugEdit, EM_SETSEL, length, length);
+
+	// 添加新文本
+	SendMessage(hDebugEdit, EM_REPLACESEL, FALSE, (LPARAM)text);
+
+	// 添加换行
+	SendMessage(hDebugEdit, EM_REPLACESEL, FALSE, (LPARAM)_T("\r\n"));
 }

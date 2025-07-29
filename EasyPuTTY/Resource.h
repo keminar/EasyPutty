@@ -59,7 +59,7 @@
 #define IDC_PRO_PATH                    1031
 #define IDC_PPK                         1032
 #define IDC_PRO_PARAM                   1033
-#define IDC_EDIT4                       1034
+#define IDM_DEBUG                       1034
 #define IDC_PRO_TAGS                    1035
 #define IDC_BUTTON1                     1036
 #define IDC_BROWSER_PSFTP               1036
@@ -119,7 +119,7 @@
 #define ID_HOTKEY_CLOSE                 32814
 #define ID_HOTKEY_SEARCH                32815
 #define ID_HOTKEY_CLONE                 32816
-#define ID_PUTTY_32817                  32817
+#define ID_DEBUG_EDIT                   32817
 #define ID_WINDOW_COMMAND               32818
 #define IDC_STATIC                      -1
 
