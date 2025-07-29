@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <tchar.h>
+
+void setEditHwnd(HWND h);
+void DebugPrint(LPCTSTR text);
 
 // 日志级别枚举
 typedef enum {

@@ -662,6 +662,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			startApp(puttygen, TRUE);
 			break;
 		}
+		case IDM_DEBUG: {
+			createDebugWindow();
+			break;
+		}
 		case IDM_ABOUT:
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
@@ -1131,7 +1135,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置  |" },
 		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他  |" },
 
-		{ -1, IDM_ABOUT,  TBSTATE_HIDDEN, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"帮助  |" },
+		{ -1, IDM_DEBUG,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"调试  |" },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
 	};
 	//必须在调用 TB_ADDBUTTONS 之前设置TB_BUTTONSTRUCTSIZE 传递结构体大小，否则工具栏可能无法正确解析按钮数据。
@@ -1466,6 +1470,84 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 		return NULL;
 	}
 	return hostWindow;
+}
+
+// 调试窗口过程
+LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{ 
+	switch (msg)
+	{
+	case WM_CREATE:
+	{
+		// 在窗口中创建独立的编辑框控件
+		HWND hDebugEdit = CreateWindowExW(
+			0,
+			L"EDIT",
+			L"",      // 初始文本为空
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+			0, 0, 0, 0,
+			hWnd,
+			(HMENU)ID_DEBUG_EDIT,
+			GetModuleHandle(NULL),
+			NULL
+		);
+
+		// 设置编辑框字体
+		HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+		SendMessage(hDebugEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+		setEditHwnd(hDebugEdit);
+		break;
+	}
+	case WM_SIZE:
+	{
+		HWND hDebugEdit = GetDlgItem(hWnd, ID_DEBUG_EDIT);
+		if (hDebugEdit)
+		{
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			MoveWindow(hDebugEdit, 0, 0, rect.right, rect.bottom, TRUE);
+		}
+		break;
+	}
+	case WM_DESTROY:
+		setEditHwnd(NULL);
+		return 0;
+	}
+
+	return DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+// 调试窗口
+HWND createDebugWindow() {
+	const wchar_t* CLASS_NAME = L"DebugWindowClass";
+	WNDCLASS wc = { 0 };
+	wc.lpfnWndProc = DebugWindowProc;
+	wc.hInstance = g_appInstance;
+	wc.lpszClassName = CLASS_NAME;
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	RegisterClass(&wc);
+
+	HWND debugWindow = CreateWindowExW(
+		0,
+		CLASS_NAME,
+		L"输出调试信息",
+		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		900, 600,
+		NULL,
+		NULL,
+		GetModuleHandle(NULL),
+		NULL
+	);
+
+	if (!debugWindow) {
+		MessageBoxW(NULL, L"无法创建调试窗口", L"错误", MB_OK | MB_ICONERROR);
+		return NULL;
+	}
+
+	return debugWindow;
 }
 
 // 附加窗口
