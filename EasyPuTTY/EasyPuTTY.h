@@ -50,5 +50,5 @@ void registerAccel(HWND hWnd);
 void unRegisterAccel(HWND hWnd);
 void cloneTab(HWND tabCtrlWinHandle);
 
-HWND createDebugWindow();
+void createDebugWindow();
 LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

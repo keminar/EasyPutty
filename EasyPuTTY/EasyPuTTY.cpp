@@ -23,6 +23,10 @@ int g_tabHitIndex;                             // 标签右键触发索引
 HWND g_hsearchEdit; //搜索框
 int g_hsearchLastWordLen = 0;
 
+HWND g_debugWindow;
+// 静态变量用于标记窗口类是否已注册
+static bool g_debugClassRegistered = false;
+
 HHOOK g_hMouseHook = NULL;  // 钩子句柄
 BOOL g_insideHook = FALSE;  // 标记是否正在处理钩子回调
 HWND g_mouseHookWnd = NULL; // 当前拦截的putty窗体
@@ -1484,7 +1488,7 @@ LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 			0,
 			L"EDIT",
 			L"",      // 初始文本为空
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | WS_BORDER,
 			0, 0, 0, 0,
 			hWnd,
 			(HMENU)ID_DEBUG_EDIT,
@@ -1506,12 +1510,13 @@ LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		{
 			RECT rect;
 			GetClientRect(hWnd, &rect);
-			MoveWindow(hDebugEdit, 0, 0, rect.right, rect.bottom, TRUE);
+			MoveWindow(hDebugEdit, 5, 0, rect.right-5, rect.bottom-5, TRUE);
 		}
 		break;
 	}
 	case WM_DESTROY:
 		setEditHwnd(NULL);
+		g_debugWindow = NULL;
 		return 0;
 	}
 
@@ -1519,17 +1524,39 @@ LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 // 调试窗口
-HWND createDebugWindow() {
+void createDebugWindow() {
 	const wchar_t* CLASS_NAME = L"DebugWindowClass";
-	WNDCLASS wc = { 0 };
-	wc.lpfnWndProc = DebugWindowProc;
-	wc.hInstance = g_appInstance;
-	wc.lpszClassName = CLASS_NAME;
-	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	RegisterClass(&wc);
+	if (g_debugWindow) {
+		// 检查窗口是否处于最小化状态
+		if (IsIconic(g_debugWindow)) {
+			// 还原窗口（从最小化状态恢复）
+			ShowWindow(g_debugWindow, SW_RESTORE);
+		}
+		SetForegroundWindow(g_debugWindow);
+		return;
+	}
+	// 确保窗口类只注册一次（首次调用时注册）
+	if (!g_debugClassRegistered) {
+		WNDCLASS wc = { 0 };
+		wc.lpfnWndProc = DebugWindowProc;
+		wc.hInstance = g_appInstance;
+		wc.lpszClassName = CLASS_NAME;
+		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+		
+		// 尝试注册窗口类
+		ATOM atom = RegisterClass(&wc);
+		DWORD error = GetLastError();
 
-	HWND debugWindow = CreateWindowExW(
+		// 检查是否注册成功或类已存在
+		if (!atom && error != ERROR_CLASS_ALREADY_EXISTS) {
+			MessageBoxW(NULL, L"无法注册调试窗口类", L"错误", MB_OK | MB_ICONERROR);
+			return;
+		}
+		g_debugClassRegistered = true; // 标记为已注册（无论本次是否实际注册）
+	}
+
+	g_debugWindow = CreateWindowExW(
 		0,
 		CLASS_NAME,
 		L"输出调试信息",
@@ -1542,12 +1569,10 @@ HWND createDebugWindow() {
 		NULL
 	);
 
-	if (!debugWindow) {
+	if (!g_debugWindow) {
 		MessageBoxW(NULL, L"无法创建调试窗口", L"错误", MB_OK | MB_ICONERROR);
-		return NULL;
+		return ;
 	}
-
-	return debugWindow;
 }
 
 // 附加窗口
