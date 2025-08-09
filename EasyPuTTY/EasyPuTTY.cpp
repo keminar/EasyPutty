@@ -54,8 +54,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	icex.dwICC = ICC_TAB_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES;
 	InitCommonControlsEx(&icex);
 
+	// 初始化语言管理
+	SetLangInstance(hInstance);
+	InitLanguage();
+
 	// 初始化全局字符串
-	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	wcscpy_s(szTitle, MAX_LOADSTRING, GetString(IDS_APP_TITLE));
+	//LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_EASYPUTTY, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
@@ -283,7 +288,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
 		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
-			MessageBoxW(NULL, L"创建工具条标签失败", L"提示", MB_OK);
+			MessageBoxW(NULL, GetString(IDS_MSG_CREATE_FAILED),
+				GetString(IDS_BTN_OK), MB_OK);
 			return 0;
 		}
 		else {
@@ -411,10 +417,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 
 		wchar_t msg[256];
-		swprintf(msg, 256, L"剪贴板内容较长（%d个字符），确定要粘贴吗?", len);
+		FormatString(msg, 256, IDS_TIP_CLIPBOARD_LEN, len);
 		int result = MessageBox(hWndUnderMouse,
 			msg,
-			L"确认粘贴",
+			GetString(IDS_TIP_CONFIRM_PASTE),
 			MB_OKCANCEL | MB_ICONQUESTION);
 
 		if (result == IDOK) {

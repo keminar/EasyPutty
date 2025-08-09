@@ -4,7 +4,6 @@
 //
 #define IDC_MYICON                      2
 #define IDD_EASYPUTTY_DIALOG            102
-#define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    104
 #define IDM_TABMENU                     105
 #define IDM_ABOUT                       106
@@ -73,6 +72,28 @@
 #define ID_SEARCH_BUTTON                1044
 #define IDC_PAGEANT_STATUS              1045
 #define IDC_INPUT                       1046
+
+// 字符串ID定义
+#define IDS_APP_TITLE         2001
+#define IDS_TAB_NEW           2002
+#define IDS_MENU_ATTACH       2003
+#define IDS_MSG_CREATE_FAILED 2004
+#define IDS_LIST_PID          2005
+#define IDS_LIST_TITLE        2006
+#define IDS_LIST_PROCESS      2007
+#define IDS_LIST_PATH         2008
+#define IDS_BTN_OK            2009
+#define IDS_BTN_CANCEL        2010
+#define IDS_TIP_CONFIRM_PASTE 2011  // 新增确认粘贴提示
+#define IDS_TIP_CLIPBOARD_LEN 2012  // 剪贴板长度提示
+#define IDS_MENU_FILE         2013  // 菜单文字
+#define IDS_MENU_HELP         2014
+#define IDS_LIST_REFRESH      2015
+
+// 语言资源ID
+#define IDR_CHINESE 3001
+#define IDR_ENGLISH 3002
+
 #define IDM_OPEN                        32771
 #define IDM_CLOSE                       32772
 #define IDM_ENUM_WINDOW                 32773

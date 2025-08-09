@@ -185,10 +185,13 @@ INT_PTR CALLBACK ENUMProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
-	case WM_INITDIALOG:
+	case WM_INITDIALOG: {
+		SetWindowText(GetDlgItem(hDlg, IDOK), GetString(IDS_BTN_OK));
+		SetWindowText(GetDlgItem(hDlg, IDCANCEL), GetString(IDS_BTN_CANCEL));
+		SetWindowText(GetDlgItem(hDlg, IDC_REFRESH), GetString(IDS_LIST_REFRESH));
 		createEnum(g_appInstance, g_tabWindowsInfo, hDlg);
 		return (INT_PTR)TRUE;
-
+	}
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK)
 		{
@@ -226,9 +229,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
-	case WM_INITDIALOG:
+	case WM_INITDIALOG: {
+		SetWindowText(GetDlgItem(hDlg, IDOK), GetString(IDS_BTN_OK));
 		return (INT_PTR)TRUE;
-
+	}
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{

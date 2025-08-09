@@ -173,26 +173,26 @@ void InitEnumColumns(HWND hWndListView) {
 	// 第1列：
 	lvc.iSubItem = 0;
 	lvc.cx = 100;
-	lvc.pszText = (LPWSTR)L"PID";
+	lvc.pszText = (LPWSTR)GetString(IDS_LIST_PID);
 	ListView_InsertColumn(hWndListView, 0, &lvc);
 
 
 	// 第2列：
 	lvc.iSubItem = 1;
 	lvc.cx = 225;
-	lvc.pszText = (LPWSTR)L"窗口";
+	lvc.pszText = (LPWSTR)GetString(IDS_LIST_TITLE);
 	ListView_InsertColumn(hWndListView, 1, &lvc);
 
 	// 第3列：
 	lvc.iSubItem = 2;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"进程名";
+	lvc.pszText = (LPWSTR)GetString(IDS_LIST_PROCESS);
 	ListView_InsertColumn(hWndListView, 2, &lvc);
 
 	// 第4列：
 	lvc.iSubItem = 3;
 	lvc.cx = 460;
-	lvc.pszText = (LPWSTR)L"路径";
+	lvc.pszText = (LPWSTR)GetString(IDS_LIST_PATH);
 	ListView_InsertColumn(hWndListView, 3, &lvc);
 }
 

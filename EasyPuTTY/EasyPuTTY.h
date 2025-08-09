@@ -4,6 +4,7 @@
 #include "overview.h"
 #include "attach.h"
 #include "logs.h"
+#include "lang_manager.h"
 
 // Data associated with each tab control item. We will use it instead of TCITEM. First member must be TCITEMHEADER, other members we can freely define
 typedef struct tagTCCUSTOMITEM {
