@@ -2,6 +2,7 @@
 
 #include "framework.h"
 #include "apputils.h"
+#include "lang_manager.h"
 
 typedef struct {
 	HWND hWnd;
