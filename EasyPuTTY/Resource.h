@@ -74,28 +74,56 @@
 #define IDC_INPUT                       1046
 
 // 字符串ID定义
-#define IDS_APP_TITLE         2001
-#define IDS_TAB_NEW           2002
-#define IDS_MENU_ATTACH       2003
-#define IDS_MSG_CREATE_FAILED 2004
-#define IDS_LIST_PID          2005
-#define IDS_LIST_TITLE        2006
-#define IDS_LIST_PROCESS      2007
-#define IDS_LIST_PATH         2008
-#define IDS_BTN_OK            2009
-#define IDS_BTN_CANCEL        2010
-#define IDS_TIP_CONFIRM_PASTE 2011  // 新增确认粘贴提示
-#define IDS_TIP_CLIPBOARD_LEN 2012  // 剪贴板长度提示
-#define IDS_MENU_FILE         2013  // 菜单文字
-#define IDS_MENU_HELP         2014
-#define IDS_LIST_REFRESH      2015
-
-// 语言资源ID
-#define IDR_CHINESE 3001
-#define IDR_ENGLISH 3002
+#define IDS_APP_TITLE                   2001
+#define IDS_TAB_NEW                     2002
+#define IDS_MENU_ATTACH                 2003
+#define IDS_MSG_CREATE_FAILED           2004
+#define IDS_LIST_PID                    2005
+#define IDS_LIST_TITLE                  2006
+#define IDS_LIST_PROCESS                2007
+#define IDS_LIST_PATH                   2008
+#define IDS_BTN_OK                      2009
+#define IDS_BTN_CANCEL                  2010
+#define IDS_TIP_CONFIRM_PASTE           2011
+#define IDS_TIP_CLIPBOARD_LEN           2012
+#define IDS_MENU_FILE                   2013
+#define IDS_MENU_HELP                   2014
+#define IDS_LIST_REFRESH                2015
+#define IDS_TAB_CLOSE_TITLE             2016
+#define IDS_TAB_CLOSE_TIP               2017
+#define IDS_MESSAGE_CAPTION             2018
+#define IDS_NEED_COMMAND                2019
+#define IDS_TIP_CONFIRM_CLOSE           2020
+#define IDS_TIP_CLOSE_APP               2021
+#define IDS_TAB_CLONE_FAIL              2022
+#define IDS_TAB_CREATE_FAIL             2023
+#define IDS_TOOLBAR_CREATE              2024
+#define IDS_TOOLBAR_WINDOW              2026
+#define IDS_TOOLBAR_SESSION             2027
+#define IDS_TOOLBAR_CREDENTIAL          2028
+#define IDS_TOOLBAR_PAGEANT	            2029
+#define IDS_TOOLBAR_PUTTYGEN            2030
+#define IDS_TOOLBAR_SETTING             2031
+#define IDS_TOOLBAR_PROGRAM             2032
+#define IDS_TOOLBAR_DEBUG               2033
+#define IDS_TOOLBAR_ABOUT               2034
+#define IDS_BTN_CLEAR                   2035
+#define IDS_TAB_UNTITLED                2036
+#define IDS_HOSTWINDOW_FAIL             2037
+#define IDS_REGISTER_WNDCLASS_FAIL      2038
+#define IDS_LOG_WINDOW_FAIL             2039
+#define IDS_PROCESS_FAIL                2040
+#define IDS_LISTVIEW_FAIL               2041
+#define IDS_CUSTOM                      2042
+#define IDS_NONE                        2043
+#define IDS_NAME                        2044
+#define IDS_TYPE                        2045
+#define IDS_COMMAND                     2046
+#define IDS_TAG                         2047
+#define IDS_CREDENTIAL                  2048
+#define IDS_INPUT                       2049
 
 #define IDM_OPEN                        32771
-#define IDM_CLOSE                       32772
 #define IDM_ENUM_WINDOW                 32773
 #define ID_ENUM_VIEW                    32774
 #define ID_ENUM_ATTACH                  32775

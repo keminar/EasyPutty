@@ -474,11 +474,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			AddNewOverview(&g_tabWindowsInfo);
 			break;
 		}
-		case IDM_CLOSE: { // 关闭当前选中
-			int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
-			RemoveTab(tabCtrlWinHandle, currentTab, FALSE);
-			break;
-		}
 		case ID_TAB_CLOSE: {//右键关闭当前鼠标位置标签
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex, FALSE);
 			break;
@@ -573,14 +568,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 			// 获取标签名
-			wchar_t szTitle[MAX_PATH] = { 0 };
+			wchar_t szText[MAX_PATH] = { 0 };
 			TCITEM tie = { 0 };
 			tie.mask = TCIF_TEXT;
 			tie.cchTextMax = MAX_PATH;
-			tie.pszText = szTitle;
+			tie.pszText = szText;
 			SendMessage(tabCtrlWinHandle, TCM_GETITEM, deleteTab, (LPARAM)&tie);
-			swprintf_s(szTitle, _countof(szTitle), L"%s 窗口退出，标签自动关闭", szTitle);
-			MessageBox(hWnd, szTitle, L"标签提醒", MB_OK);
+			swprintf_s(szText, _countof(szText), GetString(IDS_TAB_CLOSE_TIP), szText);
+			MessageBox(hWnd, szText, GetString(IDS_TAB_CLOSE_TITLE), MB_OK);
 			// 销毁标签, 因为删除标签后索引值会变化，所以用之前获取的deleteTab删除多个标签时先删除前面的
 			// 再删除后面的此时索引值已经变化，会导致删除失败。解决办法是重新循环标签查询，总数也重新算
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
@@ -709,7 +704,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			NameCommand* selLine = (NameCommand*)lParam;
 			if (wcslen(selLine->command) == 0) {
-				MessageBoxW(g_mainWindowHandle, L"请输入命令", L"提示", MB_OK | MB_ICONINFORMATION);
+				MessageBoxW(g_mainWindowHandle, GetString(IDS_NEED_COMMAND), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONINFORMATION);
 				return 0;
 			}
 			openAttach(tabCtrlWinHandle, sel, selLine->name, selLine->command);
@@ -763,8 +758,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// 当用户点击关闭按钮时会触发WM_CLOSE消息
 		int response = MessageBox(
 			hWnd,
-			L"确定要关闭所有标签内窗口吗？不关闭的请先分离！",
-			L"确认关闭",
+			GetString(IDS_TIP_CLOSE_APP),
+			GetString(IDS_TIP_CONFIRM_CLOSE),
 			MB_YESNO | MB_ICONQUESTION
 		);
 
@@ -814,7 +809,7 @@ void cloneTab(HWND tabCtrlWinHandle) {
 	// 新建标签
 	int newIndex = AddNewOverview(&g_tabWindowsInfo);
 	if (newIndex == -1) {
-		MessageBoxW(g_mainWindowHandle, L"克隆失败", L"提示", MB_OK | MB_ICONINFORMATION);
+		MessageBoxW(g_mainWindowHandle, GetString(IDS_TAB_CLONE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONINFORMATION);
 		return;
 	}
 	openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
@@ -833,7 +828,7 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 
 	newHostWinHandle = createHostWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle);
 	if (newHostWinHandle == NULL) {
-		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK);
 		return ;
 	}
 	else {
@@ -848,7 +843,7 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 			hProcess = ProcessRegisterClose(dwThreadId, &hWait);
 
 			// 输出调试日志
-			LOG_INFO(L"当前hostWindow: %p", newHostWinHandle);
+			LOG_INFO(L"hostWindow: %p", newHostWinHandle);
 
 			tabCtrlItemInfo.hostWindowHandle = newHostWinHandle;
 			tabCtrlItemInfo.attachWindowHandle = puttyWindowHandle;
@@ -1131,22 +1126,43 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	);
 	// 设置 ImageList
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
+
+	// 为每个按钮文本定义独立的局部变量
+	wchar_t btnTextCreate[64] = { 0 };
+	wchar_t btnTextWindow[64] = { 0 };
+	wchar_t btnTextSession[64] = { 0 };
+	wchar_t btnTextCredential[64] = { 0 };
+	wchar_t btnTextPageant[64] = { 0 };
+	wchar_t btnTextPuttygen[64] = { 0 };
+	wchar_t btnTextSetting[64] = { 0 };
+	wchar_t btnTextProgram[64] = { 0 };
+	wchar_t btnTextDebug[64] = { 0 };
+	wchar_t btnTextAbout[64] = { 0 };
+
+	// 从资源加载字符串到独立变量
+	wcscpy_s(btnTextCreate, _countof(btnTextCreate), GetString(IDS_TOOLBAR_CREATE));
+	wcscpy_s(btnTextWindow, _countof(btnTextWindow), GetString(IDS_TOOLBAR_WINDOW));
+	wcscpy_s(btnTextSession, _countof(btnTextSession), GetString(IDS_TOOLBAR_SESSION));
+	wcscpy_s(btnTextCredential, _countof(btnTextCredential), GetString(IDS_TOOLBAR_CREDENTIAL));
+	wcscpy_s(btnTextPageant, _countof(btnTextPageant), GetString(IDS_TOOLBAR_PAGEANT));
+	wcscpy_s(btnTextPuttygen, _countof(btnTextPuttygen), GetString(IDS_TOOLBAR_PUTTYGEN));
+	wcscpy_s(btnTextSetting, _countof(btnTextSetting), GetString(IDS_TOOLBAR_SETTING));
+	wcscpy_s(btnTextProgram, _countof(btnTextProgram), GetString(IDS_TOOLBAR_PROGRAM));
+	wcscpy_s(btnTextDebug, _countof(btnTextDebug), GetString(IDS_TOOLBAR_DEBUG));
+	wcscpy_s(btnTextAbout, _countof(btnTextAbout), GetString(IDS_TOOLBAR_ABOUT));
+
 	// 定义按钮
 	TBBUTTON tbButtons[] = {
-		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"  新建  |" },
-		{ -1, IDM_CLOSE,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关闭  |" },
-		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"窗口  |" },
-
-		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"连接  |" },
-		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"凭证  |" },
-		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"代理  |" },
-		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"密钥  |" },
-
-		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"配置  |" },
-		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"其他  |" },
-
-		{ -1, IDM_DEBUG,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"调试  |" },
-		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)L"关于" }
+		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextCreate },
+		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextWindow },
+		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextSession },
+		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextCredential },
+		{ -1, IDM_PAGEANT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextPageant },
+		{ -1, IDM_PUTTYGEN,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextPuttygen },
+		{ -1, IDM_SETTING,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextSetting },
+		{ -1, IDM_PROGRAM,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextProgram },
+		{ -1, IDM_DEBUG,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextDebug },
+		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextAbout }
 	};
 	//必须在调用 TB_ADDBUTTONS 之前设置TB_BUTTONSTRUCTSIZE 传递结构体大小，否则工具栏可能无法正确解析按钮数据。
 	SendMessage(g_toolbarHandle, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
@@ -1161,7 +1177,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		_T("EDIT"),
 		_T(""),
 		WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP | ES_WANTRETURN,
-		700, 1, 300, 30,
+		800, 1, 300, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_EDIT,
 		g_appInstance, NULL
 	);
@@ -1172,9 +1188,9 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	HWND searchButton = CreateWindowEx(
 		0,
 		_T("BUTTON"),
-		_T("清空"),
+		GetString(IDS_BTN_CLEAR),
 		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-		1000, 1, 60, 30,
+		1100, 1, 60, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
 		g_appInstance, NULL
 	);
@@ -1223,7 +1239,7 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	wchar_t tabNameBuf[256];
 
-	swprintf_s(tabNameBuf, L"新标签 %d", suffix);
+	swprintf_s(tabNameBuf, GetString(IDS_TAB_UNTITLED), suffix);
 
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_TEXT | TCIF_IMAGE;
 	tabCtrlItemInfo.tcitemheader.iImage = -1;
@@ -1253,7 +1269,7 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
 	if (hostWindow == NULL) {
 		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
-		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK);
 		return -1;
 	}
 	InitOverview(g_appInstance, tabWindowsInfo, hostWindow, g_hsearchEdit);
@@ -1476,7 +1492,7 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 	);
 
 	if (!hostWindow) {
-		MessageBoxW(NULL, L"无法创建宿主窗口", L"错误", MB_OK | MB_ICONERROR);
+		MessageBoxW(NULL, GetString(IDS_HOSTWINDOW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 		return NULL;
 	}
 	return hostWindow;
@@ -1556,7 +1572,7 @@ void createDebugWindow() {
 
 		// 检查是否注册成功或类已存在
 		if (!atom && error != ERROR_CLASS_ALREADY_EXISTS) {
-			MessageBoxW(NULL, L"无法注册调试窗口类", L"错误", MB_OK | MB_ICONERROR);
+			MessageBoxW(NULL, GetString(IDS_REGISTER_WNDCLASS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 			return;
 		}
 		g_debugClassRegistered = true; // 标记为已注册（无论本次是否实际注册）
@@ -1576,7 +1592,7 @@ void createDebugWindow() {
 	);
 
 	if (!g_debugWindow) {
-		MessageBoxW(NULL, L"无法创建调试窗口", L"错误", MB_OK | MB_ICONERROR);
+		MessageBoxW(NULL, GetString(IDS_LOG_WINDOW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 		return ;
 	}
 }
@@ -1594,7 +1610,7 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	HWND hostWindow = createHostWindow(g_appInstance, tabWindowsInfo->parentWinHandle);
 	if (hostWindow == NULL) {
 		TabCtrl_DeleteItem(tabCtrlWinHandle, newTabIndex);
-		MessageBoxW(NULL, L"创建窗口失败", L"提示", MB_OK);
+		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK);
 		return;
 	}
 	// 嵌入窗口到宿主窗口

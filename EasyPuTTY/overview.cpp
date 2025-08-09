@@ -212,7 +212,7 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab) {
 			&si,
 			&pi
 		)) {
-			MessageBoxW(NULL, L"无法启动进程", L"错误", MB_OK | MB_ICONERROR);
+			MessageBoxW(NULL, GetString(IDS_PROCESS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -465,7 +465,7 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	);
 
 	if (!hListView) {
-		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
+		MessageBoxW(NULL, GetString(IDS_LISTVIEW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 		return;
 	}
 	g_appInstance = hInstance;
@@ -530,6 +530,11 @@ void SetListViewData(HWND hListView) {
 	GetPrivateProfileStringW(SECTION_NAME, L"Input_hotkey", L"", input_hotkey, 256, iniPath);
 
 	// 自定义程序
+	wchar_t textCustom[64] = { 0 };
+	wchar_t textInput[64] = { 0 };
+	wcscpy_s(textCustom, _countof(textCustom), GetString(IDS_CUSTOM));
+	wcscpy_s(textInput, _countof(textInput), GetString(IDS_NONE));
+
 	GetProgramPath(programPath, MAX_PATH);
 	programFileList = ListIniFiles(programPath, &programCount);
 	for (int i = 0; i < programCount; i++) {
@@ -541,7 +546,7 @@ void SetListViewData(HWND hListView) {
 					|| wcsstr(programConfig.tags, searchWord) != NULL
 					|| wcsstr(programConfig.path, searchWord) != NULL) {
 					swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
-					AddListViewItem(hListView, nItem, programConfig.name, L"自定义", command, programConfig.tags, L"", L"无");
+					AddListViewItem(hListView, nItem, programConfig.name, textCustom, command, programConfig.tags, L"", textInput);
 					nItem++;
 				}
 			}
@@ -629,32 +634,32 @@ void InitializeListViewColumns(HWND hWndListView) {
 
 	lvc.iSubItem = 0;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"简称";
+	lvc.pszText = (LPWSTR)GetString(IDS_NAME);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
 	lvc.iSubItem = 1;
 	lvc.cx = 110;
-	lvc.pszText = (LPWSTR)L"类型";
+	lvc.pszText = (LPWSTR)GetString(IDS_TYPE);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
 	lvc.iSubItem = 2;
 	lvc.cx = 500;
-	lvc.pszText = (LPWSTR)L"命令";
+	lvc.pszText = (LPWSTR)GetString(IDS_COMMAND);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
 	lvc.iSubItem = 3;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"标签";
+	lvc.pszText = (LPWSTR)GetString(IDS_TAG);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
 	lvc.iSubItem = 4;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"凭证";
+	lvc.pszText = (LPWSTR)GetString(IDS_CREDENTIAL);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 
 	lvc.iSubItem = 5;
 	lvc.cx = 200;
-	lvc.pszText = (LPWSTR)L"输入法";
+	lvc.pszText = (LPWSTR)GetString(IDS_INPUT);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 }
 
