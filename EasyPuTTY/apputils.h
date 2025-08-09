@@ -2,6 +2,7 @@
 
 #include "resource.h"
 #include "framework.h"
+#include "lang_manager.h"
 
 // will use this structure to group fields which describe tab header and editor
 struct TabWindowsInfo {
