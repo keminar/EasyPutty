@@ -622,7 +622,7 @@ void SetListViewData(HWND hListView) {
 				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, input_hotkey);
 			}
 			else {
-				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, L"нч");
+				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, GetString(IDS_NONE));
 			}
 			nItem++;
 		}
