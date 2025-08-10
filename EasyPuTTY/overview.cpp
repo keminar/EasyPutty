@@ -196,6 +196,9 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab) {
 		}
 	}
 	if (!tab) {
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+
 		// Æô¶¯½ø³Ì
 		STARTUPINFO si = { sizeof(si) };
 		PROCESS_INFORMATION pi;
@@ -212,7 +215,7 @@ void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab) {
 			&si,
 			&pi
 		)) {
-			MessageBoxW(NULL, GetString(IDS_PROCESS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
+			MessageBoxW(NULL, GetString(IDS_PROCESS_FAIL), msgCaption, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -465,7 +468,10 @@ void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HW
 	);
 
 	if (!hListView) {
-		MessageBoxW(NULL, GetString(IDS_LISTVIEW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+
+		MessageBoxW(NULL, GetString(IDS_LISTVIEW_FAIL), msgCaption, MB_OK | MB_ICONERROR);
 		return;
 	}
 	g_appInstance = hInstance;
