@@ -263,6 +263,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_CREATE:
 	{
+		wchar_t btnOk[64] = { 0 };
 		// application properties
 		wchar_t fontPropertyVal[LF_FACESIZE];
 		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Microsoft Sans Serif");
@@ -288,8 +289,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
 		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
+			wcscpy_s(btnOk, _countof(btnOk), GetString(IDS_BTN_OK));
 			MessageBoxW(NULL, GetString(IDS_MSG_CREATE_FAILED),
-				GetString(IDS_BTN_OK), MB_OK);
+				btnOk, MB_OK);
 			return 0;
 		}
 		else {
@@ -701,10 +703,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case ID_LIST_ATTACH: { // 点击启动程序并嵌入标签
+			wchar_t msgCaption[MAX_PATH] = { 0 };
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			NameCommand* selLine = (NameCommand*)lParam;
 			if (wcslen(selLine->command) == 0) {
-				MessageBoxW(g_mainWindowHandle, GetString(IDS_NEED_COMMAND), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONINFORMATION);
+				wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+				MessageBoxW(g_mainWindowHandle, GetString(IDS_NEED_COMMAND), msgCaption, MB_OK | MB_ICONINFORMATION);
 				return 0;
 			}
 			openAttach(tabCtrlWinHandle, sel, selLine->name, selLine->command);
@@ -755,11 +759,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_CLOSE: {
+		wchar_t confirm[MAX_PATH] = { 0 };
+		wcscpy_s(confirm, _countof(confirm), GetString(IDS_TIP_CONFIRM_CLOSE));
 		// 当用户点击关闭按钮时会触发WM_CLOSE消息
 		int response = MessageBox(
 			hWnd,
 			GetString(IDS_TIP_CLOSE_APP),
-			GetString(IDS_TIP_CONFIRM_CLOSE),
+			confirm,
 			MB_YESNO | MB_ICONQUESTION
 		);
 
@@ -807,9 +813,11 @@ void cloneTab(HWND tabCtrlWinHandle) {
 	tie.pszText = receivedText;   // 指向接收文本的缓冲区
 	SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
 	// 新建标签
+	wchar_t msgCaption[MAX_PATH] = { 0 };
 	int newIndex = AddNewOverview(&g_tabWindowsInfo);
 	if (newIndex == -1) {
-		MessageBoxW(g_mainWindowHandle, GetString(IDS_TAB_CLONE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONINFORMATION);
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+		MessageBoxW(g_mainWindowHandle, GetString(IDS_TAB_CLONE_FAIL), msgCaption, MB_OK | MB_ICONINFORMATION);
 		return;
 	}
 	openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
@@ -828,7 +836,9 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 
 	newHostWinHandle = createHostWindow(g_appInstance, (&g_tabWindowsInfo)->parentWinHandle);
 	if (newHostWinHandle == NULL) {
-		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK);
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), msgCaption, MB_OK);
 		return ;
 	}
 	else {
