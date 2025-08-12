@@ -59,7 +59,9 @@ HWND createPuttyWindow(HINSTANCE hInstance, HWND hostWindow, const wchar_t* putt
 		&si,
 		&pi
 	)) {
-		MessageBoxW(NULL, L"无法启动进程", L"错误", MB_OK | MB_ICONERROR);
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+		MessageBoxW(NULL, GetString(IDS_PROCESS_START_FAIL), msgCaption, MB_OK | MB_ICONERROR);
 		return NULL;
 	}
 

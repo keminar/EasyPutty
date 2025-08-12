@@ -246,13 +246,16 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 	SessionInfo sessionConfig = { 0 };
 	CredentialInfo credentialConfig = { 0 };
 	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	wchar_t msgCaption[MAX_PATH] = { 0 };
+	wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+
 	if (wcscmp(type, L"PuTTY") == 0) {
 		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
 		// Filezilla路径
 		GetAppIni(iniPath, MAX_PATH);
 		GetPrivateProfileStringW(SECTION_NAME, L"Filezilla", L"", filezilla, MAX_PATH, iniPath);
 		if (filezilla[0] == L'\0') {
-			MessageBox(NULL, L"需要先配置Filezilla路径", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_FILEZILLA_PATH), msgCaption, MB_OK);
 			return;
 		}
 
@@ -262,7 +265,7 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 		ReadSessionFromIni(iniPath, &sessionConfig);
 		if (sessionConfig.hostName[0] == L'\0') {
-			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_HOSTNAME_REQUIRED), msgCaption, MB_OK);
 			return;
 		}
 
@@ -292,7 +295,7 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 			swprintf(line.command, MAX_COMMAND_LEN, L"%s:%d", line.command, sessionConfig.port);
 		}
 		if (credentialConfig.privateKey[0] != L'\0') {
-			MessageBox(NULL, L"Filezilla不支持命令行携带私钥，如果无法连接，推荐使用WinSCP", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_FILEZILLA_TIPS), msgCaption, MB_OK);
 			//return;
 		}
 		// 通过发送自定义消息获取主窗口句柄
@@ -303,7 +306,7 @@ void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		}
 	}
 	else {
-		MessageBox(NULL, L"当前行非PuTTY配置不支持ftp操作", L"提示", MB_OK);
+		MessageBox(NULL, GetString(IDS_NOT_PUTTY_TIPS), msgCaption, MB_OK);
 	}
 
 }
@@ -321,13 +324,15 @@ void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 	SessionInfo sessionConfig = { 0 };
 	CredentialInfo credentialConfig = { 0 };
 	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	wchar_t msgCaption[MAX_PATH] = { 0 };
+	wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
 	if (wcscmp(type, L"PuTTY") == 0) {
 		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
 		// Winscp路径
 		GetAppIni(iniPath, MAX_PATH);
 		GetPrivateProfileStringW(SECTION_NAME, L"Winscp", L"", winscp, MAX_PATH, iniPath);
 		if (winscp[0] == L'\0') {
-			MessageBox(NULL, L"需要先配置Winscp路径", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_WINSCP_PATH), msgCaption, MB_OK);
 			return;
 		}
 
@@ -337,7 +342,7 @@ void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 		ReadSessionFromIni(iniPath, &sessionConfig);
 		if (sessionConfig.hostName[0] == L'\0') {
-			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_HOSTNAME_REQUIRED), msgCaption, MB_OK);
 			return;
 		}
 
@@ -373,7 +378,7 @@ void winscpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		startApp(line.command, TRUE);
 	}
 	else {
-		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+		MessageBox(NULL, GetString(IDS_NOT_PUTTY_TIPS), msgCaption, MB_OK);
 	}
 
 }
@@ -393,13 +398,15 @@ void psftpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 	SessionInfo sessionConfig = { 0 };
 	CredentialInfo credentialConfig = { 0 };
 	ListView_GetItemText(hListView, selectedItem, 1, type, sizeof(type));
+	wchar_t msgCaption[MAX_PATH] = { 0 };
+	wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
 	if (wcscmp(type, L"PuTTY") == 0) {
 		ListView_GetItemText(hListView, selectedItem, 0, line.name, sizeof(line.name));
 		// psftp路径
 		GetAppIni(iniPath, MAX_PATH);
 		GetPrivateProfileStringW(SECTION_NAME, L"Psftp", L"", psftp, MAX_PATH, iniPath);
 		if (psftp[0] == L'\0') {
-			MessageBox(NULL, L"需要先配置psftp路径", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_PSFTP_PATH), msgCaption, MB_OK);
 			return;
 		}
 
@@ -409,7 +416,7 @@ void psftpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);//强制增加后缀
 		ReadSessionFromIni(iniPath, &sessionConfig);
 		if (sessionConfig.hostName[0] == L'\0') {
-			MessageBox(NULL, L"主机地址没配置", L"提示", MB_OK);
+			MessageBox(NULL, GetString(IDS_HOSTNAME_REQUIRED), msgCaption, MB_OK);
 			return;
 		}
 
@@ -449,7 +456,7 @@ void psftpCommand(HWND hwnd, HWND hListView, int selectedItem) {
 		}
 	}
 	else {
-		MessageBox(NULL, L"非PuTT配置行不支持ftp", L"提示", MB_OK);
+		MessageBox(NULL, GetString(IDS_NOT_PUTTY_TIPS), msgCaption, MB_OK);
 	}
 
 }
