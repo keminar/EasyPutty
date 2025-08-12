@@ -122,6 +122,25 @@
 #define IDS_TAG                         2047
 #define IDS_CREDENTIAL                  2048
 #define IDS_INPUT                       2049
+#define IDS_PROCESS_START_FAIL          2050
+#define IDS_PROCESS_STARTING            2051
+#define IDS_PROCESS_STARTED             2052
+#define IDS_PROCESS_NOT_STARTED         2053
+#define IDS_NAME_REQUIRED               2054
+#define IDS_HOSTNAME_REQUIRED           2055
+#define IDS_ADD_FAIL                    2056
+#define IDS_BROWSER_EXE                 2057
+#define IDS_BROWSER_PPK                 2058
+#define IDS_BROWSER_REQUIRED            2059
+#define IDS_ERROR_FORMAT                2060
+#define IDS_BROWSER_COM                 2061
+#define IDS_ACCESS_FAIL                 2062
+#define IDS_UNKNOWN                     2063
+#define IDS_FILEZILLA_PATH              2064
+#define IDS_FILEZILLA_TIPS              2065
+#define IDS_WINSCP_PATH                 2066
+#define IDS_PSFTP_PATH                  2067
+#define IDS_NOT_PUTTY_TIPS              2068
 
 #define IDM_OPEN                        32771
 #define IDM_ENUM_WINDOW                 32773

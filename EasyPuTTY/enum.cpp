@@ -15,8 +15,8 @@ HWND enumWindow;                     // 当前窗口句柄
 BOOL GetProcessInfo(DWORD processId, wchar_t* processName, wchar_t* processPath, DWORD bufferSize) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
 	if (hProcess == NULL) {
-		wcscpy_s(processName, bufferSize, L"无法访问");
-		wcscpy_s(processPath, bufferSize, L"无法访问");
+		wcscpy_s(processName, bufferSize, GetString(IDS_ACCESS_FAIL));
+		wcscpy_s(processPath, bufferSize, GetString(IDS_ACCESS_FAIL));
 		return FALSE;
 	}
 
@@ -32,8 +32,8 @@ BOOL GetProcessInfo(DWORD processId, wchar_t* processName, wchar_t* processPath,
 		}
 	}
 	else {
-		wcscpy_s(processName, bufferSize, L"未知");
-		wcscpy_s(processPath, bufferSize, L"未知");
+		wcscpy_s(processName, bufferSize, GetString(IDS_UNKNOWN));
+		wcscpy_s(processPath, bufferSize, GetString(IDS_UNKNOWN));
 	}
 
 	CloseHandle(hProcess);
@@ -133,7 +133,9 @@ void createEnum(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND
 	);
 
 	if (!hListView) {
-		MessageBoxW(NULL, L"无法创建列表视图", L"错误", MB_OK | MB_ICONERROR);
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+		MessageBoxW(NULL, GetString(IDS_LISTVIEW_FAIL), msgCaption, MB_OK | MB_ICONERROR);
 		return;
 	}
 	// 设置列表视图扩展样式

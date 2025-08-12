@@ -160,13 +160,12 @@ int startApp(const wchar_t* appPath, BOOL show) {
 		// 关闭进程和线程句柄
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
-		/*if (!show) {
-			MessageBoxW(NULL, L"后台启动成功，请在任务栏查看", L"提示", MB_OK);
-		}*/
 		return 0;
 	}
 	else {
-		MessageBoxW(NULL, L"启动失败", L"提示", MB_OK);
+		wchar_t msgCaption[MAX_PATH] = { 0 };
+		wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+		MessageBoxW(NULL, GetString(IDS_PROCESS_START_FAIL), msgCaption, MB_OK);
 		return 1;
 	}
 }
@@ -272,7 +271,7 @@ INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		HWND existingHwnd = FindWindow(NULL, L"Pageant");
 		HWND status = GetDlgItem(hDlg, IDC_PAGEANT_STATUS);
 		if (existingHwnd == NULL) {
-			SetWindowText(status, L"启动中");
+			SetWindowText(status, GetString(IDS_PROCESS_STARTING));
 			wchar_t iniPath[MAX_PATH] = { 0 };
 			wchar_t pageant[MAX_PATH] = { 0 };
 			// putty路径
@@ -287,14 +286,14 @@ INT_PTR CALLBACK Pageant(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				Sleep(100);
 			}
 			if (!existingHwnd) {
-				SetWindowText(status, L"未启动");
+				SetWindowText(status, GetString(IDS_PROCESS_NOT_STARTED));
 			}
 			else {
-				SetWindowText(status, L"已启动");
+				SetWindowText(status, GetString(IDS_PROCESS_STARTED));
 			}
 		}
 		else {
-			SetWindowText(status, L"已启动");
+			SetWindowText(status, GetString(IDS_PROCESS_STARTED));
 		}
 		return (INT_PTR)TRUE;
 	}
@@ -458,12 +457,14 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			hEdit = GetDlgItem(hDlg, IDC_OTHER_PARAMS);
 			GetWindowText(hEdit, otherParams, MAX_PATH);
 
+			wchar_t msgCaption[MAX_PATH] = { 0 };
+			wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
 			if (name[0] == L'\0') {
-				MessageBoxW(hDlg, L"简称为必填", L"错误", MB_OK);
+				MessageBoxW(hDlg, GetString(IDS_NAME_REQUIRED), msgCaption, MB_OK);
 				return FALSE;
 			}
 			if (hostname[0] == L'\0') {
-				MessageBoxW(hDlg, L"地址为必填", L"错误", MB_OK);
+				MessageBoxW(hDlg, GetString(IDS_HOSTNAME_REQUIRED), msgCaption, MB_OK);
 				return FALSE;
 			}
 			// 构建路径
@@ -480,7 +481,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"OtherParams", otherParams, iniPath);
 			if (!result) {
-				showError(hDlg, L"添加失败");
+				showError(hDlg, GetString(IDS_ADD_FAIL));
 				return FALSE;
 			}
 
@@ -912,7 +913,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Psftp", psftp, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Input_hotkey", inputHotkey, iniPath);
 			if (!result) {
-				showError(hDlg, L"添加失败");
+				showError(hDlg, GetString(IDS_ADD_FAIL));
 				return FALSE;
 			}
 			EndDialog(hDlg, LOWORD(wParam));
@@ -928,27 +929,27 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PUTTY) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PUTTY);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PUTTY);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_WINSCP) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0COM文件\0*.com\0所有文件\0*.*\0", IDC_WINSCP);
+			setBrowser(hDlg, GetString(IDS_BROWSER_COM), IDC_WINSCP);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_FILEZILLA) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_FILEZILLA);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_FILEZILLA);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PUTTYGEN) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PUTTYGEN);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PUTTYGEN);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PAGEANT) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PAGEANT);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PAGEANT);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PSFTP) {
-			setBrowser(hDlg, L"可执行文件\0*.exe\0所有文件\0*.*\0", IDC_PSFTP);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PSFTP);
 			return (INT_PTR)TRUE;
 		}
 		break;
@@ -999,8 +1000,8 @@ void showError(HWND hwnd, const wchar_t* showMsg)
 
 	// 显示错误信息
 	wchar_t fullError[512];
-	swprintf_s(fullError, 512, L"%s！错误代码: %lu\n%ls", showMsg, errorCode, errorMsg);
-	MessageBox(hwnd, fullError, L"错误", MB_ICONERROR);
+	swprintf_s(fullError, 512, GetString(IDS_ERROR_FORMAT), showMsg, errorCode, errorMsg);
+	MessageBox(hwnd, fullError, GetString(IDS_MESSAGE_CAPTION), MB_ICONERROR);
 }
 
 // 认证凭证
@@ -1051,7 +1052,9 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			GetWindowText(hEdit, ppkfile, MAX_PATH);
 
 			if (name[0] == L'\0') {
-				MessageBoxW(hDlg, L"名称为必填", L"错误", MB_OK);
+				wchar_t msgCaption[MAX_PATH] = { 0 };
+				wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+				MessageBoxW(hDlg, GetString(IDS_NAME_REQUIRED), msgCaption, MB_OK);
 				return FALSE;
 			}
 			// 构建路径
@@ -1066,7 +1069,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			WritePrivateProfileString(SECTION_NAME, L"PrivateKey", ppkfile, iniPath);
 
 			if (!result) {
-				showError(hDlg, L"添加失败");
+				showError(hDlg, GetString(IDS_ADD_FAIL));
 				return FALSE;
 			}
 			if (LOWORD(wParam) == IDC_ADD) {
@@ -1135,7 +1138,9 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			}
 			else
 			{
-				MessageBox(hDlg, L"请先选择一个项目", L"提示", MB_ICONINFORMATION);
+				wchar_t msgCaption[MAX_PATH] = { 0 };
+				wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+				MessageBox(hDlg, GetString(IDS_BROWSER_REQUIRED), msgCaption, MB_ICONINFORMATION);
 			}
 			return (INT_PTR)FALSE;
 		}
@@ -1169,7 +1174,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			return (INT_PTR)FALSE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
-			setBrowser(hDlg, L"PuTTY私钥.ppk\0*.ppk\0所有文件\0*.*\0", IDC_PPK);
+			setBrowser(hDlg, GetString(IDS_BROWSER_PPK), IDC_PPK);
 			return (INT_PTR)TRUE;
 		}
 		break;
@@ -1232,12 +1237,14 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			hEdit = GetDlgItem(hDlg, IDC_PRO_TAGS);
 			GetWindowText(hEdit, tags, MAX_PATH);
 
+			wchar_t msgCaption[MAX_PATH] = { 0 };
+			wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
 			if (name[0] == L'\0') {
-				MessageBoxW(hDlg, L"名称为必填", L"错误", MB_OK);
+				MessageBoxW(hDlg, GetString(IDS_NAME_REQUIRED), msgCaption, MB_OK);
 				return FALSE;
 			}
 			if (path[0] == L'\0') {
-				MessageBoxW(hDlg, L"路径为必填", L"错误", MB_OK);
+				MessageBoxW(hDlg, GetString(IDS_HOSTNAME_REQUIRED), msgCaption, MB_OK);
 				return FALSE;
 			}
 			// 构建路径
@@ -1252,7 +1259,7 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
 
 			if (!result) {
-				showError(hDlg, L"添加失败");
+				showError(hDlg, GetString(IDS_ADD_FAIL));
 				return FALSE;
 			}
 
@@ -1275,7 +1282,7 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
-			setBrowser(hDlg, L"可执行程序.exe\0*.exe\0所有文件\0*.*\0", IDC_PRO_PATH);
+			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PRO_PATH);
 			return (INT_PTR)TRUE;
 		}
 		break;
