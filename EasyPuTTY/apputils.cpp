@@ -185,10 +185,6 @@ INT_PTR CALLBACK ENUMProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_INITDIALOG: {
-		SetWindowText(GetDlgItem(hDlg, IDOK), GetString(IDS_BTN_OK));
-		SetWindowText(GetDlgItem(hDlg, IDCANCEL), GetString(IDS_BTN_CANCEL));
-		SetWindowText(GetDlgItem(hDlg, IDC_REFRESH), GetString(IDS_LIST_REFRESH));
-		SetWindowText(hDlg, GetString(IDS_SELECT_WINDOW));
 		createEnum(g_appInstance, g_tabWindowsInfo, hDlg);
 		return (INT_PTR)TRUE;
 	}
@@ -230,7 +226,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_INITDIALOG: {
-		SetWindowText(GetDlgItem(hDlg, IDOK), GetString(IDS_BTN_OK));
 		return (INT_PTR)TRUE;
 	}
 	case WM_COMMAND:
