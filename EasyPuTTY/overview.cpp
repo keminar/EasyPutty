@@ -64,7 +64,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED, LVIS_SELECTED);
 				}
 				// 加载菜单资源
-				HMENU hMenu = LoadMenu(g_appInstance, MAKEINTRESOURCE(IDR_SESSION));
+				HMENU hMenu = LoadMenuW(g_appInstance, MakeIntreSource(IDR_SESSION, IDR_SESSION_EN));
 				HMENU hSubMenu = GetSubMenu(hMenu, 0);
 
 				// 显示右键菜单（TrackPopupMenu是阻塞函数，会等待用户选择菜单项）
