@@ -90,7 +90,6 @@
 #define IDS_TIP_CLIPBOARD_LEN           2012
 #define IDS_MENU_FILE                   2013
 #define IDS_MENU_HELP                   2014
-#define IDS_LIST_REFRESH                2015
 #define IDS_TAB_CLOSE_TITLE             2016
 #define IDS_TAB_CLOSE_TIP               2017
 #define IDS_MESSAGE_CAPTION             2018
@@ -143,10 +142,15 @@
 #define IDS_WINSCP_PATH                 2066
 #define IDS_PSFTP_PATH                  2067
 #define IDS_NOT_PUTTY_TIPS              2068
-#define IDS_SELECT_WINDOW               2069
 #define IDS_DEBUG_TITLE                 2070
 #define IDD_ABOUTBOX_EN                 2071
 #define IDD_PAGEANT_EN                  2072
+#define IDD_SESSION_EN                  2073
+#define IDD_CREDENTIAL_EN               2074
+#define IDD_SETTING_EN                  2075
+#define IDD_PROGRAM_EN                  2076
+#define IDD_RENAME_EN                   2077
+#define IDD_ENUMWIN_EN                  2078
 
 #define IDM_OPEN                        32771
 #define IDM_ENUM_WINDOW                 32773

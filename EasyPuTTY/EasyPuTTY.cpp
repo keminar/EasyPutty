@@ -520,7 +520,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case ID_TAB_RENAME: {//重命名弹窗
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_RENAME), hWnd, RenameProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_RENAME, IDD_RENAME_EN), hWnd, RenameProc);
 			break;
 		}
 		case ID_TAB_RENAME_GET: { // 获取旧标签名
@@ -634,23 +634,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case IDM_ENUM_WINDOW: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ENUMWIN), hWnd, ENUMProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_ENUMWIN, IDD_ENUMWIN_EN), hWnd, ENUMProc);
 			break;
 		}
 		case IDM_SETTING: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SETTING), hWnd, SettingProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_SETTING, IDD_SETTING_EN), hWnd, SettingProc);
 			break;
 		}
 		case IDM_SESSION: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hWnd, SessionProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_SESSION, IDD_SESSION_EN), hWnd, SessionProc);
 			break;
 		}
 		case IDM_CREDENTIAL: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_CREDENTIAL), hWnd, CredentialProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_CREDENTIAL, IDD_CREDENTIAL_EN), hWnd, CredentialProc);
 			break;
 		}
 		case IDM_PROGRAM: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PROGRAM), hWnd, ProgramProc);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_PROGRAM, IDD_PROGRAM_EN), hWnd, ProgramProc);
 			break;
 		}
 		case IDM_PAGEANT: {
