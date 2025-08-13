@@ -146,6 +146,7 @@
 #define IDS_SELECT_WINDOW               2069
 #define IDS_DEBUG_TITLE                 2070
 #define IDD_ABOUTBOX_EN                 2071
+#define IDD_PAGEANT_EN                  2072
 
 #define IDM_OPEN                        32771
 #define IDM_ENUM_WINDOW                 32773
