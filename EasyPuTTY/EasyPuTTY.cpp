@@ -654,7 +654,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case IDM_PAGEANT: {
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PAGEANT), hWnd, Pageant);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_PAGEANT, IDD_PAGEANT_EN), hWnd, Pageant);
 			break;
 		}
 		case IDM_PUTTYGEN: {
