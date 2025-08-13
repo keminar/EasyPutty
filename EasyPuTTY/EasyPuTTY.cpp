@@ -296,7 +296,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else {
 			// 获取标签的右键菜单
-			g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MAKEINTRESOURCEW(IDM_TABMENU));
+			g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MakeIntreSource(IDM_TABMENU, IDM_TABMENU_EN));
 			g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
 
 			// 添加初始标签
@@ -674,7 +674,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case IDM_ABOUT:
-			showDialogBox(g_appInstance, &g_tabWindowsInfo, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_ABOUTBOX, IDD_ABOUTBOX_EN), hWnd, About);
 			break;
 		case IDM_EXIT://退出菜单
 			DestroyWindow(hWnd);
@@ -1591,7 +1591,7 @@ void createDebugWindow() {
 	g_debugWindow = CreateWindowExW(
 		0,
 		CLASS_NAME,
-		L"输出调试信息",
+		GetString(IDS_DEBUG_TITLE),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		900, 600,

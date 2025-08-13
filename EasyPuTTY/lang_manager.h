@@ -23,3 +23,5 @@ const wchar_t* GetString(int stringId);
 
 // 格式化字符串（支持带参数的多语言文本）
 int FormatString(wchar_t* buffer, size_t bufferSize, int stringId, ...);
+
+LPCWSTR MakeIntreSource(int cn, int en);

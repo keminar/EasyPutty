@@ -40,11 +40,11 @@ const wchar_t* GetString(int stringId) {
 
 	// 根据当前语言获取对应的语言 ID
 	WORD langId;
-	if (g_currentLang == LANG_EN) {
-		langId = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+	if (g_currentLang == LANG_CN) {
+		langId = MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
 	}
 	else {
-		langId = MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+		langId = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
 	}
 
 	// 1. 尝试加载指定语言的资源
@@ -102,4 +102,13 @@ int FormatString(wchar_t* buffer, size_t bufferSize, int stringId, ...) {
 
 	va_end(args);
 	return result;
+}
+
+LPCWSTR MakeIntreSource(int cn, int en) {
+	if (g_currentLang == LANG_CN) {
+		return MAKEINTRESOURCEW(cn);
+	}
+	else {
+		return MAKEINTRESOURCEW(en);
+	}
 }

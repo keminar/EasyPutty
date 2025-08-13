@@ -4,8 +4,9 @@
 //
 #define IDC_MYICON                      2
 #define IDD_EASYPUTTY_DIALOG            102
-#define IDD_ABOUTBOX                    104
-#define IDM_TABMENU                     105
+#define IDD_ABOUTBOX                    103
+#define IDM_TABMENU                     104
+#define IDM_TABMENU_EN                  105
 #define IDM_ABOUT                       106
 #define IDM_EXIT                        107
 #define IDI_EASYPUTTY                   108
@@ -18,9 +19,10 @@
 #define IDD_SESSION                     134
 #define IDD_SETTING                     135
 #define IDR_SESSION                     136
-#define IDD_PROGRAM                     137
-#define IDD_DIALOG1                     138
-#define IDD_RENAME                      139
+#define IDR_SESSION_EN                  137
+#define IDD_PROGRAM                     138
+#define IDD_DIALOG1                     139
+#define IDD_RENAME                      140
 #define IDD_PAGEANT                     141
 #define IDC_REFRESH                     1001
 #define IDC_BROWSER_PUTTY               1002
@@ -141,6 +143,9 @@
 #define IDS_WINSCP_PATH                 2066
 #define IDS_PSFTP_PATH                  2067
 #define IDS_NOT_PUTTY_TIPS              2068
+#define IDS_SELECT_WINDOW               2069
+#define IDS_DEBUG_TITLE                 2070
+#define IDD_ABOUTBOX_EN                 2071
 
 #define IDM_OPEN                        32771
 #define IDM_ENUM_WINDOW                 32773
