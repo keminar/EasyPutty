@@ -1073,9 +1073,13 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message) {
 	case WM_KEYUP: {
 		GetWindowText(g_hsearchEdit, searchWord, 256);
+		SYSTEMTIME st;
+		// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
+		GetLocalTime(&st);
+
 		if (wParam == VK_RETURN) {
 			// 小狼毫输入法回车上屏
-			if (g_hsearchLastWordLen != lstrlen(searchWord)) {
+			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
 				g_hsearchLastWordLen = lstrlen(searchWord);
 				PerformSearch(hWnd);
 			}
@@ -1106,7 +1110,7 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else {
 			// 不管长度是否改变，都搜索
-			g_hsearchLastWordLen = lstrlen(searchWord);
+			g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
 			PerformSearch(hWnd);
 		}
 		break;
