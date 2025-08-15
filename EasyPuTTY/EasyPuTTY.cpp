@@ -469,6 +469,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_SEARCH_BUTTON://搜索框清空
 			if (HIWORD(wParam) == BN_CLICKED) {
 				SetWindowText(g_hsearchEdit, L"");
+				g_hsearchLastWordLen = 0;
 				PerformSearch(g_hsearchEdit);
 			}
 			break;
