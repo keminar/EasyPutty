@@ -1081,7 +1081,7 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (wParam == VK_RETURN) {
 			// 小狼毫输入法回车上屏
 			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
-				g_hsearchLastWordLen = lstrlen(searchWord);
+				g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
 				PerformSearch(hWnd);
 			}
 			// 处理回车键
