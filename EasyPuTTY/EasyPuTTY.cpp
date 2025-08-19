@@ -1112,12 +1112,12 @@ LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 // 子类化后的窗口过程函数
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	wchar_t searchWord[256] = { 0 };
 	// 获取原始窗口过程
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
 	switch (message) {
 	case WM_KEYUP: {
 		if (wParam == VK_RETURN) {
+			wchar_t searchWord[256] = { 0 };
 			GetWindowText(g_hsearchEdit, searchWord, 256);
 			SYSTEMTIME st;
 			// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
