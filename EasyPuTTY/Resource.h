@@ -3,6 +3,8 @@
 // 供 EasyPuTTY.rc 使用
 //
 #define IDC_MYICON                      2
+#define IDC_EASYPUTTY                   100
+#define IDC_TABCONTROL                  101
 #define IDD_EASYPUTTY_DIALOG            102
 #define IDD_ABOUTBOX                    103
 #define IDM_TABMENU                     104
@@ -10,7 +12,6 @@
 #define IDM_ABOUT                       106
 #define IDM_EXIT                        107
 #define IDI_EASYPUTTY                   108
-#define IDC_EASYPUTTY                   110
 #define IDR_MAINFRAME                   128
 #define IDR_MAIN_TOOLBAR                129
 #define IDD_ATTACH                      131

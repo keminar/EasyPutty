@@ -5,9 +5,8 @@
 #include "EasyPuTTY.h"
 
 #define MAX_LOADSTRING 256
-// 自定义定时
+// 设置焦点定时
 #define TIMER_ID_FOCUS 101
-#define IDC_TABCONTROL 100
 // 自定义消息：通知主窗口 Attach窗口 被点击
 #define WM_ATTACH_CLICK (WM_USER + 1001)
 #define WM_ATTACH_RCLICK (WM_USER + 1002)
@@ -22,6 +21,7 @@ HWND g_mainWindowHandle;                       // 主窗体
 int g_tabHitIndex;                             // 标签右键触发索引
 HWND g_hsearchEdit; //搜索框
 int g_hsearchLastWordLen = 0;
+UINT_PTR g_searchTimer = 0;       // 搜索框定时器ID
 
 HWND g_debugWindow;
 // 静态变量用于标记窗口类是否已注册
@@ -1067,18 +1067,63 @@ void selectedTabToLeft() {
 }
 
 // 子类化后的窗口过程函数
+LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	// 获取原始窗口过程
+	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+	switch (message) {
+	case WM_COMMAND: {
+			// 低字是控件ID，高字是通知码
+			UINT_PTR nID = LOWORD(wParam);
+			UINT_PTR nCode = HIWORD(wParam);
+			// 判断是否是目标编辑框的EN_CHANGE通知
+			if (nID == ID_SEARCH_EDIT && nCode == EN_CHANGE) {
+				// 收到内容变化，重置定时器
+				if (g_searchTimer) {
+					KillTimer(hWnd, g_searchTimer); // 清除旧定时器
+				}
+				// 启动新定时器（等待300毫秒）
+				g_searchTimer = SetTimer(hWnd, 1, 300, NULL);
+			}
+		}
+		break;
+	case WM_TIMER: {
+			wchar_t searchWord[256] = { 0 };
+			// 定时器触发：视为输入稳定，处理内容
+			KillTimer(hWnd, g_searchTimer); // 先销毁定时器
+			g_searchTimer = 0;
+			
+			SYSTEMTIME st;
+			// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
+			GetLocalTime(&st);
+			GetWindowText(g_hsearchEdit, searchWord, 256);
+			LOG_DEBUG(L"search: change g_hsearchLastWordLen=%d, lstrlen=%d, second=%d", g_hsearchLastWordLen, lstrlen(searchWord), st.wSecond);
+			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
+				g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
+				PerformSearch(hWnd);
+			}
+		}
+		break;
+	}
+
+	// 调用原始窗口过程处理其他消息
+	return CallWindowProc(originalProc, hWnd, message, wParam, lParam);
+}
+
+
+// 子类化后的窗口过程函数
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	wchar_t searchWord[256] = { 0 };
 	// 获取原始窗口过程
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
 	switch (message) {
 	case WM_KEYUP: {
-		GetWindowText(g_hsearchEdit, searchWord, 256);
-		SYSTEMTIME st;
-		// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
-		GetLocalTime(&st);
-
 		if (wParam == VK_RETURN) {
+			GetWindowText(g_hsearchEdit, searchWord, 256);
+			SYSTEMTIME st;
+			// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
+			GetLocalTime(&st);
+
+			LOG_DEBUG(L"search: return g_hsearchLastWordLen=%d, lstrlen=%d, second=%d", g_hsearchLastWordLen, lstrlen(searchWord), st.wSecond);
 			// 小狼毫输入法回车上屏
 			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
 				g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
@@ -1109,13 +1154,8 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// 若不想让回车符输入到 Edit 中，直接返回
 			return 0;
 		}
-		else {
-			// 不管长度是否改变，都搜索
-			g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
-			PerformSearch(hWnd);
-		}
 		break;
-	}	
+	}
 	}
 
 	// 调用原始窗口过程处理其他消息
@@ -1139,6 +1179,9 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		WS_CHILD | WS_VISIBLE | TBSTYLE_TOOLTIPS,
 		0, 0, 0, 0, parentWinHandle, (HMENU)IDR_MAIN_TOOLBAR, g_appInstance, NULL
 	);
+	WNDPROC originalToolbarProc = (WNDPROC)SetWindowLongPtr(g_toolbarHandle, GWLP_WNDPROC, (LONG_PTR)ToolbarProc);
+	// 存储原始窗口过程，用于后续调用
+	SetWindowLongPtrW(g_toolbarHandle, GWLP_USERDATA, (LONG_PTR)originalToolbarProc);
 	// 设置 ImageList
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 
@@ -1732,6 +1775,7 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 
 // 执行搜索功能的函数
 void PerformSearch(HWND hWnd) {
+	LOG_DEBUG(L"search: search");
 	HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 
