@@ -54,6 +54,7 @@ void cloneTab(HWND tabCtrlWinHandle);
 
 void createDebugWindow();
 void createSplitWindow();
+int calcWordLen(int len);
 LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

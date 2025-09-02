@@ -1072,6 +1072,13 @@ void selectedTabToLeft() {
 	}
 }
 
+// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
+int calcWordLen(int len) {
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	return len + st.wSecond / 2 * 1000;
+}
+
 // 子类化后的窗口过程函数
 LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	// 获取原始窗口过程
@@ -1098,13 +1105,12 @@ LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			KillTimer(hWnd, g_searchTimer); // 先销毁定时器
 			g_searchTimer = 0;
 			
-			SYSTEMTIME st;
-			// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
-			GetLocalTime(&st);
 			GetWindowText(g_hsearchEdit, searchWord, 256);
-			LOG_DEBUG(L"search: change g_hsearchLastWordLen=%d, lstrlen=%d, second=%d", g_hsearchLastWordLen, lstrlen(searchWord), st.wSecond);
-			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
-				g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
+			int newLen = calcWordLen(lstrlen(searchWord));
+			LOG_DEBUG(L"search: change g_hsearchLastWordLen=%d, wordlen=%d, newLen=%d", g_hsearchLastWordLen, lstrlen(searchWord), newLen);
+			// 同长度刚查询过，不触发查询
+			if (g_hsearchLastWordLen != newLen) {
+				g_hsearchLastWordLen = newLen;
 				PerformSearch(hWnd);
 			}
 		}
@@ -1115,24 +1121,21 @@ LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 	return CallWindowProc(originalProc, hWnd, message, wParam, lParam);
 }
 
-
-// 子类化后的窗口过程函数
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	// 获取原始窗口过程
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+
 	switch (message) {
-	case WM_KEYUP: {
-		if (wParam == VK_RETURN) {
+		// 拦截字符消息（关键，很多时候响铃由此触发,如果不拦截按回车时会发生响铃）
+	case WM_CHAR:
+		if (wParam == VK_RETURN || wParam == 13) {// 13是回车的ASCII码
 			wchar_t searchWord[256] = { 0 };
 			GetWindowText(g_hsearchEdit, searchWord, 256);
-			SYSTEMTIME st;
-			// 获取当前本地时间，用于输入法回车上屏新和旧长度一致没更新的问题
-			GetLocalTime(&st);
 
-			LOG_DEBUG(L"search: return g_hsearchLastWordLen=%d, lstrlen=%d, second=%d", g_hsearchLastWordLen, lstrlen(searchWord), st.wSecond);
 			// 小狼毫输入法回车上屏
-			if (g_hsearchLastWordLen != lstrlen(searchWord) + st.wSecond) {
-				g_hsearchLastWordLen = lstrlen(searchWord) + st.wSecond;
+			int newLen = calcWordLen(lstrlen(searchWord));
+			LOG_DEBUG(L"search: return g_hsearchLastWordLen=%d, wordlen=%d, newLen=%d", g_hsearchLastWordLen, lstrlen(searchWord), newLen);
+			if (g_hsearchLastWordLen != newLen) {
+				g_hsearchLastWordLen = newLen;
 				PerformSearch(hWnd);
 			}
 			// 处理回车键
@@ -1157,11 +1160,9 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 
 			}
-			// 若不想让回车符输入到 Edit 中，直接返回
-			return 0;
+			return 0; // 阻止默认处理（包括响铃和输入回车符）
 		}
 		break;
-	}
 	}
 
 	// 调用原始窗口过程处理其他消息
