@@ -23,9 +23,11 @@ HWND g_hsearchEdit; //搜索框
 int g_hsearchLastWordLen = 0;
 UINT_PTR g_searchTimer = 0;       // 搜索框定时器ID
 
-HWND g_debugWindow;
+HWND g_debugWindow; // 日志窗口
+HWND g_splitWindow; // 分屏窗口
 // 静态变量用于标记窗口类是否已注册
 static bool g_debugClassRegistered = false;
+static bool g_splitClassRegistered = false;
 
 HHOOK g_hMouseHook = NULL;  // 钩子句柄
 BOOL g_insideHook = FALSE;  // 标记是否正在处理钩子回调
@@ -477,6 +479,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			AddNewOverview(&g_tabWindowsInfo);
 			break;
 		}
+		case IDM_SPLIT: {//四分屏
+			createSplitWindow();
+			break;
+		}
 		case ID_TAB_CLOSE: {//右键关闭当前鼠标位置标签
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex, FALSE);
 			break;
@@ -618,7 +624,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		}
-		case ID_TAB_MOVETOLEFT: {
+		case ID_TAB_MOVETOLEFT: { // 移动标签
 			selectedTabToLeft();
 			return 0;
 		}
@@ -670,11 +676,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			startApp(puttygen, TRUE);
 			break;
 		}
-		case IDM_DEBUG: {
+		case IDM_DEBUG: {//日志窗口
 			createDebugWindow();
 			break;
 		}
-		case IDM_ABOUT:
+		case IDM_ABOUT:  //关于
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_ABOUTBOX, IDD_ABOUTBOX_EN), hWnd, About);
 			break;
 		case IDM_EXIT://退出菜单
@@ -1167,6 +1173,20 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	HWND tabCtrlWinHandle;
 	LOGFONTW tabCaptionFont;
 	HFONT tabCaptionFontHandle;
+	int searchLeft = 700;
+	int searchWidth = 300;
+	// 为每个按钮文本定义独立的局部变量
+	wchar_t btnTextCreate[64] = { 0 };
+	wchar_t btnTextSplit[64] = { 0 };
+	wchar_t btnTextWindow[64] = { 0 };
+	wchar_t btnTextSession[64] = { 0 };
+	wchar_t btnTextCredential[64] = { 0 };
+	wchar_t btnTextPageant[64] = { 0 };
+	wchar_t btnTextPuttygen[64] = { 0 };
+	wchar_t btnTextSetting[64] = { 0 };
+	wchar_t btnTextProgram[64] = { 0 };
+	wchar_t btnTextDebug[64] = { 0 };
+	wchar_t btnTextAbout[64] = { 0 };
 
 	tabWindowsInfo->tabWindowIdentifier = IDC_TABCONTROL;
 	tabWindowsInfo->tabIncrementor = 0;
@@ -1185,20 +1205,10 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 设置 ImageList
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 
-	// 为每个按钮文本定义独立的局部变量
-	wchar_t btnTextCreate[64] = { 0 };
-	wchar_t btnTextWindow[64] = { 0 };
-	wchar_t btnTextSession[64] = { 0 };
-	wchar_t btnTextCredential[64] = { 0 };
-	wchar_t btnTextPageant[64] = { 0 };
-	wchar_t btnTextPuttygen[64] = { 0 };
-	wchar_t btnTextSetting[64] = { 0 };
-	wchar_t btnTextProgram[64] = { 0 };
-	wchar_t btnTextDebug[64] = { 0 };
-	wchar_t btnTextAbout[64] = { 0 };
 
 	// 从资源加载字符串到独立变量
 	wcscpy_s(btnTextCreate, _countof(btnTextCreate), GetString(IDS_TOOLBAR_CREATE));
+	wcscpy_s(btnTextSplit, _countof(btnTextSplit), GetString(IDS_TOOLBAR_SPLIT));
 	wcscpy_s(btnTextWindow, _countof(btnTextWindow), GetString(IDS_TOOLBAR_WINDOW));
 	wcscpy_s(btnTextSession, _countof(btnTextSession), GetString(IDS_TOOLBAR_SESSION));
 	wcscpy_s(btnTextCredential, _countof(btnTextCredential), GetString(IDS_TOOLBAR_CREDENTIAL));
@@ -1212,6 +1222,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	// 定义按钮
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextCreate },
+		{ -1, IDM_SPLIT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextSplit },
 		{ -1, IDM_ENUM_WINDOW,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextWindow },
 		{ -1, IDM_SESSION,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextSession },
 		{ -1, IDM_CREDENTIAL,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextCredential },
@@ -1229,29 +1240,31 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
 	// 自动调整大小
 	SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
+	if (g_currentLang == LANG_EN) {
+		searchLeft = 900;
+	}
 	// 创建搜索框和搜索按钮
 	g_hsearchEdit = CreateWindowEx(
 		WS_EX_CLIENTEDGE,
 		_T("EDIT"),
 		_T(""),
 		WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP | ES_WANTRETURN,
-		800, 1, 300, 30,
+		searchLeft, 1, searchWidth, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_EDIT,
 		g_appInstance, NULL
 	);
-	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
-	// 存储原始窗口过程，用于后续调用
-	SetWindowLongPtrW(g_hsearchEdit, GWLP_USERDATA, (LONG_PTR)originalProc);
-
 	HWND searchButton = CreateWindowEx(
 		0,
 		_T("BUTTON"),
 		GetString(IDS_BTN_CLEAR),
 		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-		1100, 1, 60, 30,
+		searchLeft+ searchWidth, 1, 60, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
 		g_appInstance, NULL
 	);
+	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
+	// 存储原始窗口过程，用于后续调用
+	SetWindowLongPtrW(g_hsearchEdit, GWLP_USERDATA, (LONG_PTR)originalProc);
 
 	// 创建标签控件
 	tabCtrlWinHandle = CreateWindowW(
@@ -1786,4 +1799,75 @@ void PerformSearch(HWND hWnd) {
 	}
 	HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW);
 	SetListViewData(hListView);
+}
+
+
+// 调试窗口
+void createSplitWindow() {
+	const wchar_t* CLASS_NAME = L"SplitScreenClass";
+	if (g_splitWindow) {
+		// 检查窗口是否处于最小化状态
+		if (IsIconic(g_splitWindow)) {
+			// 还原窗口（从最小化状态恢复）
+			ShowWindow(g_splitWindow, SW_RESTORE);
+		}
+		SetForegroundWindow(g_splitWindow);
+		return;
+	}
+	// 确保窗口类只注册一次（首次调用时注册）
+	if (!g_splitClassRegistered) {
+		WNDCLASS wc = { 0 };
+		wc.lpfnWndProc = SplitWindowProc;
+		wc.hInstance = g_appInstance;
+		wc.lpszClassName = CLASS_NAME;
+		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+
+		// 尝试注册窗口类
+		ATOM atom = RegisterClass(&wc);
+		DWORD error = GetLastError();
+
+		// 检查是否注册成功或类已存在
+		if (!atom && error != ERROR_CLASS_ALREADY_EXISTS) {
+			MessageBoxW(NULL, GetString(IDS_REGISTER_WNDCLASS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
+			return;
+		}
+		g_splitClassRegistered = true; // 标记为已注册（无论本次是否实际注册）
+	}
+
+	g_splitWindow = CreateWindowExW(
+		0,
+		CLASS_NAME,
+		GetString(IDS_SPLIT_TITLE),
+		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		900, 600,
+		NULL,
+		NULL,
+		GetModuleHandle(NULL),
+		NULL
+	);
+
+	if (!g_splitWindow) {
+		MessageBoxW(NULL, GetString(IDS_HOSTWINDOW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
+		return;
+	}
+}
+
+// 分屏窗口过程
+LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_CREATE:
+	{
+		CreateChildWindows(g_appInstance, hWnd);
+		break;
+	}
+	case WM_DESTROY:
+		g_splitWindow = NULL;
+		return 0;
+	}
+
+	return DefWindowProcW(hWnd, msg, wParam, lParam);
 }

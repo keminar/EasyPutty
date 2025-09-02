@@ -100,6 +100,7 @@
 #define IDS_TAB_CLONE_FAIL              2022
 #define IDS_TAB_CREATE_FAIL             2023
 #define IDS_TOOLBAR_CREATE              2024
+#define IDS_TOOLBAR_SPLIT               2025
 #define IDS_TOOLBAR_WINDOW              2026
 #define IDS_TOOLBAR_SESSION             2027
 #define IDS_TOOLBAR_CREDENTIAL          2028
@@ -152,8 +153,10 @@
 #define IDD_PROGRAM_EN                  2076
 #define IDD_RENAME_EN                   2077
 #define IDD_ENUMWIN_EN                  2078
+#define IDS_SPLIT_TITLE                 2079
 
 #define IDM_OPEN                        32771
+#define IDM_SPLIT                       32772
 #define IDM_ENUM_WINDOW                 32773
 #define ID_ENUM_VIEW                    32774
 #define ID_ENUM_ATTACH                  32775
