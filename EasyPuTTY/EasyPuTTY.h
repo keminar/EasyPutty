@@ -5,6 +5,7 @@
 #include "attach.h"
 #include "logs.h"
 #include "lang_manager.h"
+#include "splitter.h"
 
 // Data associated with each tab control item. We will use it instead of TCITEM. First member must be TCITEMHEADER, other members we can freely define
 typedef struct tagTCCUSTOMITEM {
@@ -52,6 +53,8 @@ void unRegisterAccel(HWND hWnd);
 void cloneTab(HWND tabCtrlWinHandle);
 
 void createDebugWindow();
+void createSplitWindow();
 LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
