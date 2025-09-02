@@ -1842,7 +1842,7 @@ void createSplitWindow() {
 		GetString(IDS_SPLIT_TITLE),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		900, 600,
+		1200, 900,
 		NULL,
 		NULL,
 		GetModuleHandle(NULL),
@@ -1865,6 +1865,12 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		CreateChildWindows(g_appInstance, hWnd);
 		break;
 	}
+	case WM_SIZE:
+		ArrangeWindows(g_appInstance, hWnd);
+		break;
+
+	case WM_ERASEBKGND:
+		return TRUE;
 	case WM_DESTROY:
 		g_splitWindow = NULL;
 		return 0;
