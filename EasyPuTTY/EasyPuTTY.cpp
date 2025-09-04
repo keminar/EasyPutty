@@ -6,7 +6,7 @@
 
 #define MAX_LOADSTRING 256
 // 设置焦点定时
-#define TIMER_ID_FOCUS 101
+#define TIMER_ID_FOCUS 10
 // 自定义消息：通知主窗口 Attach窗口 被点击
 #define WM_ATTACH_CLICK (WM_USER + 1001)
 #define WM_ATTACH_RCLICK (WM_USER + 1002)
@@ -24,10 +24,8 @@ int g_hsearchLastWordLen = 0;
 UINT_PTR g_searchTimer = 0;       // 搜索框定时器ID
 
 HWND g_debugWindow; // 日志窗口
-HWND g_splitWindow; // 分屏窗口
 // 静态变量用于标记窗口类是否已注册
 static bool g_debugClassRegistered = false;
-static bool g_splitClassRegistered = false;
 
 HHOOK g_hMouseHook = NULL;  // 钩子句柄
 BOOL g_insideHook = FALSE;  // 标记是否正在处理钩子回调
@@ -480,7 +478,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case IDM_SPLIT: {//四分屏
-			createSplitWindow();
+			createSplitWindow(g_appInstance, hWnd);
 			break;
 		}
 		case ID_TAB_CLOSE: {//右键关闭当前鼠标位置标签
@@ -695,7 +693,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case ID_TAB_DETACH: { //分离程序
-			DetachTab(tabCtrlWinHandle, g_tabHitIndex);
+			DetachTab(tabCtrlWinHandle, g_tabHitIndex, NULL);
 			return 0;
 		}
 		case ID_TAB_DETACH_ALL: {//全分离
@@ -705,8 +703,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 			for (int i = tabItemsCount - 1; i >=0; i--) {
-				DetachTab(tabCtrlWinHandle, i);
+				DetachTab(tabCtrlWinHandle, i, NULL);
 			}
+			return 0;
+		}
+		case ID_SPLIT_TOPLEFT: {
+			SplitTab(g_tabHitIndex, 1);
+			return 0;
+		}
+		case ID_SPLIT_TOPRIGHT: {
+			SplitTab(g_tabHitIndex, 2);
+			return 0;
+		}
+		case ID_SPLIT_BOTTOMLEFT: {
+			SplitTab(g_tabHitIndex, 3);
+			return 0;
+		}
+		case ID_SPLIT_BOTTOMRIGHT: {
+			SplitTab(g_tabHitIndex, 4);
 			return 0;
 		}
 		case ID_LIST_ATTACH: { // 点击启动程序并嵌入标签
@@ -1734,7 +1748,7 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 }
 
 // 分离程序并删除标签
-void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
+void DetachTab(HWND tabCtrlWinHandle, int indexTab, HWND newParent) {
 	int newTabItemsCount;
 	int newSelectedTab;
 	int currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
@@ -1773,17 +1787,36 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab) {
 	// 去掉回调函数
 	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 	// 最后分离
-	SetParent(tabCtrlItemInfo.attachWindowHandle, NULL);
-	int diff = indexTab % 10 * 30;
-	// 重新定位窗口，增加一些错位
-	MoveWindow(tabCtrlItemInfo.attachWindowHandle,
-		rect.left + 30 + diff, rect.top + 50 + diff,
-		rect.right - rect.left, rect.bottom - rect.top,
-		TRUE);
-
+	SetParent(tabCtrlItemInfo.attachWindowHandle, newParent);
+	if (newParent == NULL) {
+		int diff = indexTab % 10 * 30;
+		// 重新定位窗口，增加一些错位
+		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
+			rect.left + 30 + diff, rect.top + 50 + diff,
+			rect.right - rect.left, rect.bottom - rect.top,
+			TRUE);
+	}
+	
 	// 最后释放资源
 	if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+	}
+}
+
+void SplitTab(int g_tabHitIndex, int pos) {
+	HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
+	HWND splitHwnd = createSplitWindow(g_appInstance, g_mainWindowHandle);
+	if (!splitHwnd) {
+		return;
+	}
+	// 先获取窗口
+	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
+	getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
+	// 分离窗口
+	DetachTab(tabCtrlWinHandle, g_tabHitIndex, splitHwnd);
+	// 写入分屏编号
+	if (tabCtrlItemInfo.attachWindowHandle && IsWindow(tabCtrlItemInfo.attachWindowHandle)) {
+		insertSplitWindow(tabCtrlItemInfo.attachWindowHandle, pos);
 	}
 }
 
@@ -1802,79 +1835,3 @@ void PerformSearch(HWND hWnd) {
 	SetListViewData(hListView);
 }
 
-
-// 调试窗口
-void createSplitWindow() {
-	const wchar_t* CLASS_NAME = L"SplitScreenClass";
-	if (g_splitWindow) {
-		// 检查窗口是否处于最小化状态
-		if (IsIconic(g_splitWindow)) {
-			// 还原窗口（从最小化状态恢复）
-			ShowWindow(g_splitWindow, SW_RESTORE);
-		}
-		SetForegroundWindow(g_splitWindow);
-		return;
-	}
-	// 确保窗口类只注册一次（首次调用时注册）
-	if (!g_splitClassRegistered) {
-		WNDCLASS wc = { 0 };
-		wc.lpfnWndProc = SplitWindowProc;
-		wc.hInstance = g_appInstance;
-		wc.lpszClassName = CLASS_NAME;
-		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-
-		// 尝试注册窗口类
-		ATOM atom = RegisterClass(&wc);
-		DWORD error = GetLastError();
-
-		// 检查是否注册成功或类已存在
-		if (!atom && error != ERROR_CLASS_ALREADY_EXISTS) {
-			MessageBoxW(NULL, GetString(IDS_REGISTER_WNDCLASS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
-			return;
-		}
-		g_splitClassRegistered = true; // 标记为已注册（无论本次是否实际注册）
-	}
-
-	g_splitWindow = CreateWindowExW(
-		0,
-		CLASS_NAME,
-		GetString(IDS_SPLIT_TITLE),
-		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-		CW_USEDEFAULT, CW_USEDEFAULT,
-		1200, 900,
-		NULL,
-		NULL,
-		GetModuleHandle(NULL),
-		NULL
-	);
-
-	if (!g_splitWindow) {
-		MessageBoxW(NULL, GetString(IDS_HOSTWINDOW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
-		return;
-	}
-}
-
-// 分屏窗口过程
-LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_CREATE:
-	{
-		CreateChildWindows(g_appInstance, hWnd);
-		break;
-	}
-	case WM_SIZE:
-		ArrangeWindows(g_appInstance, hWnd);
-		break;
-
-	case WM_ERASEBKGND:
-		return TRUE;
-	case WM_DESTROY:
-		g_splitWindow = NULL;
-		return 0;
-	}
-
-	return DefWindowProcW(hWnd, msg, wParam, lParam);
-}
