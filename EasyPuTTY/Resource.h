@@ -3,8 +3,6 @@
 // 供 EasyPuTTY.rc 使用
 //
 #define IDC_MYICON                      2
-#define IDC_EASYPUTTY                   100
-#define IDC_TABCONTROL                  101
 #define IDD_EASYPUTTY_DIALOG            102
 #define IDD_ABOUTBOX                    103
 #define IDM_TABMENU                     104
@@ -12,6 +10,7 @@
 #define IDM_ABOUT                       106
 #define IDM_EXIT                        107
 #define IDI_EASYPUTTY                   108
+#define IDC_EASYPUTTY                   110
 #define IDR_MAINFRAME                   128
 #define IDR_MAIN_TOOLBAR                129
 #define IDD_ATTACH                      131
@@ -25,6 +24,7 @@
 #define IDD_DIALOG1                     139
 #define IDD_RENAME                      140
 #define IDD_PAGEANT                     141
+#define IDC_TABCONTROL                  142
 #define IDC_REFRESH                     1001
 #define IDC_BROWSER_PUTTY               1002
 #define IDC_SYSLINK1                    1003
@@ -75,8 +75,6 @@
 #define ID_SEARCH_BUTTON                1044
 #define IDC_PAGEANT_STATUS              1045
 #define IDC_INPUT                       1046
-
-// 字符串ID定义
 #define IDS_APP_TITLE                   2001
 #define IDS_TAB_NEW                     2002
 #define IDS_MENU_ATTACH                 2003
@@ -100,11 +98,10 @@
 #define IDS_TAB_CLONE_FAIL              2022
 #define IDS_TAB_CREATE_FAIL             2023
 #define IDS_TOOLBAR_CREATE              2024
-#define IDS_TOOLBAR_SPLIT               2025
 #define IDS_TOOLBAR_WINDOW              2026
 #define IDS_TOOLBAR_SESSION             2027
 #define IDS_TOOLBAR_CREDENTIAL          2028
-#define IDS_TOOLBAR_PAGEANT	            2029
+#define IDS_TOOLBAR_PAGEANT             2029
 #define IDS_TOOLBAR_PUTTYGEN            2030
 #define IDS_TOOLBAR_SETTING             2031
 #define IDS_TOOLBAR_PROGRAM             2032
@@ -153,10 +150,10 @@
 #define IDD_PROGRAM_EN                  2076
 #define IDD_RENAME_EN                   2077
 #define IDD_ENUMWIN_EN                  2078
-#define IDS_SPLIT_TITLE                 2079
-
+#define IDS_TOOLBAR_SPLIT               2079
+#define IDS_SPLIT_TITLE                 2080
+#define IDM_SPLIT                       2081
 #define IDM_OPEN                        32771
-#define IDM_SPLIT                       32772
 #define IDM_ENUM_WINDOW                 32773
 #define ID_ENUM_VIEW                    32774
 #define ID_ENUM_ATTACH                  32775
@@ -203,6 +200,20 @@
 #define ID_HOTKEY_CLONE                 32816
 #define ID_DEBUG_EDIT                   32817
 #define ID_WINDOW_COMMAND               32818
+#define ID_TAB_32819                    32819
+#define ID_32820                        32820
+#define ID_32821                        32821
+#define ID_32822                        32822
+#define ID_32823                        32823
+#define ID_SPLIT_TOPLEFT                32824
+#define ID_SPLIT_TOPRIGHT               32825
+#define ID_SPLIT_BOTTOMLEFT             32826
+#define ID_SPLIT_BOTTOMRIGHT            32827
+#define ID_TAB_SPLITSCREEN              32828
+#define ID_SPLITSCREEN_TOP              32829
+#define ID_SPLITSCREEN_TOP32830         32830
+#define ID_SPLITSCREEN_BOTTOM           32831
+#define ID_SPLITSCREEN_BOTTOM32832      32832
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -211,7 +222,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        142
-#define _APS_NEXT_COMMAND_VALUE         32819
+#define _APS_NEXT_COMMAND_VALUE         32833
 #define _APS_NEXT_CONTROL_VALUE         1047
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
