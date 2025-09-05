@@ -336,7 +336,6 @@ void CreateChildWindows(HWND parentWindow)
 		g_hWndMain, NULL, g_appInstance, NULL);	
 }
 
-// 排列所有窗口位置
 void ArrangeWindows() {
 	GetClientRect(g_hWndMain, &g_rcMain);
 	if (g_rcMain.right == 0 || g_rcMain.bottom == 0)
@@ -344,10 +343,20 @@ void ArrangeWindows() {
 
 	int scrollPos = g_rcMain.right - SCROLLBAR_WIDTH;
 
+	// 1. 绘制所有非PuTTY区域（规则矩形）
+	HDC hdc = GetDC(g_hWndMain);
+	HBRUSH hBgBrush = (HBRUSH)(COLOR_WINDOW + 1);
+	HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBgBrush);
+	 
 
+	// 2. 调整所有窗口位置（保持原有逻辑）
 	// 窗口1 - 上左
 	if (puttyHandle1 && IsWindow(puttyHandle1)) {
 		MoveWindow(puttyHandle1, 0, 0, g_nVSplitTopPos, g_nHSplitPos, TRUE);
+	}
+	else {
+		RECT rcTopLeft = { 0, 0, g_nVSplitTopPos, g_nHSplitPos };
+		FillRect(hdc, &rcTopLeft, hBgBrush);
 	}
 
 	// 顶部垂直分隔条
@@ -355,15 +364,29 @@ void ArrangeWindows() {
 
 	// 窗口2 - 上右
 	if (puttyHandle2 && IsWindow(puttyHandle2)) {
-		MoveWindow(puttyHandle2, g_nVSplitTopPos + SPLITTER_SIZE, 0, scrollPos - (g_nVSplitTopPos + SPLITTER_SIZE), g_nHSplitPos, TRUE);
+		MoveWindow(puttyHandle2, g_nVSplitTopPos + SPLITTER_SIZE, 0,
+			scrollPos - (g_nVSplitTopPos + SPLITTER_SIZE), g_nHSplitPos, TRUE);
 	}
+	else {
+		RECT rcTopRight = { g_nVSplitTopPos + SPLITTER_SIZE, 0,
+						  g_rcMain.right, g_nHSplitPos };
+		FillRect(hdc, &rcTopRight, hBgBrush);
+	}
+
 	// 水平分隔条
 	MoveWindow(g_hWndHSplit, 0, g_nHSplitPos, g_rcMain.right, SPLITTER_SIZE, TRUE);
-		
+
 	// 窗口3 - 下左
 	if (puttyHandle3 && IsWindow(puttyHandle3)) {
-		MoveWindow(puttyHandle3, 0, g_nHSplitPos + SPLITTER_SIZE, g_nVSplitBottomPos, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
+		MoveWindow(puttyHandle3, 0, g_nHSplitPos + SPLITTER_SIZE,
+			g_nVSplitBottomPos, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
 	}
+	else {
+		RECT rcBottomLeft = { 0, g_nHSplitPos + SPLITTER_SIZE,
+						   g_nVSplitBottomPos, g_rcMain.bottom };
+		FillRect(hdc, &rcBottomLeft, hBgBrush);
+	}
+
 	// 底部垂直分隔条
 	MoveWindow(g_hWndVSplitBottom,
 		g_nVSplitBottomPos, g_nHSplitPos + SPLITTER_SIZE,
@@ -374,10 +397,20 @@ void ArrangeWindows() {
 	if (puttyHandle4 && IsWindow(puttyHandle4)) {
 		MoveWindow(puttyHandle4,
 			g_nVSplitBottomPos + SPLITTER_SIZE, g_nHSplitPos + SPLITTER_SIZE,
-			scrollPos - (g_nVSplitBottomPos + SPLITTER_SIZE), g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
+			scrollPos - (g_nVSplitBottomPos + SPLITTER_SIZE),
+			g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
 			TRUE);
 	}
+	else {
+		RECT rcBottomRight = { g_nVSplitBottomPos + SPLITTER_SIZE,
+							g_nHSplitPos + SPLITTER_SIZE,
+							g_rcMain.right, g_rcMain.bottom };
+		FillRect(hdc, &rcBottomRight, hBgBrush);
+	}
 
+	// 清理GDI资源
+	SelectObject(hdc, hOldBrush);
+	ReleaseDC(g_hWndMain, hdc);
 	LOG_DEBUG(L"ArrangeWindows: rc=%d, %d %d %d", g_rcMain.left, g_rcMain.top, g_rcMain.right, g_rcMain.bottom);
 }
 
