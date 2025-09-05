@@ -396,14 +396,14 @@ int GetWindowRegion(HWND hWnd) {
 	int area3 = CalculateOverlapArea(&rcWnd, &rcRegion3);
 	int area4 = CalculateOverlapArea(&rcWnd, &rcRegion4);
 
-	// 如果完全覆盖某一区域
-	if (area1 == (rcRegion1.right - rcRegion1.left) * (rcRegion1.bottom - rcRegion1.top)) {
+	// 如果完全覆盖某一区域达90%
+	if (area1 > 0.9 * (rcRegion1.right - rcRegion1.left) * (rcRegion1.bottom - rcRegion1.top)) {
 		return 1;
-	} else if (area2 == (rcRegion2.right - rcRegion2.left) * (rcRegion2.bottom - rcRegion2.top)) {
+	} else if (area2 > 0.9 * (rcRegion2.right - rcRegion2.left) * (rcRegion2.bottom - rcRegion2.top)) {
 		return 2;
-	}else if (area3 == (rcRegion3.right - rcRegion3.left) * (rcRegion3.bottom - rcRegion3.top)) {
+	}else if (area3 > 0.9 * (rcRegion3.right - rcRegion3.left) * (rcRegion3.bottom - rcRegion3.top)) {
 		return 3;
-	}else if (area3 == (rcRegion4.right - rcRegion4.left) * (rcRegion4.bottom - rcRegion4.top)) {
+	}else if (area3 > 0.9 * (rcRegion4.right - rcRegion4.left) * (rcRegion4.bottom - rcRegion4.top)) {
 		return 4;
 	}
 
