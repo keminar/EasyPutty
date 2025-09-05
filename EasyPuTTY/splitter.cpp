@@ -391,6 +391,17 @@ int GetWindowRegion(HWND hWnd) {
 	int area3 = CalculateOverlapArea(&rcWnd, &rcRegion3);
 	int area4 = CalculateOverlapArea(&rcWnd, &rcRegion4);
 
+	// 如果完全覆盖某一区域
+	if (area1 == (rcRegion1.right - rcRegion1.left) * (rcRegion1.bottom - rcRegion1.top)) {
+		return 1;
+	} else if (area2 == (rcRegion2.right - rcRegion2.left) * (rcRegion2.bottom - rcRegion2.top)) {
+		return 2;
+	}else if (area3 == (rcRegion3.right - rcRegion3.left) * (rcRegion3.bottom - rcRegion3.top)) {
+		return 3;
+	}else if (area3 == (rcRegion4.right - rcRegion4.left) * (rcRegion4.bottom - rcRegion4.top)) {
+		return 4;
+	}
+
 	// 找到最大重叠区域
 	int maxArea = max(max(area1, area2), max(area3, area4));
 
