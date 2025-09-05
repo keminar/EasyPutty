@@ -531,6 +531,7 @@ void ArrangeWindows() {
 	// 1. 绘制所有非PuTTY区域（规则矩形）
 	HDC hdc = GetDC(g_hWndMain);
 	HBRUSH hBgBrush = (HBRUSH)(COLOR_WINDOW + 1);
+	HBRUSH hSplitBrush = (HBRUSH)(COLOR_BTNFACE + 1);
 	HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBgBrush);
 	 
 
@@ -546,7 +547,15 @@ void ArrangeWindows() {
 	}
 
 	// 顶部垂直分隔条
-	MoveWindow(g_hWndVSplitTop, g_nVSplitTopPos, 0, SPLITTER_SIZE, g_nHSplitPos, TRUE);
+	//MoveWindow(g_hWndVSplitTop, g_nVSplitTopPos, 0, SPLITTER_SIZE, g_nHSplitPos, TRUE);
+	RECT rcVSplitTop = {
+		g_nVSplitTopPos,          // 左边界（与MoveWindow的x参数一致）
+		0,                        // 上边界（与MoveWindow的y参数一致）
+		g_nVSplitTopPos + SPLITTER_SIZE, // 右边界（x + 分隔条宽度）
+		g_nHSplitPos              // 下边界（与MoveWindow的高度参数一致）
+	};
+	FillRect(hdc, &rcVSplitTop, hSplitBrush); // 用背景画刷重绘顶部垂直分隔条
+
 
 	// 窗口2 - 上右
 	if (puttyHandle2 && IsWindow(puttyHandle2)) {
@@ -561,7 +570,14 @@ void ArrangeWindows() {
 	}
 
 	// 水平分隔条
-	MoveWindow(g_hWndHSplit, 0, g_nHSplitPos, g_rcMain.right, SPLITTER_SIZE, TRUE);
+	//MoveWindow(g_hWndHSplit, 0, g_nHSplitPos, g_rcMain.right, SPLITTER_SIZE, TRUE);
+	RECT rcHSplit = {
+		0,        
+		g_nHSplitPos,
+		g_rcMain.right,
+		g_nHSplitPos + SPLITTER_SIZE 
+	};
+	FillRect(hdc, &rcHSplit, hSplitBrush);
 
 	// 窗口3 - 下左
 	if (puttyHandle3 && IsWindow(puttyHandle3)) {
@@ -576,10 +592,17 @@ void ArrangeWindows() {
 	}
 
 	// 底部垂直分隔条
-	MoveWindow(g_hWndVSplitBottom,
+	/*MoveWindow(g_hWndVSplitBottom,
 		g_nVSplitBottomPos, g_nHSplitPos + SPLITTER_SIZE,
 		SPLITTER_SIZE, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
-		TRUE);
+		TRUE);*/
+	RECT rcVSplitBottom = {
+		g_nVSplitBottomPos,
+		g_nHSplitPos + SPLITTER_SIZE,
+		g_nVSplitBottomPos+ SPLITTER_SIZE,
+		g_rcMain.bottom
+	};
+	FillRect(hdc, &rcVSplitBottom, hSplitBrush);
 
 	// 窗口4 - 下右
 	if (puttyHandle4 && IsWindow(puttyHandle4)) {
