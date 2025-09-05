@@ -5,6 +5,7 @@
 static HINSTANCE g_appInstance;
 
 HWND g_hWndMain;                // 主窗口句柄
+HWND g_hWndHost;                // 空间容器层，解决putty等窗体移动残影问题
 HWND g_hWndHSplit;              // 水平分隔条
 HWND g_hWndVSplitTop;           // 顶部垂直分隔条
 HWND g_hWndVSplitBottom;        // 底部垂直分隔条
@@ -21,7 +22,7 @@ double g_dHSplitRatio = 0.5;     // 水平分隔条位置比例
 double g_dVSplitTopRatio = 0.5;  // 顶部垂直分隔条位置比例
 double g_dVSplitBottomRatio = 0.5; // 底部垂直分隔条位置比例
 
-const int SPLITTER_SIZE = 5;    // 分隔条粗细
+const int SPLITTER_SIZE = 10;    // 分隔条粗细
 const int SCROLLBAR_WIDTH = 20; // 滚动条宽度
 
 // 确保窗口类只注册一次（首次调用时注册）
@@ -137,9 +138,10 @@ HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
 		MessageBoxW(NULL, GetString(IDS_HOSTWINDOW_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 		return NULL;
 	}
+
 	// 初始化PuTTY拖动监听钩子
 	StartPuTTYHooks();
-	return g_hWndMain;
+	return g_hWndHost;
 }
 
 // 分屏窗口过程
@@ -172,7 +174,7 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 			g_nVSplitTopPos = (int)(g_dVSplitTopRatio * g_rcMain.right);
 			g_nVSplitBottomPos = (int)(g_dVSplitBottomRatio * g_rcMain.right);
 		}
-
+		MoveWindow(g_hWndHost, g_rcMain.left, g_rcMain.top, g_rcMain.right - g_rcMain.left, g_rcMain.bottom - g_rcMain.top, TRUE);
 		ArrangeWindows();
 		break;
 	}
@@ -261,6 +263,7 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		break;
 	case WM_DESTROY: {
 		g_hWndMain = NULL;
+		g_hWndHost = NULL;
 		// 重置比例
 		g_dHSplitRatio = 0.5;
 		g_dVSplitTopRatio = 0.5;
@@ -297,55 +300,57 @@ void insertSplitWindow(HWND puttyHwnd, int pos) {
 }
 
 // 创建子窗口
-void CreateChildWindows(HWND parentWindow)
+void CreateChildWindows(HWND hWnd)
 {
-	g_hWndMain = parentWindow;
-	/*
-	puttyHandle1 = createPuttyWindow(g_appInstance, g_hWndMain, L"cmd");
-	MoveWindow(puttyHandle1, 0, 0, 600, 450, TRUE);
-	
-	puttyHandle2 = createPuttyWindow(g_appInstance, g_hWndMain, L"cmd");
-	MoveWindow(puttyHandle2, 0, 0, 600, 450, TRUE);
-	
-	puttyHandle3 = createPuttyWindow(g_appInstance, g_hWndMain, L"cmd");
-	MoveWindow(puttyHandle3, 0, 0, 600, 450, TRUE);
-	
-	puttyHandle4 = createPuttyWindow(g_appInstance, g_hWndMain, L"cmd");
-	MoveWindow(puttyHandle4, 0, 0, 600, 450, TRUE);
-	*/
-	
+	g_hWndMain = hWnd;
+
+	// 创建宿主窗口
+	g_hWndHost = CreateWindowExW(
+		0,
+		L"Static",
+		L"",
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
+		0, 0,
+		1200, 900,
+		g_hWndMain,
+		NULL,
+		g_appInstance,
+		NULL
+	);
+
 	// 创建自定义同步滚动条
 	g_hScrollTop = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
 		0, 0, SCROLLBAR_WIDTH, 0,
-		g_hWndMain, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, g_appInstance, NULL);
 
 	g_hScrollBottom = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
 		0, 0, SCROLLBAR_WIDTH, 0,
-		g_hWndMain, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, g_appInstance, NULL);
 
 	// 创建分隔条（置于顶层以确保可点击）
 	g_hWndHSplit = CreateWindowEx(
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, 0, SPLITTER_SIZE,
-		g_hWndMain, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, g_appInstance, NULL);
 
 	g_hWndVSplitTop = CreateWindowEx(
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SPLITTER_SIZE, 0,
-		g_hWndMain, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, g_appInstance, NULL);
 
 	g_hWndVSplitBottom = CreateWindowEx(
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SPLITTER_SIZE, 0,
-		g_hWndMain, NULL, g_appInstance, NULL);	
+		g_hWndHost, NULL, g_appInstance, NULL);
 }
+
 // 辅助函数：计算两个矩形的重叠面积
 int CalculateOverlapArea(const RECT* rc1, const RECT* rc2) {
 	int left = max(rc1->left, rc2->left);
@@ -477,23 +482,25 @@ void CALLBACK MoveSizeChangeHookProc(
 		}
 		return;
 	}
-	if (event == EVENT_SYSTEM_MOVESIZEEND && g_hDraggingPuTTY == hWnd) {
-		int endRegion = GetWindowRegion(hWnd);
-		if (endRegion != 0 && endRegion != g_nStartRegion) {
-			// 执行句柄交换逻辑
-			HWND hTarget = GetHandleByRegion(endRegion);
-			if (hTarget) {
-				SwapRegionHandles(g_nStartRegion, endRegion);
+	if (event == EVENT_SYSTEM_MOVESIZEEND) {
+		if (g_hDraggingPuTTY == hWnd){
+			int endRegion = GetWindowRegion(hWnd);
+			if (endRegion != 0 && endRegion != g_nStartRegion) {
+				// 执行句柄交换逻辑
+				HWND hTarget = GetHandleByRegion(endRegion);
+				if (hTarget) {
+					SwapRegionHandles(g_nStartRegion, endRegion);
+				}
+				else {
+					SetHandleByRegion(endRegion, hWnd);
+					SetHandleByRegion(g_nStartRegion, NULL);
+				}
+				ArrangeWindows();
 			}
-			else {
-				SetHandleByRegion(endRegion, hWnd);
-				SetHandleByRegion(g_nStartRegion, NULL);
-			}
-			ArrangeWindows();
+			LOG_DEBUG(L"move end %d %d %p", g_nStartRegion, endRegion, hWnd);
+			g_hDraggingPuTTY = NULL;  // 重置拖动状态
+			g_nStartRegion = 0;
 		}
-		LOG_DEBUG(L"move end %d %d %p", g_nStartRegion, endRegion, hWnd);
-		g_hDraggingPuTTY = NULL;  // 重置拖动状态
-		g_nStartRegion = 0;
 	}
 }
 
@@ -539,81 +546,35 @@ void ArrangeWindows() {
 	LOG_DEBUG(L"Arrange %p %p %p %p", puttyHandle1, puttyHandle2, puttyHandle3, puttyHandle4);
 	int scrollPos = g_rcMain.right - SCROLLBAR_WIDTH;
 
-	// 1. 绘制所有非PuTTY区域（规则矩形）
-	HDC hdc = GetDC(g_hWndMain);
-	HBRUSH hBgBrush = (HBRUSH)(COLOR_WINDOW + 1);
-	HBRUSH hSplitBrush = (HBRUSH)(COLOR_BTNFACE + 1);
-	HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBgBrush);
-	 
-
-	// 2. 调整所有窗口位置（保持原有逻辑）
+	// 调整所有窗口位置（保持原有逻辑）
 	// 窗口1 - 上左
 	if (puttyHandle1 && IsWindow(puttyHandle1)) {
 		MoveWindow(puttyHandle1, 0, 0, g_nVSplitTopPos, g_nHSplitPos, TRUE);
 	}
-	else {
-		puttyHandle1 = NULL;
-		RECT rcTopLeft = { 0, 0, g_nVSplitTopPos, g_nHSplitPos };
-		FillRect(hdc, &rcTopLeft, hBgBrush);
-	}
 
 	// 顶部垂直分隔条
-	//MoveWindow(g_hWndVSplitTop, g_nVSplitTopPos, 0, SPLITTER_SIZE, g_nHSplitPos, TRUE);
-	RECT rcVSplitTop = {
-		g_nVSplitTopPos,          // 左边界（与MoveWindow的x参数一致）
-		0,                        // 上边界（与MoveWindow的y参数一致）
-		g_nVSplitTopPos + SPLITTER_SIZE, // 右边界（x + 分隔条宽度）
-		g_nHSplitPos              // 下边界（与MoveWindow的高度参数一致）
-	};
-	FillRect(hdc, &rcVSplitTop, hSplitBrush); // 用背景画刷重绘顶部垂直分隔条
-
+	MoveWindow(g_hWndVSplitTop, g_nVSplitTopPos, 0, SPLITTER_SIZE, g_nHSplitPos, TRUE);
 
 	// 窗口2 - 上右
 	if (puttyHandle2 && IsWindow(puttyHandle2)) {
 		MoveWindow(puttyHandle2, g_nVSplitTopPos + SPLITTER_SIZE, 0,
 			scrollPos - (g_nVSplitTopPos + SPLITTER_SIZE), g_nHSplitPos, TRUE);
 	}
-	else {
-		puttyHandle2 = NULL;
-		RECT rcTopRight = { g_nVSplitTopPos + SPLITTER_SIZE, 0,
-						  g_rcMain.right, g_nHSplitPos };
-		FillRect(hdc, &rcTopRight, hBgBrush);
-	}
 
 	// 水平分隔条
-	//MoveWindow(g_hWndHSplit, 0, g_nHSplitPos, g_rcMain.right, SPLITTER_SIZE, TRUE);
-	RECT rcHSplit = {
-		0,        
-		g_nHSplitPos,
-		g_rcMain.right,
-		g_nHSplitPos + SPLITTER_SIZE 
-	};
-	FillRect(hdc, &rcHSplit, hSplitBrush);
+	MoveWindow(g_hWndHSplit, 0, g_nHSplitPos, g_rcMain.right, SPLITTER_SIZE, TRUE);
 
 	// 窗口3 - 下左
 	if (puttyHandle3 && IsWindow(puttyHandle3)) {
 		MoveWindow(puttyHandle3, 0, g_nHSplitPos + SPLITTER_SIZE,
 			g_nVSplitBottomPos, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
 	}
-	else {
-		puttyHandle3 = NULL;
-		RECT rcBottomLeft = { 0, g_nHSplitPos + SPLITTER_SIZE,
-						   g_nVSplitBottomPos, g_rcMain.bottom };
-		FillRect(hdc, &rcBottomLeft, hBgBrush);
-	}
 
 	// 底部垂直分隔条
-	/*MoveWindow(g_hWndVSplitBottom,
+	MoveWindow(g_hWndVSplitBottom,
 		g_nVSplitBottomPos, g_nHSplitPos + SPLITTER_SIZE,
 		SPLITTER_SIZE, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
-		TRUE);*/
-	RECT rcVSplitBottom = {
-		g_nVSplitBottomPos,
-		g_nHSplitPos + SPLITTER_SIZE,
-		g_nVSplitBottomPos+ SPLITTER_SIZE,
-		g_rcMain.bottom
-	};
-	FillRect(hdc, &rcVSplitBottom, hSplitBrush);
+		TRUE);
 
 	// 窗口4 - 下右
 	if (puttyHandle4 && IsWindow(puttyHandle4)) {
@@ -623,17 +584,7 @@ void ArrangeWindows() {
 			g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
 			TRUE);
 	}
-	else {
-		puttyHandle4 = NULL;
-		RECT rcBottomRight = { g_nVSplitBottomPos + SPLITTER_SIZE,
-							g_nHSplitPos + SPLITTER_SIZE,
-							g_rcMain.right, g_rcMain.bottom };
-		FillRect(hdc, &rcBottomRight, hBgBrush);
-	}
 
-	// 清理GDI资源
-	SelectObject(hdc, hOldBrush);
-	ReleaseDC(g_hWndMain, hdc);
 	LOG_DEBUG(L"ArrangeWindows: rc=%d, %d %d %d", g_rcMain.left, g_rcMain.top, g_rcMain.right, g_rcMain.bottom);
 }
 
