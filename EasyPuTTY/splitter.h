@@ -4,7 +4,7 @@
 
 HWND createSplitWindow(HINSTANCE hInstance, HWND hWnd);
 void registerClass();
-void CreateChildWindows(HWND parentWindow);
+void CreateChildWindows(HWND hWnd);
 void ArrangeWindows();
 LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK SplitterProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
