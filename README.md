@@ -3,15 +3,18 @@
 
 1. 启动puttygen.exe生成ppk证书
 2. 启动pageant.exe代理鉴权
-3. 标签化putty窗口，支持非putty窗口嵌入
+3. 标签化putty窗口，支持非putty窗口嵌入，支持分屏
 4. 配置文件管理灵活，容易维护
 5. 内存占用少，可执行文件小，库依赖少
+6. 使用Microsoft Visual Studio 2017编译
 
 # 展示
 
 ![英文](images/en.png)
 
 ![中文](images/zh_cn.png)
+
+![分屏](images/split.png)
 
 # 对比方案
 
