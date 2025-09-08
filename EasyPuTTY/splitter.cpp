@@ -42,8 +42,6 @@ int g_nStartRegion = 0;
 // 滚动相关变量
 int g_nScrollPosTop = 0;        // 顶部滚动条位置
 int g_nScrollPosBottom = 0;     // 底部滚动条位置
-int g_nScrollStartY = 0;        // 滚动条拖动起始Y坐标
-int g_nScrollStartPos = 0;      // 滚动条拖动起始位置
 int g_nContentHeightTop = 1500; // 顶部内容高度
 int g_nContentHeightBottom = 1500; // 底部内容高度
 int g_nVisibleHeightTop = 0;    // 顶部可见高度
@@ -170,17 +168,17 @@ void UpdateScrollRanges() {
 	// 确保滚动位置在有效范围内
 	g_nScrollPosTop = min(g_nScrollPosTop, g_nScrollRangeTop);
 	g_nScrollPosBottom = min(g_nScrollPosBottom, g_nScrollRangeBottom);
+	LOG_DEBUG(L"split scroll pos g_nScrollPosTop", g_nScrollPosTop);
 }
 
 // 向PuTTY窗口发送滚动消息（修复方向：反转deltaY）
 void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
+	LOG_DEBUG(L"split send to hwnd %p %d", hWnd, deltaY);
+
 	if (!hWnd || !IsWindow(hWnd)) return;
 
-	// 关键修复：反转滚动方向（乘以-1）
-	deltaY *= -1;
-
 	// 发送鼠标滚轮消息给PuTTY窗口
-	WPARAM wParam = (deltaY > 0 ? WHEEL_DELTA : -WHEEL_DELTA) << 16;
+	WPARAM wParam = (deltaY < 0 ? WHEEL_DELTA : -WHEEL_DELTA) << 16;
 	SendMessage(hWnd, WM_MOUSEWHEEL, wParam, MAKELPARAM(10, 10)); // 任意位置
 
 	// 同时发送键盘滚动消息作为备份
@@ -196,26 +194,18 @@ void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
 	}
 }
 
-// 同步滚动处理（修复方向：调整移动位置计算）
+// 同步滚动处理
 void SyncScroll(int pos, bool isTop) {
 	int oldPos = isTop ? g_nScrollPosTop : g_nScrollPosBottom;
-	int deltaY = pos - oldPos; // 计算滚动变化量
 
 	// 限制滚动位置在有效范围内
 	pos = max(0, min(pos, isTop ? g_nScrollRangeTop : g_nScrollRangeBottom));
 	if (pos == oldPos) return; // 没有变化则返回
-
-	// 更新滚动位置
-	if (isTop) {
-		g_nScrollPosTop = pos;
-	}
-	else {
-		g_nScrollPosBottom = pos;
-	}
+	int deltaY = pos - oldPos; // 计算滚动变化量
 
 	// 移动对应区域的PuTTY窗口并发送滚动消息
-	// 关键修复：窗口移动方向反转（将-pos改为pos）
 	if (isTop) {
+		g_nScrollPosTop = pos;
 		if (puttyHandle1 && IsWindow(puttyHandle1)) {
 			SendScrollMessageToPuTTY(puttyHandle1, deltaY);
 		}
@@ -224,6 +214,7 @@ void SyncScroll(int pos, bool isTop) {
 		}
 	}
 	else {
+		g_nScrollPosBottom = pos;
 		if (puttyHandle3 && IsWindow(puttyHandle3)) {
 			SendScrollMessageToPuTTY(puttyHandle3, deltaY);
 		}
@@ -232,13 +223,6 @@ void SyncScroll(int pos, bool isTop) {
 		}
 	}
 
-	// 重绘滚动条
-	/*if (isTop && g_hScrollTop) {
-		InvalidateRect(g_hScrollTop, NULL, TRUE);
-	}
-	else if (!isTop && g_hScrollBottom) {
-		InvalidateRect(g_hScrollBottom, NULL, TRUE);
-	}*/
 }
 
 // 分屏窗口过程
@@ -339,7 +323,7 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	case WM_LBUTTONDOWN:
 		// 开始拖动
 		g_nDragging = GetSplitterAtPoint(pt);
-		if (g_nDragging > 0)
+		if (g_nDragging > 0 && g_nDragging <= 3)
 		{
 			SetCapture(hWnd);
 			if (g_nDragging == 1)
@@ -356,7 +340,7 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 
 	case WM_LBUTTONUP:
 		// 结束拖动
-		if (g_nDragging > 0)
+		if (g_nDragging > 0 && g_nDragging <= 3)
 		{
 			g_nDragging = 0;
 			ReleaseCapture();
@@ -365,21 +349,24 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		}
 		break;
 	case WM_MOUSEWHEEL: {
+		// 下滚为负，上滚为正
 		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-		int lineStep = 100; // 每次滚动的像素数
 
 		// 判断鼠标在哪个区域
 		bool isTopRegion = (pt.y < g_nHSplitPos);
 
-		// 关键修复：反转滚轮方向（将zDelta取反）
-		zDelta *= -1;
+		int visibleHeight = isTopRegion ? g_nVisibleHeightTop : g_nVisibleHeightBottom;
+		int lineStep = visibleHeight / 20;
+		if (zDelta > 0) {
+			lineStep = -lineStep;
+		}
 
-		// 上滚为负，下滚为正
-		int delta = (zDelta < 0) ? lineStep : -lineStep;
 		int newPos = isTopRegion ?
-			(g_nScrollPosTop + delta) :
-			(g_nScrollPosBottom + delta);
+			(g_nScrollPosTop + lineStep) :
+			(g_nScrollPosBottom + lineStep);
 
+		newPos = max(0, newPos);
+		LOG_DEBUG(L"split SplitWindowProc MOUSEWHEEL  %d, pos %d, newpos %d", zDelta, isTopRegion ? g_nScrollPosTop : g_nScrollPosBottom, newPos);
 		SyncScroll(newPos, isTopRegion);
 		return 0;
 	}
@@ -467,20 +454,17 @@ void CreateChildWindows(HWND hWnd)
 
 	// 创建自定义同步滚动条
 	g_hScrollTop = CreateWindowEx(
-		WS_EX_TOPMOST, _T("CustomScrollbar"), _T(""),
+		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL,
 		0, 0, SCROLLBAR_WIDTH, 0,
 		g_hWndHost, NULL, g_appInstance, NULL);
 
 	g_hScrollBottom = CreateWindowEx(
-		WS_EX_TOPMOST, _T("CustomScrollbar"), _T(""),
+		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL,
 		0, 0, SCROLLBAR_WIDTH, 0,
 		g_hWndHost, NULL, g_appInstance, NULL);
 
-	// 确保滚动条在最上层
-	if (g_hScrollTop) SetWindowPos(g_hScrollTop, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-	if (g_hScrollBottom) SetWindowPos(g_hScrollBottom, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 }
 
 // 辅助函数：计算两个矩形的重叠面积
@@ -814,56 +798,8 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		}
 		break;
 
-	case WM_LBUTTONDOWN: {
-		POINT clickPoint;
-		clickPoint.x = LOWORD(lParam);
-		clickPoint.y = HIWORD(lParam);
-
-		int thumbPos = (int)((*pPos * (double)trackSize) / scrollRange);
-		RECT thumbRect = { 0, thumbPos, SCROLLBAR_WIDTH, thumbPos + thumbSize };
-
-		if (PtInRect(&thumbRect, clickPoint)) {
-			g_nDragging = isTop ? 4 : 5;
-			g_nScrollStartY = HIWORD(lParam);
-			g_nScrollStartPos = *pPos;
-			SetCapture(hWnd);
-			SetCursor(LoadCursor(NULL, IDC_SIZEALL)); // 明确显示拖动光标
-			return 0;
-		}
-		else {
-			// 点击轨道时计算新位置
-			int newPos;
-			if (clickPoint.y < thumbPos) {
-				newPos = *pPos - visibleHeight; // 上滚一页
-			}
-			else {
-				newPos = *pPos + visibleHeight; // 下滚一页
-			}
-			SyncScroll(newPos, isTop);
-			return 0;
-		}
-	}
-
-	case WM_MOUSEMOVE:
-		if (g_nDragging == (isTop ? 4 : 5)) {
-			// 计算新位置
-			int deltaY = HIWORD(lParam) - g_nScrollStartY;
-			int newPos = g_nScrollStartPos +
-				(int)((deltaY * (double)scrollRange) / trackSize);
-			SyncScroll(newPos, isTop);
-			return 0; // 确保处理后返回
-		}
-		break;
-
-	case WM_LBUTTONUP:
-		if (g_nDragging == (isTop ? 4 : 5)) {
-			g_nDragging = 0;
-			ReleaseCapture();
-			return 0;
-		}
-		break;
-
 	case WM_VSCROLL: {
+		LOG_DEBUG(L"split scroolProc VSCROLL ");
 		int scrollCode = LOWORD(wParam);
 		int newPos = *pPos;
 		int lineStep = visibleHeight / 20;
