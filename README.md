@@ -36,11 +36,10 @@
 以下是通过 PuTTYgen 图形工具，将 OpenSSH 格式的 `id_rsa` 私钥转换为 PuTTY 专用 `ppk` 格式的操作流程：
 
 ### 1. 打开 PuTTYgen 工具
-### 2. 加载本地 id_rsa 文件
 1. 在 PuTTYgen 界面顶部，点击 「Conversions」菜单下的**Import key** 按钮。
-2. 弹出文件选择窗口后， . 选中 `id_rsa` 文件，点击「打开」。
+2. 弹出文件选择窗口后， 选中 `id_rsa` 文件，点击「打开」。
 
-### 3. 验证密钥并生成 ppk 文件
+### 2. 验证密钥并生成 ppk 文件
 1. **密码验证（若有）**：  
    - 若生成 `id_rsa` 时设置过密码，会弹出「Enter passphrase to load key」对话框，输入正确密码后点击「OK」。  
    - 若未设置密码，将直接加载成功（界面会显示密钥的指纹信息，如「RSA-2048」「Fingerprint」等）。
