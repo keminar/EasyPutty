@@ -23,7 +23,9 @@ double g_dVSplitTopRatio = 0.5;  // 顶部垂直分隔条位置比例
 double g_dVSplitBottomRatio = 0.5; // 底部垂直分隔条位置比例
 
 const int SPLITTER_SIZE = 10;    // 分隔条粗细
-const int SCROLLBAR_WIDTH = 20; // 滚动条宽度
+const int SCROLLBAR_WIDTH = 24;  // 加宽滚动条便于可见
+const int THUMB_MIN_HEIGHT = 30; // 加大滑块便于点击
+const int SCROLL_MARGIN = 2;     // 滚动条内边距
 
 // 确保窗口类只注册一次（首次调用时注册）
 static bool g_splitMainClassRegistered = false;
@@ -39,7 +41,7 @@ HWINEVENTHOOK g_hMoveEndHook = NULL;
 HWND g_hDraggingPuTTY = NULL;
 int g_nStartRegion = 0;
 
-// 滚动相关变量
+// 滚动相关变量（新增滑块状态和拖动信息）
 int g_nScrollPosTop = 0;        // 顶部滚动条位置
 int g_nScrollPosBottom = 0;     // 底部滚动条位置
 int g_nContentHeightTop = 1500; // 顶部内容高度
@@ -48,6 +50,27 @@ int g_nVisibleHeightTop = 0;    // 顶部可见高度
 int g_nVisibleHeightBottom = 0; // 底部可见高度
 int g_nScrollRangeTop = 0;      // 顶部可滚动范围
 int g_nScrollRangeBottom = 0;   // 底部可滚动范围
+
+// 滚动条状态枚举（新增）
+typedef enum {
+	SB_STATE_NORMAL,   // 正常
+	SB_STATE_HOVER,    // 悬停
+	SB_STATE_DRAGGING  // 拖动中
+} ScrollBarState;
+
+// 滚动条私有数据（存储每个滚动条的状态和资源，支持多个滚动条）
+typedef struct {
+	ScrollBarState thumbState;  // 滑块状态
+	BOOL isDragging;            // 是否正在拖动
+	int dragYOffset;            // 拖动时鼠标在滑块内的Y偏移
+	// 绘图资源（避免重复创建销毁）
+	HBRUSH hTrackBrush;         // 轨道画刷（浅灰）
+	HBRUSH hThumbNormalBrush;   // 滑块正常画刷（亮蓝）
+	HBRUSH hThumbHoverBrush;    // 滑块悬停画刷（深蓝）
+	HBRUSH hBorderBrush;        // 边框画刷（黑色）
+} ScrollBarData;
+static ScrollBarData g_scrollTopData = { 0 }; // 顶部滚动条数据
+static ScrollBarData g_scrollBottomData = { 0 }; // 底部滚动条数据
 
 // 注册窗口类
 void registerClass() {
@@ -154,6 +177,52 @@ HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
 	return g_hWndHost;
 }
 
+// 计算滑块高度（根据滚动范围和可见高度比例）
+static int CalcThumbHeight(int scrollRange, int visibleHeight, int clientHeight) {
+	if (scrollRange <= 0) return clientHeight; // 无滚动时滑块占满轨道
+	int thumbH = (int)((double)visibleHeight / (visibleHeight + scrollRange) * clientHeight);
+	return max(thumbH, THUMB_MIN_HEIGHT);
+}
+
+// 计算滑块Y坐标（根据当前滚动位置）
+static int CalcThumbY(int scrollPos, int scrollRange, int thumbHeight, int clientHeight) {
+	if (scrollRange <= 0) return 0; // 无滚动时滑块置顶
+	int trackAvailH = clientHeight - thumbHeight; // 轨道可用高度
+	return (int)((double)scrollPos / scrollRange * trackAvailH);
+}
+
+// 从鼠标位置计算滚动位置（拖动时用）
+static int CalcPosFromMouse(int mouseY, int dragOffset, int scrollRange, int thumbHeight, int clientHeight) {
+	if (scrollRange <= 0) return 0;
+	int trackAvailH = clientHeight - thumbHeight;
+	if (trackAvailH <= 0) return 0;
+	// 鼠标在轨道中的相对Y坐标 = 鼠标Y - 拖动偏移 - 客户区顶部
+	int relY = mouseY - dragOffset;
+	// 限制在轨道范围内
+	relY = max(0, min(relY, trackAvailH));
+	return (int)((double)relY / trackAvailH * scrollRange);
+}
+
+// 初始化滚动条资源（避免重复创建）
+static void InitScrollBarData(ScrollBarData* sbData) {
+	if (sbData->hTrackBrush) return; // 已初始化过
+	sbData->hTrackBrush = CreateSolidBrush(RGB(230, 230, 230));       // 轨道：浅灰
+	sbData->hThumbNormalBrush = CreateSolidBrush(RGB(100, 180, 255)); // 滑块正常：亮蓝
+	sbData->hThumbHoverBrush = CreateSolidBrush(RGB(50, 150, 255));   // 滑块悬停：深蓝
+	sbData->hBorderBrush = CreateSolidBrush(RGB(0, 0, 0));            // 边框：黑色
+	sbData->thumbState = SB_STATE_NORMAL;
+	sbData->isDragging = FALSE;
+	sbData->dragYOffset = 0;
+}
+
+// 释放滚动条资源（防止内存泄漏）
+static void FreeScrollBarData(ScrollBarData* sbData) {
+	if (sbData->hTrackBrush) DeleteObject(sbData->hTrackBrush);
+	if (sbData->hThumbNormalBrush) DeleteObject(sbData->hThumbNormalBrush);
+	if (sbData->hThumbHoverBrush) DeleteObject(sbData->hThumbHoverBrush);
+	if (sbData->hBorderBrush) DeleteObject(sbData->hBorderBrush);
+	ZeroMemory(sbData, sizeof(ScrollBarData));
+}
 
 // 更新滚动范围
 void UpdateScrollRanges() {
@@ -168,6 +237,11 @@ void UpdateScrollRanges() {
 	// 确保滚动位置在有效范围内
 	g_nScrollPosTop = min(g_nScrollPosTop, g_nScrollRangeTop);
 	g_nScrollPosBottom = min(g_nScrollPosBottom, g_nScrollRangeBottom);
+
+	// 滚动条位置变化后强制重绘
+	if (g_hScrollTop) InvalidateRect(g_hScrollTop, NULL, FALSE);
+	if (g_hScrollBottom) InvalidateRect(g_hScrollBottom, NULL, FALSE);
+
 	LOG_DEBUG(L"split scroll pos g_nScrollPosTop", g_nScrollPosTop);
 }
 
@@ -197,9 +271,10 @@ void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
 // 同步滚动处理
 void SyncScroll(int pos, bool isTop) {
 	int oldPos = isTop ? g_nScrollPosTop : g_nScrollPosBottom;
+	int scrollRange = isTop ? g_nScrollRangeTop : g_nScrollRangeBottom;
 
 	// 限制滚动位置在有效范围内
-	pos = max(0, min(pos, isTop ? g_nScrollRangeTop : g_nScrollRangeBottom));
+	pos = max(0, min(pos, scrollRange));
 	if (pos == oldPos) return; // 没有变化则返回
 	int deltaY = pos - oldPos; // 计算滚动变化量
 
@@ -212,6 +287,8 @@ void SyncScroll(int pos, bool isTop) {
 		if (puttyHandle2 && IsWindow(puttyHandle2)) {
 			SendScrollMessageToPuTTY(puttyHandle2, deltaY);
 		}
+		// 同步顶部滚动条重绘
+		if (g_hScrollTop) InvalidateRect(g_hScrollTop, NULL, FALSE);
 	}
 	else {
 		g_nScrollPosBottom = pos;
@@ -221,8 +298,9 @@ void SyncScroll(int pos, bool isTop) {
 		if (puttyHandle4 && IsWindow(puttyHandle4)) {
 			SendScrollMessageToPuTTY(puttyHandle4, deltaY);
 		}
+		// 同步底部滚动条重绘
+		if (g_hScrollBottom) InvalidateRect(g_hScrollBottom, NULL, FALSE);
 	}
-
 }
 
 // 分屏窗口过程
@@ -248,6 +326,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	case WM_CREATE:
 	{
 		CreateChildWindows(hWnd);
+		// 初始化滚动条数据（创建绘图资源）
+		InitScrollBarData(&g_scrollTopData);
+		InitScrollBarData(&g_scrollBottomData);
 		break;
 	}
 	case WM_SIZE: {
@@ -384,6 +465,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		puttyHandle4 = NULL;
 		// 卸载拖动监听钩子
 		StopPuTTYHooks();
+		// 释放滚动条资源
+		FreeScrollBarData(&g_scrollTopData);
+		FreeScrollBarData(&g_scrollBottomData);
 		return 0;
 	}
 	}
@@ -452,19 +536,23 @@ void CreateChildWindows(HWND hWnd)
 		0, 0, SPLITTER_SIZE, 0,
 		g_hWndHost, NULL, g_appInstance, NULL);
 
-	// 创建自定义同步滚动条
+	// 创建自定义同步滚动条（添加WS_BORDER确保可见）
 	g_hScrollTop = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL,
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SCROLLBAR_WIDTH, 0,
 		g_hWndHost, NULL, g_appInstance, NULL);
 
 	g_hScrollBottom = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL,
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SCROLLBAR_WIDTH, 0,
 		g_hWndHost, NULL, g_appInstance, NULL);
 
+	// 检查滚动条是否创建成功
+	if (!g_hScrollTop || !g_hScrollBottom) {
+		MessageBoxW(NULL, L"滚动条创建失败", GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
+	}
 }
 
 // 辅助函数：计算两个矩形的重叠面积
@@ -515,11 +603,14 @@ int GetWindowRegion(HWND hWnd) {
 	// 如果完全覆盖某一区域达90%
 	if (area1 > 0.9 * (rcRegion1.right - rcRegion1.left) * (rcRegion1.bottom - rcRegion1.top)) {
 		return 1;
-	} else if (area2 > 0.9 * (rcRegion2.right - rcRegion2.left) * (rcRegion2.bottom - rcRegion2.top)) {
+	}
+	else if (area2 > 0.9 * (rcRegion2.right - rcRegion2.left) * (rcRegion2.bottom - rcRegion2.top)) {
 		return 2;
-	}else if (area3 > 0.9 * (rcRegion3.right - rcRegion3.left) * (rcRegion3.bottom - rcRegion3.top)) {
+	}
+	else if (area3 > 0.9 * (rcRegion3.right - rcRegion3.left) * (rcRegion3.bottom - rcRegion3.top)) {
 		return 3;
-	}else if (area4 > 0.9 * (rcRegion4.right - rcRegion4.left) * (rcRegion4.bottom - rcRegion4.top)) {
+	}
+	else if (area4 > 0.9 * (rcRegion4.right - rcRegion4.left) * (rcRegion4.bottom - rcRegion4.top)) {
 		return 4;
 	}
 
@@ -537,7 +628,7 @@ int GetWindowRegion(HWND hWnd) {
 	return 0;  // 未满足50%重叠条件
 }
 
-// 2. 辅助函数：根据区域获取对应PuTTY句柄
+// 辅助函数：根据区域获取对应PuTTY句柄
 HWND GetHandleByRegion(int region) {
 	switch (region) {
 	case 1: return puttyHandle1;
@@ -548,7 +639,7 @@ HWND GetHandleByRegion(int region) {
 	}
 }
 
-// 3. 辅助函数：设置区域对应的PuTTY句柄
+// 辅助函数：设置区域对应的PuTTY句柄
 void SetHandleByRegion(int region, HWND hWnd) {
 	// 如果是无效的句柄，清掉
 	if (hWnd && !IsWindow(hWnd)) {
@@ -562,7 +653,7 @@ void SetHandleByRegion(int region, HWND hWnd) {
 	}
 }
 
-// 4. 辅助函数：交换两个区域的PuTTY句柄
+// 辅助函数：交换两个区域的PuTTY句柄
 void SwapRegionHandles(int regionA, int regionB) {
 	HWND hA = GetHandleByRegion(regionA);
 	HWND hB = GetHandleByRegion(regionB);
@@ -599,7 +690,7 @@ void CALLBACK MoveSizeChangeHookProc(
 		return;
 	}
 	if (event == EVENT_SYSTEM_MOVESIZEEND) {
-		if (g_hDraggingPuTTY == hWnd){
+		if (g_hDraggingPuTTY == hWnd) {
 			int endRegion = GetWindowRegion(hWnd);
 			if (endRegion != 0 && endRegion != g_nStartRegion) {
 				// 执行句柄交换逻辑
@@ -701,10 +792,16 @@ void ArrangeWindows() {
 			TRUE);
 	}
 
-	// 调整滚动条位置
-	if (g_hScrollTop) MoveWindow(g_hScrollTop, scrollPos, 0, SCROLLBAR_WIDTH, g_nHSplitPos, TRUE);
-	if (g_hScrollBottom) MoveWindow(g_hScrollBottom, scrollPos, g_nHSplitPos + SPLITTER_SIZE,
-		SCROLLBAR_WIDTH, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
+	// 调整滚动条位置（确保可见）
+	if (g_hScrollTop) {
+		MoveWindow(g_hScrollTop, scrollPos, 0, SCROLLBAR_WIDTH, g_nHSplitPos, TRUE);
+		ShowWindow(g_hScrollTop, SW_SHOW); // 强制显示
+	}
+	if (g_hScrollBottom) {
+		MoveWindow(g_hScrollBottom, scrollPos, g_nHSplitPos + SPLITTER_SIZE,
+			SCROLLBAR_WIDTH, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
+		ShowWindow(g_hScrollBottom, SW_SHOW); // 强制显示
+	}
 	LOG_DEBUG(L"ArrangeWindows: rc=%d, %d %d %d", g_rcMain.left, g_rcMain.top, g_rcMain.right, g_rcMain.bottom);
 }
 
@@ -735,25 +832,26 @@ LRESULT CALLBACK SplitterProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-// 自定义滚动条窗口过程
+// 自定义滚动条窗口过程（修复版）
 LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
 	bool isTop = (hWnd == g_hScrollTop);
+	ScrollBarData* sbData = isTop ? &g_scrollTopData : &g_scrollBottomData;
 	int* pPos = isTop ? &g_nScrollPosTop : &g_nScrollPosBottom;
 	int scrollRange = isTop ? g_nScrollRangeTop : g_nScrollRangeBottom;
-	RECT rc;
-	GetClientRect(hWnd, &rc);
-	int scrollHeight = rc.bottom - rc.top;
-	int thumbSize = 0;
-	int trackSize = 0;
 	int visibleHeight = isTop ? g_nVisibleHeightTop : g_nVisibleHeightBottom;
 
-	if (scrollRange > 0 && visibleHeight > 0) {
-		thumbSize = max(20, (scrollHeight * visibleHeight) / (visibleHeight + scrollRange));
-		trackSize = scrollHeight - thumbSize;
-	}
-	else {
-		*pPos = 0;
+	RECT clientRect;
+	GetClientRect(hWnd, &clientRect);
+	int clientHeight = clientRect.bottom - clientRect.top;
+	int thumbHeight = CalcThumbHeight(scrollRange, visibleHeight, clientHeight);
+	int thumbY = CalcThumbY(*pPos, scrollRange, thumbHeight, clientHeight);
+
+	// 处理鼠标位置
+	POINT pt;
+	if (Msg == WM_MOUSEMOVE || Msg == WM_LBUTTONDOWN || Msg == WM_LBUTTONUP) {
+		pt.x = LOWORD(lParam);
+		pt.y = HIWORD(lParam);
 	}
 
 	switch (Msg) {
@@ -761,71 +859,197 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 
-		// 绘制轨道
-		RECT rcTrack = ps.rcPaint;
-		HBRUSH hTrackBrush = CreateSolidBrush(RGB(230, 230, 230));
-		FillRect(hdc, &rcTrack, hTrackBrush);
-		DeleteObject(hTrackBrush);
+		// 创建内存DC用于双缓冲
+		HDC memDC = CreateCompatibleDC(hdc);
+		HBITMAP memBitmap = CreateCompatibleBitmap(hdc,
+			clientRect.right - clientRect.left,
+			clientRect.bottom - clientRect.top);
+		HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
 
-		// 绘制滑块
-		if (scrollRange > 0 && visibleHeight > 0) {
-			int thumbPos = (int)((*pPos * (double)trackSize) / scrollRange);
-			RECT rcThumb = {
-				2, thumbPos,
-				SCROLLBAR_WIDTH - 2, thumbPos + thumbSize
-			};
-			HBRUSH hThumbBrush = CreateSolidBrush(RGB(100, 180, 255));
-			FillRect(hdc, &rcThumb, hThumbBrush);
-			HPEN hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
-			HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
-			Rectangle(hdc, rcThumb.left, rcThumb.top, rcThumb.right, rcThumb.bottom);
-			SelectObject(hdc, hOldPen);
-			DeleteObject(hPen);
-			DeleteObject(hThumbBrush);
-		}
+		HGDIOBJ oldBrush;
 
+		// 1. 绘制滚动条背景
+		HBRUSH bgBrush = CreateSolidBrush(RGB(255, 240, 240));
+		oldBrush = SelectObject(memDC, bgBrush);
+		Rectangle(memDC, clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
+		SelectObject(memDC, oldBrush);
+		DeleteObject(bgBrush);
+
+		// 2. 绘制轨道
+		RECT trackRect = {
+			clientRect.left + SCROLL_MARGIN,
+			clientRect.top + SCROLL_MARGIN,
+			clientRect.right - SCROLL_MARGIN,
+			clientRect.bottom - SCROLL_MARGIN
+		};
+		oldBrush = SelectObject(memDC, sbData->hTrackBrush);
+		Rectangle(memDC, trackRect.left, trackRect.top, trackRect.right, trackRect.bottom);
+		SelectObject(memDC, oldBrush);
+
+		// 3. 绘制滑块
+		RECT thumbRect = {
+			trackRect.left,
+			trackRect.top + thumbY,
+			trackRect.right,
+			trackRect.top + thumbY + thumbHeight
+		};
+
+		HBRUSH thumbBrush = (sbData->thumbState == SB_STATE_HOVER || sbData->thumbState == SB_STATE_DRAGGING)
+			? sbData->hThumbHoverBrush : sbData->hThumbNormalBrush;
+
+		oldBrush = SelectObject(memDC, thumbBrush);
+		Rectangle(memDC, thumbRect.left, thumbRect.top, thumbRect.right, thumbRect.bottom);
+		SelectObject(memDC, oldBrush);
+
+		// 4. 绘制滑块边框
+		HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+		HPEN oldPen = (HPEN)SelectObject(memDC, borderPen);
+		MoveToEx(memDC, thumbRect.left, thumbRect.top, NULL);
+		LineTo(memDC, thumbRect.right, thumbRect.top);
+		LineTo(memDC, thumbRect.right, thumbRect.bottom);
+		LineTo(memDC, thumbRect.left, thumbRect.bottom);
+		LineTo(memDC, thumbRect.left, thumbRect.top);
+		SelectObject(memDC, oldPen);
+		DeleteObject(borderPen);
+
+		// 将内存DC内容一次性复制到屏幕DC
+		BitBlt(hdc, clientRect.left, clientRect.top,
+			clientRect.right - clientRect.left,
+			clientRect.bottom - clientRect.top,
+			memDC, 0, 0, SRCCOPY);
+
+		// 清理资源
+		SelectObject(memDC, oldBitmap);
+		DeleteObject(memBitmap);
+		DeleteDC(memDC);
 		EndPaint(hWnd, &ps);
 		return 0;
 	}
 
 	case WM_ERASEBKGND:
+		// 禁止系统擦除背景，减少闪烁
 		return TRUE;
 
-	case WM_SETCURSOR:
-		if (LOWORD(lParam) == HTCLIENT) {
-			SetCursor(LoadCursor(NULL, IDC_ARROW));
-			return 1;
+	case WM_MOUSEMOVE: {
+		RECT thumbRect = {
+			clientRect.left + SCROLL_MARGIN,
+			clientRect.top + SCROLL_MARGIN + thumbY,
+			clientRect.right - SCROLL_MARGIN,
+			clientRect.top + SCROLL_MARGIN + thumbY + thumbHeight
+		};
+
+		if (sbData->isDragging) {
+			int newPos = CalcPosFromMouse(pt.y, sbData->dragYOffset, scrollRange, thumbHeight, clientHeight);
+			// 只在位置变化时才重绘
+			if (newPos != *pPos) {
+				SyncScroll(newPos, isTop);
+			}
+			return 0;
 		}
-		break;
+
+		ScrollBarState newState = PtInRect(&thumbRect, pt) ? SB_STATE_HOVER : SB_STATE_NORMAL;
+		if (newState != sbData->thumbState) {
+			sbData->thumbState = newState;
+			// 只重绘滑块区域而非整个控件
+			InvalidateRect(hWnd, &thumbRect, FALSE);
+			SetCursor(LoadCursor(NULL, IDC_HAND));
+		}
+		return 0;
+	}
+
+	case WM_LBUTTONDOWN: {
+		// 滑块区域
+		RECT thumbRect = {
+			clientRect.left + SCROLL_MARGIN,
+			clientRect.top + SCROLL_MARGIN + thumbY,
+			clientRect.right - SCROLL_MARGIN,
+			clientRect.top + SCROLL_MARGIN + thumbY + thumbHeight
+		};
+
+		if (PtInRect(&thumbRect, pt)) {
+			// 开始拖动滑块
+			sbData->isDragging = TRUE;
+			sbData->thumbState = SB_STATE_DRAGGING;
+			sbData->dragYOffset = pt.y - thumbRect.top; // 记录鼠标在滑块内的偏移
+			SetCapture(hWnd);
+			InvalidateRect(hWnd, NULL, FALSE);
+			return 0;
+		}
+
+		// 点击轨道空白处
+		int lineStep = visibleHeight / 2; // 半页滚动
+		int newPos = *pPos;
+
+		if (pt.y < thumbY + SCROLL_MARGIN) {
+			newPos -= lineStep; // 上滚
+		}
+		else {
+			newPos += lineStep; // 下滚
+		}
+
+		SyncScroll(newPos, isTop);
+		return 0;
+	}
+
+	case WM_LBUTTONUP:
+	case WM_CAPTURECHANGED: {
+		if (sbData->isDragging) {
+			sbData->isDragging = FALSE;
+			sbData->thumbState = SB_STATE_NORMAL;
+			ReleaseCapture();
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		return 0;
+	}
 
 	case WM_VSCROLL: {
-		LOG_DEBUG(L"split scroolProc VSCROLL ");
 		int scrollCode = LOWORD(wParam);
 		int newPos = *pPos;
-		int lineStep = visibleHeight / 20;
-		int pageStep = visibleHeight;
+		int lineStep = visibleHeight / 20;  // 行滚动
+		int pageStep = visibleHeight;       // 页滚动
 
 		switch (scrollCode) {
 		case SB_THUMBTRACK:
 		case SB_THUMBPOSITION:
 			newPos = HIWORD(wParam);
 			break;
-		case SB_LINEUP: newPos -= lineStep; break;
-		case SB_LINEDOWN: newPos += lineStep; break;
-		case SB_PAGEUP: newPos -= pageStep; break;
-		case SB_PAGEDOWN: newPos += pageStep; break;
-		case SB_TOP: newPos = 0; break;
-		case SB_BOTTOM: newPos = scrollRange; break;
-		default: return 0;
+		case SB_LINEUP:
+			newPos -= lineStep;
+			break;
+		case SB_LINEDOWN:
+			newPos += lineStep;
+			break;
+		case SB_PAGEUP:
+			newPos -= pageStep;
+			break;
+		case SB_PAGEDOWN:
+			newPos += pageStep;
+			break;
+		case SB_TOP:
+			newPos = 0;
+			break;
+		case SB_BOTTOM:
+			newPos = scrollRange;
+			break;
+		default:
+			return 0;
 		}
+
 		SyncScroll(newPos, isTop);
 		return 0;
 	}
 
-	case WM_CAPTURECHANGED:
-		if ((HWND)lParam != hWnd) g_nDragging = 0;
+	case WM_SETCURSOR:
+		// 始终显示手型光标提示可交互
+		SetCursor(LoadCursor(NULL, IDC_HAND));
+		return 1;
+
+	case WM_DESTROY:
+		// 释放资源
+		FreeScrollBarData(sbData);
 		break;
 	}
+
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
 }
 
