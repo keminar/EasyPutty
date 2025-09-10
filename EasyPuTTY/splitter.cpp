@@ -10,7 +10,7 @@ HWND g_hWndHSplit;              // Ë®Æ½·Ö¸ôÌõ
 HWND g_hWndVSplitTop;           // ¶¥²¿´¹Ö±·Ö¸ôÌõ
 HWND g_hWndVSplitBottom;        // µ×²¿´¹Ö±·Ö¸ôÌõ
 HWND g_hScrollTop, g_hScrollBottom; // Í¬²½¹ö¶¯Ìõ
-HWND puttyHandle1, puttyHandle2, puttyHandle3, puttyHandle4;
+HWND puttyHandle1, puttyHandle2, puttyHandle3, puttyHandle4;// putty´°¿Ú
 
 RECT g_rcMain;                  // Ö÷´°¿Ú¿Í»§Çø¾ØĞÎ
 int g_nHSplitPos = 450;         // Ë®Æ½·Ö¸ôÌõÎ»ÖÃ
@@ -23,8 +23,8 @@ double g_dVSplitTopRatio = 0.5;  // ¶¥²¿´¹Ö±·Ö¸ôÌõÎ»ÖÃ±ÈÀı
 double g_dVSplitBottomRatio = 0.5; // µ×²¿´¹Ö±·Ö¸ôÌõÎ»ÖÃ±ÈÀı
 
 const int SPLITTER_SIZE = 10;    // ·Ö¸ôÌõ´ÖÏ¸
-const int SCROLLBAR_WIDTH = 24;  // ¼Ó¿í¹ö¶¯Ìõ±ãÓÚ¿É¼û
-const int THUMB_MIN_HEIGHT = 30; // ¼Ó´ó»¬¿é±ãÓÚµã»÷
+const int SCROLLBAR_WIDTH = 20;  // ¼Ó¿í¹ö¶¯Ìõ±ãÓÚ¿É¼û
+const int THUMB_MIN_HEIGHT = 10; // ¼Ó´ó»¬¿é±ãÓÚµã»÷
 const int SCROLL_MARGIN = 2;     // ¹ö¶¯ÌõÄÚ±ß¾à
 
 // È·±£´°¿ÚÀàÖ»×¢²áÒ»´Î£¨Ê×´Îµ÷ÓÃÊ±×¢²á£©
@@ -36,16 +36,16 @@ int g_nDragging = 0;            // 0=Î´ÍÏ¶¯, 1=Ë®Æ½, 2=¶¥²¿´¹Ö±, 3=µ×²¿´¹Ö±, 4=¶
 #define TIMER_ID_RESIZE 11      //¶¨Ê±Æ÷
 
 // È«¾Ö±äÁ¿
-HWINEVENTHOOK g_hMoveSizeHook = NULL;  // ×¨ÃÅ¼àÌıÒÆ¶¯/µ÷Õû´óĞ¡½áÊøµÄ¹³×Ó
-HWINEVENTHOOK g_hMoveEndHook = NULL;
-HWND g_hDraggingPuTTY = NULL;
-int g_nStartRegion = 0;
+HWINEVENTHOOK g_hMoveSizeHook = NULL;  // ¼àÌıÒÆ¶¯µÄ¹³×Ó
+HWINEVENTHOOK g_hMoveEndHook = NULL;   // ÒÆ¶¯½áÊøµÄ¹³×Ó
+HWND g_hDraggingPuTTY = NULL;          // putty´°¿ÚÍÏ¶¯×´Ì¬
+int g_nStartRegion = 0;                // ´°¿ÚÒÆ¶¯³õÊ¼Î»ÖÃ
 
 // ¹ö¶¯Ïà¹Ø±äÁ¿£¨ĞÂÔö»¬¿é×´Ì¬ºÍÍÏ¶¯ĞÅÏ¢£©
 int g_nScrollPosTop = 0;        // ¶¥²¿¹ö¶¯ÌõÎ»ÖÃ
 int g_nScrollPosBottom = 0;     // µ×²¿¹ö¶¯ÌõÎ»ÖÃ
-int g_nContentHeightTop = 1500; // ¶¥²¿ÄÚÈİ¸ß¶È
-int g_nContentHeightBottom = 1500; // µ×²¿ÄÚÈİ¸ß¶È
+int g_nContentHeightTop = 10000; // ¶¥²¿ÄÚÈİ¸ß¶È
+int g_nContentHeightBottom = 10000; // µ×²¿ÄÚÈİ¸ß¶È
 int g_nVisibleHeightTop = 0;    // ¶¥²¿¿É¼û¸ß¶È
 int g_nVisibleHeightBottom = 0; // µ×²¿¿É¼û¸ß¶È
 int g_nScrollRangeTop = 0;      // ¶¥²¿¿É¹ö¶¯·¶Î§
@@ -69,8 +69,8 @@ typedef struct {
 	HBRUSH hThumbHoverBrush;    // »¬¿éĞüÍ£»­Ë¢£¨ÉîÀ¶£©
 	HBRUSH hBorderBrush;        // ±ß¿ò»­Ë¢£¨ºÚÉ«£©
 } ScrollBarData;
-static ScrollBarData g_scrollTopData = { 0 }; // ¶¥²¿¹ö¶¯ÌõÊı¾İ
-static ScrollBarData g_scrollBottomData = { 0 }; // µ×²¿¹ö¶¯ÌõÊı¾İ
+static ScrollBarData g_scrollTopData; // ¶¥²¿¹ö¶¯ÌõÊı¾İ
+static ScrollBarData g_scrollBottomData; // µ×²¿¹ö¶¯ÌõÊı¾İ
 
 // ×¢²á´°¿ÚÀà
 void registerClass() {
@@ -152,7 +152,7 @@ HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
 		SetForegroundWindow(g_hWndMain);
 		return g_hWndMain;
 	}
-	// È·±£´°¿ÚÀàÖ»×¢²áÒ»´Î£¨Ê×´Îµ÷ÓÃÊ±×¢²á£©
+	// ×¢²á´°¿ÚÀà£¬ÄÚ²¿ÅĞ¶ÏÖ»»á×¢²áÒ»´Î
 	registerClass();
 
 	g_hWndMain = CreateWindowExW(
@@ -206,10 +206,13 @@ static int CalcPosFromMouse(int mouseY, int dragOffset, int scrollRange, int thu
 // ³õÊ¼»¯¹ö¶¯Ìõ×ÊÔ´£¨±ÜÃâÖØ¸´´´½¨£©
 static void InitScrollBarData(ScrollBarData* sbData) {
 	if (sbData->hTrackBrush) return; // ÒÑ³õÊ¼»¯¹ı
+
+	// ³õÊ¼»¯»æÍ¼×ÊÔ´£¨´´½¨»­±Ê/»­Ë¢£©
 	sbData->hTrackBrush = CreateSolidBrush(RGB(230, 230, 230));       // ¹ìµÀ£ºÇ³»Ò
 	sbData->hThumbNormalBrush = CreateSolidBrush(RGB(100, 180, 255)); // »¬¿éÕı³££ºÁÁÀ¶
 	sbData->hThumbHoverBrush = CreateSolidBrush(RGB(50, 150, 255));   // »¬¿éĞüÍ££ºÉîÀ¶
 	sbData->hBorderBrush = CreateSolidBrush(RGB(0, 0, 0));            // ±ß¿ò£ººÚÉ«
+	// ³õÊ¼»¯×´Ì¬±äÁ¿
 	sbData->thumbState = SB_STATE_NORMAL;
 	sbData->isDragging = FALSE;
 	sbData->dragYOffset = 0;
@@ -245,28 +248,38 @@ void UpdateScrollRanges() {
 	LOG_DEBUG(L"split scroll pos g_nScrollPosTop", g_nScrollPosTop);
 }
 
-// ÏòPuTTY´°¿Ú·¢ËÍ¹ö¶¯ÏûÏ¢£¨ĞŞ¸´·½Ïò£º·´×ªdeltaY£©
+// ÏòPuTTY´°¿Ú·¢ËÍ¹ö¶¯ÏûÏ¢£¨ÓëdeltaY¹ØÁª£¬µ÷Õû¹ö¶¯ËÙ¶È£©
 void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
-	LOG_DEBUG(L"split send to hwnd %p %d", hWnd, deltaY);
 
 	if (!hWnd || !IsWindow(hWnd)) return;
 
-	// ·¢ËÍÊó±ê¹öÂÖÏûÏ¢¸øPuTTY´°¿Ú
-	WPARAM wParam = (deltaY < 0 ? WHEEL_DELTA : -WHEEL_DELTA) << 16;
-	SendMessage(hWnd, WM_MOUSEWHEEL, wParam, MAKELPARAM(10, 10)); // ÈÎÒâÎ»ÖÃ
+	// ¼ÆËã¹ö¶¯Ç¿¶È£¨¸ù¾İdeltaY¾ø¶ÔÖµÈ·¶¨¹ö¶¯´ÎÊı£©
+	// deltaY¾ø¶ÔÖµÔ½´ó£¬¹ö¶¯´ÎÊıÔ½¶à£¨ËÙ¶ÈÔ½¿ì£©
+	int scrollAmount = abs(deltaY);
+	// Ã¿´Î»ù´¡¹ö¶¯¶ÔÓ¦µÄdeltaÖµ£¨¿É¸ù¾İĞèÒªµ÷ÕûÁéÃô¶È£©
+	const int BASE_DELTA = 8;
+	// ¼ÆËã¹ö¶¯´ÎÊı£¨ÖÁÉÙ1´Î£¬×î¶à10´Î±ÜÃâ¹ö¶¯¹ı¿ì£©
+	int scrollCount = max(1, min(scrollAmount / BASE_DELTA, 10));
 
-	// Í¬Ê±·¢ËÍ¼üÅÌ¹ö¶¯ÏûÏ¢×÷Îª±¸·İ
-	if (deltaY > 0) {
-		// ÉÏ¹ö£º·¢ËÍÏòÉÏ¼ıÍ·
-		SendMessage(hWnd, WM_KEYDOWN, VK_UP, 0);
-		SendMessage(hWnd, WM_KEYUP, VK_UP, 0);
-	}
-	else {
-		// ÏÂ¹ö£º·¢ËÍÏòÏÂ¼ıÍ·
-		SendMessage(hWnd, WM_KEYDOWN, VK_DOWN, 0);
-		SendMessage(hWnd, WM_KEYUP, VK_DOWN, 0);
+	// È·¶¨¹ö¶¯·½Ïò£¨ÉÏ¹ö/ÏÂ¹ö£©
+	BOOL isUp = deltaY > 0;
+	WPARAM wheelParam = isUp ? (-WHEEL_DELTA << 16) : (WHEEL_DELTA << 16);
+	WORD vkCode = isUp ? VK_UP : VK_DOWN;
+
+	LOG_DEBUG(L"split send to hwnd %p %d %d", hWnd, deltaY, scrollCount);
+	// ¸ù¾İdeltaY´óĞ¡·¢ËÍ¶à´Î¹ö¶¯ÏûÏ¢
+	for (int i = 0; i < scrollCount; i++) {
+		// ·¢ËÍÊó±ê¹öÂÖÏûÏ¢
+		SendMessage(hWnd, WM_MOUSEWHEEL, wheelParam, MAKELPARAM(10, 10));
+
+		// ·¢ËÍ¼üÅÌ¹ö¶¯ÏûÏ¢×÷Îª±¸·İ
+		//SendMessage(hWnd, WM_KEYDOWN, vkCode, 0);
+		// ÇáÎ¢ÑÓ³ÙÈ·±£°´¼ü±»ÕıÈ·Ê¶±ğ£¨¿É¸ù¾İĞèÒªµ÷Õû£©
+		//Sleep(5);
+		//SendMessage(hWnd, WM_KEYUP, vkCode, 0);
 	}
 }
+
 
 // Í¬²½¹ö¶¯´¦Àí
 void SyncScroll(int pos, bool isTop) {
@@ -756,7 +769,8 @@ void ArrangeWindows() {
 	// µ÷ÕûËùÓĞ´°¿ÚÎ»ÖÃ£¨±£³ÖÔ­ÓĞÂß¼­£©
 	// ´°¿Ú1 - ÉÏ×ó
 	if (puttyHandle1 && IsWindow(puttyHandle1)) {
-		MoveWindow(puttyHandle1, 0, 0, g_nVSplitTopPos, g_nHSplitPos, TRUE);
+		// Ôö¼ÓÒ»¸ö¼äÏ¶£¬·½±ã¶¨Î»ÍÏ¶¯Ìõ
+		MoveWindow(puttyHandle1, 0, 0, g_nVSplitTopPos-1, g_nHSplitPos, TRUE);
 	}
 
 	// ¶¥²¿´¹Ö±·Ö¸ôÌõ
@@ -773,8 +787,9 @@ void ArrangeWindows() {
 
 	// ´°¿Ú3 - ÏÂ×ó
 	if (puttyHandle3 && IsWindow(puttyHandle3)) {
+		// Ôö¼ÓÒ»¸ö¼äÏ¶£¬·½±ã¶¨Î»ÍÏ¶¯Ìõ
 		MoveWindow(puttyHandle3, 0, g_nHSplitPos + SPLITTER_SIZE,
-			g_nVSplitBottomPos, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
+			g_nVSplitBottomPos - 1, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
 	}
 
 	// µ×²¿´¹Ö±·Ö¸ôÌõ
@@ -856,6 +871,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 
 	switch (Msg) {
 	case WM_PAINT: {
+		LOG_DEBUG(L"splitter ScrollbarProc WM_PAINT");
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 
@@ -931,6 +947,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		return TRUE;
 
 	case WM_MOUSEMOVE: {
+		LOG_DEBUG(L"splitter ScrollbarProc WM_MOUSEMOVE");
 		RECT thumbRect = {
 			clientRect.left + SCROLL_MARGIN,
 			clientRect.top + SCROLL_MARGIN + thumbY,
@@ -958,6 +975,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 	}
 
 	case WM_LBUTTONDOWN: {
+		LOG_DEBUG(L"splitter ScrollbarProc WM_LBUTTONDOWN");
 		// »¬¿éÇøÓò
 		RECT thumbRect = {
 			clientRect.left + SCROLL_MARGIN,
@@ -1003,6 +1021,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 	}
 
 	case WM_VSCROLL: {
+		LOG_DEBUG(L"splitter ScrollbarProc WM_VSCROLL");
 		int scrollCode = LOWORD(wParam);
 		int newPos = *pPos;
 		int lineStep = visibleHeight / 20;  // ĞĞ¹ö¶¯
