@@ -44,8 +44,8 @@ int g_nStartRegion = 0;                // 窗口移动初始位置
 // 滚动相关变量（新增滑块状态和拖动信息）
 int g_nScrollPosTop = 0;        // 顶部滚动条位置
 int g_nScrollPosBottom = 0;     // 底部滚动条位置
-int g_nContentHeightTop = 10000; // 顶部内容高度
-int g_nContentHeightBottom = 10000; // 底部内容高度
+int g_nContentHeightTop = 2000; // 顶部内容高度
+int g_nContentHeightBottom = 2000; // 底部内容高度
 int g_nVisibleHeightTop = 0;    // 顶部可见高度
 int g_nVisibleHeightBottom = 0; // 底部可见高度
 int g_nScrollRangeTop = 0;      // 顶部可滚动范围
@@ -245,44 +245,33 @@ void UpdateScrollRanges() {
 	if (g_hScrollTop) InvalidateRect(g_hScrollTop, NULL, FALSE);
 	if (g_hScrollBottom) InvalidateRect(g_hScrollBottom, NULL, FALSE);
 
-	LOG_DEBUG(L"split scroll pos g_nScrollPosTop", g_nScrollPosTop);
+	LOG_DEBUG(L"splitter.cpp UpdateScrollRanges g_nScrollPosTop", g_nScrollPosTop);
 }
 
-// 向PuTTY窗口发送滚动消息（与deltaY关联，调整滚动速度）
+// 向PuTTY窗口发送滚动消息
 void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
+	LOG_DEBUG(L"splitter.cpp SendScrollMessageToPuTTY to hwnd %p %d", hWnd, deltaY);
 
 	if (!hWnd || !IsWindow(hWnd)) return;
 
-	// 计算滚动强度（根据deltaY绝对值确定滚动次数）
-	// deltaY绝对值越大，滚动次数越多（速度越快）
-	int scrollAmount = abs(deltaY);
-	// 每次基础滚动对应的delta值（可根据需要调整灵敏度）
-	const int BASE_DELTA = 8;
-	// 计算滚动次数（至少1次，最多10次避免滚动过快）
-	int scrollCount = max(1, min(scrollAmount / BASE_DELTA, 10));
+	// 确定滚动方向
+	UINT scrollCmd = (deltaY < 0) ? SB_LINEUP : SB_LINEDOWN;
+	// 根据deltaY计算滚动步长（取绝对值确保步长为正）
+	int scrollStep = abs(deltaY) / 20;
 
-	// 确定滚动方向（上滚/下滚）
-	BOOL isUp = deltaY > 0;
-	WPARAM wheelParam = isUp ? (-WHEEL_DELTA << 16) : (WHEEL_DELTA << 16);
-	WORD vkCode = isUp ? VK_UP : VK_DOWN;
+	// 确保至少滚动1步，避免极小的scrollStep导致无滚动
+	scrollStep = max(scrollStep, 1);
 
-	LOG_DEBUG(L"split send to hwnd %p %d %d", hWnd, deltaY, scrollCount);
-	// 根据deltaY大小发送多次滚动消息
-	for (int i = 0; i < scrollCount; i++) {
-		// 发送鼠标滚轮消息
-		SendMessage(hWnd, WM_MOUSEWHEEL, wheelParam, MAKELPARAM(10, 10));
-
-		// 发送键盘滚动消息作为备份
-		//SendMessage(hWnd, WM_KEYDOWN, vkCode, 0);
-		// 轻微延迟确保按键被正确识别（可根据需要调整）
-		//Sleep(5);
-		//SendMessage(hWnd, WM_KEYUP, vkCode, 0);
+	// 按照计算出的步长发送滚动消息
+	for (int i = 0; i < scrollStep; i++) {
+		SendMessage(hWnd, WM_VSCROLL, scrollCmd, 0);
 	}
 }
 
 
 // 同步滚动处理
 void SyncScroll(int pos, bool isTop) {
+	
 	int oldPos = isTop ? g_nScrollPosTop : g_nScrollPosBottom;
 	int scrollRange = isTop ? g_nScrollRangeTop : g_nScrollRangeBottom;
 
@@ -442,28 +431,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 			return 0;
 		}
 		break;
-	case WM_MOUSEWHEEL: {
-		// 下滚为负，上滚为正
-		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-
-		// 判断鼠标在哪个区域
-		bool isTopRegion = (pt.y < g_nHSplitPos);
-
-		int visibleHeight = isTopRegion ? g_nVisibleHeightTop : g_nVisibleHeightBottom;
-		int lineStep = visibleHeight / 20;
-		if (zDelta > 0) {
-			lineStep = -lineStep;
-		}
-
-		int newPos = isTopRegion ?
-			(g_nScrollPosTop + lineStep) :
-			(g_nScrollPosBottom + lineStep);
-
-		newPos = max(0, newPos);
-		LOG_DEBUG(L"split SplitWindowProc MOUSEWHEEL  %d, pos %d, newpos %d", zDelta, isTopRegion ? g_nScrollPosTop : g_nScrollPosBottom, newPos);
-		SyncScroll(newPos, isTopRegion);
-		return 0;
-	}
+	//滚轮消息传给putty体验并不好，所以不做
+	/*case WM_MOUSEWHEEL: {
+	}*/
 	case WM_DESTROY: {
 		g_hWndMain = NULL;
 		g_hWndHost = NULL;
@@ -672,7 +642,7 @@ void SwapRegionHandles(int regionA, int regionB) {
 	HWND hB = GetHandleByRegion(regionB);
 	SetHandleByRegion(regionA, hB);
 	SetHandleByRegion(regionB, hA);
-	LOG_DEBUG(L"Swap PuTTY: Region%d <-> Region%d", regionA, regionB);
+	LOG_DEBUG(L"splitter.cpp SwapRegionHandles: Region%d <-> Region%d", regionA, regionB);
 }
 
 
@@ -698,7 +668,7 @@ void CALLBACK MoveSizeChangeHookProc(
 		if (!g_hDraggingPuTTY) { // 首次触发视为拖动开始
 			g_hDraggingPuTTY = hWnd;
 			g_nStartRegion = GetWindowRegion(hWnd); // 记录初始区域
-			LOG_DEBUG(L"move start %d %p", g_nStartRegion, hWnd);
+			LOG_DEBUG(L"splitter.cpp MoveSizeChangeHookProc move start %d %p", g_nStartRegion, hWnd);
 		}
 		return;
 	}
@@ -717,7 +687,7 @@ void CALLBACK MoveSizeChangeHookProc(
 				}
 				ArrangeWindows();
 			}
-			LOG_DEBUG(L"move end %d %d %p", g_nStartRegion, endRegion, hWnd);
+			LOG_DEBUG(L"splitter.cpp MoveSizeChangeHookProc move end %d %d %p", g_nStartRegion, endRegion, hWnd);
 			g_hDraggingPuTTY = NULL;  // 重置拖动状态
 			g_nStartRegion = 0;
 		}
@@ -763,7 +733,7 @@ void ArrangeWindows() {
 	GetClientRect(g_hWndMain, &g_rcMain);
 	if (g_rcMain.right == 0 || g_rcMain.bottom == 0)
 		return;
-	LOG_DEBUG(L"Arrange %p %p %p %p", puttyHandle1, puttyHandle2, puttyHandle3, puttyHandle4);
+	LOG_DEBUG(L"splitter.cpp ArrangeWindows %p %p %p %p", puttyHandle1, puttyHandle2, puttyHandle3, puttyHandle4);
 	int scrollPos = g_rcMain.right - SCROLLBAR_WIDTH;
 
 	// 调整所有窗口位置（保持原有逻辑）
@@ -817,7 +787,7 @@ void ArrangeWindows() {
 			SCROLLBAR_WIDTH, g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE), TRUE);
 		ShowWindow(g_hScrollBottom, SW_SHOW); // 强制显示
 	}
-	LOG_DEBUG(L"ArrangeWindows: rc=%d, %d %d %d", g_rcMain.left, g_rcMain.top, g_rcMain.right, g_rcMain.bottom);
+	LOG_DEBUG(L"splitter.cpp ArrangeWindows: rc=%d, %d %d %d", g_rcMain.left, g_rcMain.top, g_rcMain.right, g_rcMain.bottom);
 }
 
 // 分隔条窗口过程
@@ -871,7 +841,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 
 	switch (Msg) {
 	case WM_PAINT: {
-		LOG_DEBUG(L"splitter ScrollbarProc WM_PAINT");
+		LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_PAINT %d %d", thumbHeight, thumbY);
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 
@@ -947,7 +917,6 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		return TRUE;
 
 	case WM_MOUSEMOVE: {
-		LOG_DEBUG(L"splitter ScrollbarProc WM_MOUSEMOVE");
 		RECT thumbRect = {
 			clientRect.left + SCROLL_MARGIN,
 			clientRect.top + SCROLL_MARGIN + thumbY,
@@ -957,6 +926,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 
 		if (sbData->isDragging) {
 			int newPos = CalcPosFromMouse(pt.y, sbData->dragYOffset, scrollRange, thumbHeight, clientHeight);
+			LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_MOUSEMOVE %d %d", newPos, thumbHeight);
 			// 只在位置变化时才重绘
 			if (newPos != *pPos) {
 				SyncScroll(newPos, isTop);
@@ -975,7 +945,6 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 	}
 
 	case WM_LBUTTONDOWN: {
-		LOG_DEBUG(L"splitter ScrollbarProc WM_LBUTTONDOWN");
 		// 滑块区域
 		RECT thumbRect = {
 			clientRect.left + SCROLL_MARGIN,
@@ -985,6 +954,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		};
 
 		if (PtInRect(&thumbRect, pt)) {
+			LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_LBUTTONDOWN");
 			// 开始拖动滑块
 			sbData->isDragging = TRUE;
 			sbData->thumbState = SB_STATE_DRAGGING;
@@ -993,68 +963,18 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 			InvalidateRect(hWnd, NULL, FALSE);
 			return 0;
 		}
-
-		// 点击轨道空白处
-		int lineStep = visibleHeight / 2; // 半页滚动
-		int newPos = *pPos;
-
-		if (pt.y < thumbY + SCROLL_MARGIN) {
-			newPos -= lineStep; // 上滚
-		}
-		else {
-			newPos += lineStep; // 下滚
-		}
-
-		SyncScroll(newPos, isTop);
 		return 0;
 	}
 
 	case WM_LBUTTONUP:
 	case WM_CAPTURECHANGED: {
 		if (sbData->isDragging) {
+			LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_LBUTTONUP");
 			sbData->isDragging = FALSE;
 			sbData->thumbState = SB_STATE_NORMAL;
 			ReleaseCapture();
 			InvalidateRect(hWnd, NULL, FALSE);
 		}
-		return 0;
-	}
-
-	case WM_VSCROLL: {
-		LOG_DEBUG(L"splitter ScrollbarProc WM_VSCROLL");
-		int scrollCode = LOWORD(wParam);
-		int newPos = *pPos;
-		int lineStep = visibleHeight / 20;  // 行滚动
-		int pageStep = visibleHeight;       // 页滚动
-
-		switch (scrollCode) {
-		case SB_THUMBTRACK:
-		case SB_THUMBPOSITION:
-			newPos = HIWORD(wParam);
-			break;
-		case SB_LINEUP:
-			newPos -= lineStep;
-			break;
-		case SB_LINEDOWN:
-			newPos += lineStep;
-			break;
-		case SB_PAGEUP:
-			newPos -= pageStep;
-			break;
-		case SB_PAGEDOWN:
-			newPos += pageStep;
-			break;
-		case SB_TOP:
-			newPos = 0;
-			break;
-		case SB_BOTTOM:
-			newPos = scrollRange;
-			break;
-		default:
-			return 0;
-		}
-
-		SyncScroll(newPos, isTop);
 		return 0;
 	}
 
