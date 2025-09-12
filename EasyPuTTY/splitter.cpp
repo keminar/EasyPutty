@@ -208,10 +208,10 @@ static void InitScrollBarData(ScrollBarData* sbData) {
 	if (sbData->hTrackBrush) return; // 已初始化过
 
 	// 初始化绘图资源（创建画笔/画刷）
-	sbData->hTrackBrush = CreateSolidBrush(RGB(230, 230, 230));       // 轨道：浅灰
-	sbData->hThumbNormalBrush = CreateSolidBrush(RGB(100, 180, 255)); // 滑块正常：亮蓝
-	sbData->hThumbHoverBrush = CreateSolidBrush(RGB(50, 150, 255));   // 滑块悬停：深蓝
-	sbData->hBorderBrush = CreateSolidBrush(RGB(0, 0, 0));            // 边框：黑色
+	sbData->hTrackBrush = CreateSolidBrush(RGB(240, 240, 240));       // 轨道：浅灰色（更常见的背景色）
+	sbData->hThumbNormalBrush = CreateSolidBrush(RGB(200, 200, 200)); // 滑块正常：中灰色（通用滑块颜色）
+	sbData->hThumbHoverBrush = CreateSolidBrush(RGB(160, 160, 160));  // 滑块悬停：深灰色（hover状态自然过渡）
+	sbData->hBorderBrush = CreateSolidBrush(RGB(220, 220, 220));      // 边框：淡灰色（更柔和的边框）
 	// 初始化状态变量
 	sbData->thumbState = SB_STATE_NORMAL;
 	sbData->isDragging = FALSE;
@@ -954,7 +954,7 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 		};
 
 		if (PtInRect(&thumbRect, pt)) {
-			LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_LBUTTONDOWN");
+			LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_LBUTTONDOWN isDragging");
 			// 开始拖动滑块
 			sbData->isDragging = TRUE;
 			sbData->thumbState = SB_STATE_DRAGGING;
@@ -963,6 +963,20 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 			InvalidateRect(hWnd, NULL, FALSE);
 			return 0;
 		}
+
+		// 点击轨道空白处
+		int lineStep = visibleHeight / 2; // 半页滚动
+		LOG_DEBUG(L"splitter.cpp ScrollbarProc WM_LBUTTONDOWN %d", lineStep);
+		int newPos = *pPos;
+
+		if (pt.y < thumbY + SCROLL_MARGIN) {
+			newPos -= lineStep; // 上滚
+		}
+		else {
+			newPos += lineStep; // 下滚
+		}
+
+		SyncScroll(newPos, isTop);
 		return 0;
 	}
 
