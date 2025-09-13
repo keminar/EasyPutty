@@ -250,21 +250,31 @@ void UpdateScrollRanges() {
 
 // 向PuTTY窗口发送滚动消息
 void SendScrollMessageToPuTTY(HWND hWnd, int deltaY) {
-	LOG_DEBUG(L"splitter.cpp SendScrollMessageToPuTTY to hwnd %p %d", hWnd, deltaY);
+	// 检测Alt键是否按下
+	BOOL isAltPressed = (GetKeyState(VK_MENU) & 0x8000) != 0;
+	//LOG_DEBUG(L"splitter.cpp SendScrollMessageToPuTTY to hwnd %p %d %d", hWnd, deltaY, isAltPressed);
 
 	if (!hWnd || !IsWindow(hWnd)) return;
 
-	// 确定滚动方向
-	UINT scrollCmd = (deltaY < 0) ? SB_LINEUP : SB_LINEDOWN;
-	// 根据deltaY计算滚动步长（取绝对值确保步长为正）
-	int scrollStep = abs(deltaY) / 20;
+	if (isAltPressed) {//用于编辑器内向下移动光标
+		WORD vkCode = (deltaY < 0) ? VK_UP : VK_DOWN;
+		SendMessage(hWnd, WM_KEYDOWN, vkCode, 0);
+		// 轻微延迟确保按键被正确识别（可根据需要调整）
+		Sleep(5);
+		SendMessage(hWnd, WM_KEYUP, vkCode, 0);
+	}
+	else {
+		// 根据deltaY计算滚动步长（取绝对值确保步长为正）
+		int scrollStep = abs(deltaY) / 20;
 
-	// 确保至少滚动1步，避免极小的scrollStep导致无滚动
-	scrollStep = max(scrollStep, 1);
-
-	// 按照计算出的步长发送滚动消息
-	for (int i = 0; i < scrollStep; i++) {
-		SendMessage(hWnd, WM_VSCROLL, scrollCmd, 0);
+		// 确保至少滚动1步，避免极小的scrollStep导致无滚动
+		scrollStep = max(scrollStep, 1);
+		// 确定滚动方向
+		UINT scrollCmd = (deltaY < 0) ? SB_LINEUP : SB_LINEDOWN;
+		// 按照计算出的步长发送滚动消息
+		for (int i = 0; i < scrollStep; i++) {
+			SendMessage(hWnd, WM_VSCROLL, scrollCmd, 0);
+		}
 	}
 }
 
@@ -479,6 +489,10 @@ void insertSplitWindow(HWND puttyHwnd, int pos) {
 	}
 
 	ArrangeWindows();
+
+	// 置顶
+	SetWindowPos(g_hWndMain, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	SetWindowPos(g_hWndMain, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 }
 
 // 创建子窗口
