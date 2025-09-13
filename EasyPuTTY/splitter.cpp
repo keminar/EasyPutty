@@ -622,6 +622,24 @@ HWND GetHandleByRegion(int region) {
 	}
 }
 
+int GetRegionByHandle(HWND hWnd) {
+	if (hWnd == puttyHandle1) {
+		return 1;
+	}
+	else if (hWnd == puttyHandle2) {
+		return 2;
+	}
+	else if (hWnd == puttyHandle3) {
+		return 3;
+	}
+	else if (hWnd == puttyHandle4) {
+		return 4;
+	}
+	else {
+		return 0;
+	}
+}
+
 // 辅助函数：设置区域对应的PuTTY句柄
 void SetHandleByRegion(int region, HWND hWnd) {
 	// 如果是无效的句柄，清掉
@@ -667,7 +685,8 @@ void CALLBACK MoveSizeChangeHookProc(
 	if (event == EVENT_SYSTEM_MOVESIZESTART) {
 		if (!g_hDraggingPuTTY) { // 首次触发视为拖动开始
 			g_hDraggingPuTTY = hWnd;
-			g_nStartRegion = GetWindowRegion(hWnd); // 记录初始区域
+			// 初始区要根据句柄判断,不能用GetWindowRegion获取，因为可能移动两次，第二次会判断错
+			g_nStartRegion = GetRegionByHandle(hWnd);
 			LOG_DEBUG(L"splitter.cpp MoveSizeChangeHookProc move start %d %p", g_nStartRegion, hWnd);
 		}
 		return;
