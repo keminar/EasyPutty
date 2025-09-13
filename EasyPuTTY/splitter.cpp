@@ -781,7 +781,7 @@ void ArrangeWindows() {
 
 	// 窗口2 - 上右
 	if (puttyHandle2 && IsWindow(puttyHandle2)) {
-		MoveWindow(puttyHandle2, g_nVSplitTopPos + SPLITTER_SIZE, 0,
+		MoveWindow(puttyHandle2, g_nVSplitTopPos + SPLITTER_SIZE + 1, 0,
 			scrollPos - (g_nVSplitTopPos + SPLITTER_SIZE), g_nHSplitPos, TRUE);
 	}
 
@@ -804,7 +804,7 @@ void ArrangeWindows() {
 	// 窗口4 - 下右
 	if (puttyHandle4 && IsWindow(puttyHandle4)) {
 		MoveWindow(puttyHandle4,
-			g_nVSplitBottomPos + SPLITTER_SIZE, g_nHSplitPos + SPLITTER_SIZE,
+			g_nVSplitBottomPos + SPLITTER_SIZE + 1, g_nHSplitPos + SPLITTER_SIZE,
 			scrollPos - (g_nVSplitBottomPos + SPLITTER_SIZE),
 			g_rcMain.bottom - (g_nHSplitPos + SPLITTER_SIZE),
 			TRUE);
@@ -1042,10 +1042,10 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 // 检查鼠标点位于哪个分隔条上 - 增大检测区域，更容易选中
 int GetSplitterAtPoint(POINT pt)
 {
-	// 检查水平分隔条 - 增大检测区域到10像素
+	// 检查水平分隔条 - 增大检测区域
 	RECT rcHSplit;
 	rcHSplit.top = g_nHSplitPos - 5;
-	rcHSplit.bottom = g_nHSplitPos + 5;
+	rcHSplit.bottom = g_nHSplitPos + SPLITTER_SIZE + 5;
 	rcHSplit.left = 0;
 	rcHSplit.right = g_rcMain.right;
 	if (PtInRect(&rcHSplit, pt))
@@ -1054,7 +1054,7 @@ int GetSplitterAtPoint(POINT pt)
 	// 检查顶部垂直分隔条
 	RECT rcVSplitTop;
 	rcVSplitTop.left = g_nVSplitTopPos - 5;
-	rcVSplitTop.right = g_nVSplitTopPos + 5;
+	rcVSplitTop.right = g_nVSplitTopPos + SPLITTER_SIZE + 5;
 	rcVSplitTop.top = 0;
 	rcVSplitTop.bottom = g_nHSplitPos;
 	if (PtInRect(&rcVSplitTop, pt))
@@ -1063,7 +1063,7 @@ int GetSplitterAtPoint(POINT pt)
 	// 检查底部垂直分隔条
 	RECT rcVSplitBottom;
 	rcVSplitBottom.left = g_nVSplitBottomPos - 5;
-	rcVSplitBottom.right = g_nVSplitBottomPos + 5;
+	rcVSplitBottom.right = g_nVSplitBottomPos + SPLITTER_SIZE + 5;
 	rcVSplitBottom.top = g_nHSplitPos;
 	rcVSplitBottom.bottom = g_rcMain.bottom;
 	if (PtInRect(&rcVSplitBottom, pt))
