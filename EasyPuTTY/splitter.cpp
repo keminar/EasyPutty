@@ -34,6 +34,7 @@ static bool g_scrollbarClassRegistered = false;
 
 int g_nDragging = 0;            // 0=未拖动, 1=水平, 2=顶部垂直, 3=底部垂直, 4=顶部滚动条, 5=底部滚动条
 #define TIMER_ID_RESIZE 11      //定时器
+#define WM_HOOK_MOVESIZE_END (WM_USER + 1001) // 钩子触发的移动结束消息
 
 // 全局变量
 HWINEVENTHOOK g_hMoveSizeHook = NULL;  // 监听移动的钩子
@@ -338,6 +339,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	case WM_CREATE:
 	{
 		CreateChildWindows(hWnd);
+		// 重置滚动条数据（避免旧数据干扰）
+		ZeroMemory(&g_scrollTopData, sizeof(ScrollBarData));
+		ZeroMemory(&g_scrollBottomData, sizeof(ScrollBarData));
 		// 初始化滚动条数据（创建绘图资源）
 		InitScrollBarData(&g_scrollTopData);
 		InitScrollBarData(&g_scrollBottomData);
@@ -410,6 +414,24 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 			KillTimer(hWnd, TIMER_ID_RESIZE); // 关闭计时器
 			ArrangeWindows();
 			UpdateScrollRanges();
+		}
+		return 0;
+	}
+	case WM_HOOK_MOVESIZE_END: {
+		HWND hWndPuTTY = (HWND)wParam;
+		int startRegion = LOWORD(lParam);
+		int endRegion = HIWORD(lParam);
+		// 执行原有的句柄交换和窗口排列（主窗口线程中安全操作）
+		if (endRegion != 0 && endRegion != startRegion) {
+			HWND hTarget = GetHandleByRegion(endRegion);
+			if (hTarget) {
+				SwapRegionHandles(startRegion, endRegion);
+			}
+			else {
+				SetHandleByRegion(endRegion, hWndPuTTY);
+				SetHandleByRegion(startRegion, NULL);
+			}
+			ArrangeWindows();
 		}
 		return 0;
 	}
@@ -693,6 +715,8 @@ void CALLBACK MoveSizeChangeHookProc(
 	// 只处理窗口本身且是我们的PuTTY窗口
 	if (idObject != OBJID_WINDOW || idChild != CHILDID_SELF)
 		return;
+	// 主窗口不存在时，直接返回
+	if (!g_hWndMain || !IsWindow(g_hWndMain)) return;
 	if (!IsManagedPuTTY(hWnd))
 		return;
 
@@ -709,16 +733,10 @@ void CALLBACK MoveSizeChangeHookProc(
 		if (g_hDraggingPuTTY == hWnd) {
 			int endRegion = GetWindowRegion(hWnd);
 			if (endRegion != 0 && endRegion != g_nStartRegion) {
-				// 执行句柄交换逻辑
-				HWND hTarget = GetHandleByRegion(endRegion);
-				if (hTarget) {
-					SwapRegionHandles(g_nStartRegion, endRegion);
-				}
-				else {
-					SetHandleByRegion(endRegion, hWnd);
-					SetHandleByRegion(g_nStartRegion, NULL);
-				}
-				ArrangeWindows();
+				// 异步进行窗口UI变化
+				PostMessage(g_hWndMain, WM_HOOK_MOVESIZE_END,
+					(WPARAM)hWnd,
+					MAKELONG(g_nStartRegion, endRegion));
 			}
 			LOG_DEBUG(L"splitter.cpp MoveSizeChangeHookProc move end %d %d %p", g_nStartRegion, endRegion, hWnd);
 			g_hDraggingPuTTY = NULL;  // 重置拖动状态
@@ -730,7 +748,7 @@ void CALLBACK MoveSizeChangeHookProc(
 // 启动钩子（同时监听位置变化和移动结束）
 void StartPuTTYHooks() {
 	StopPuTTYHooks();
-
+	if (!g_hWndMain || !IsWindow(g_hWndMain)) return;
 	// 2个钩子不能合成一个，会收不到消息
 	// 注册位置变化钩子
 	g_hMoveSizeHook = SetWinEventHook(
@@ -889,10 +907,12 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 
 		// 1. 绘制滚动条背景
 		HBRUSH bgBrush = CreateSolidBrush(RGB(255, 240, 240));
-		oldBrush = SelectObject(memDC, bgBrush);
-		Rectangle(memDC, clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
-		SelectObject(memDC, oldBrush);
-		DeleteObject(bgBrush);
+		if (bgBrush) {
+			oldBrush = SelectObject(memDC, bgBrush);
+			Rectangle(memDC, clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
+			SelectObject(memDC, oldBrush);
+			DeleteObject(bgBrush);
+		}
 
 		// 2. 绘制轨道
 		RECT trackRect = {
@@ -922,14 +942,16 @@ LRESULT CALLBACK ScrollbarProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam
 
 		// 4. 绘制滑块边框
 		HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
-		HPEN oldPen = (HPEN)SelectObject(memDC, borderPen);
-		MoveToEx(memDC, thumbRect.left, thumbRect.top, NULL);
-		LineTo(memDC, thumbRect.right, thumbRect.top);
-		LineTo(memDC, thumbRect.right, thumbRect.bottom);
-		LineTo(memDC, thumbRect.left, thumbRect.bottom);
-		LineTo(memDC, thumbRect.left, thumbRect.top);
-		SelectObject(memDC, oldPen);
-		DeleteObject(borderPen);
+		if (borderPen) {
+			HPEN oldPen = (HPEN)SelectObject(memDC, borderPen);
+			MoveToEx(memDC, thumbRect.left, thumbRect.top, NULL);
+			LineTo(memDC, thumbRect.right, thumbRect.top);
+			LineTo(memDC, thumbRect.right, thumbRect.bottom);
+			LineTo(memDC, thumbRect.left, thumbRect.bottom);
+			LineTo(memDC, thumbRect.left, thumbRect.top);
+			SelectObject(memDC, oldPen);
+			DeleteObject(borderPen);
+		}
 
 		// 将内存DC内容一次性复制到屏幕DC
 		BitBlt(hdc, clientRect.left, clientRect.top,
