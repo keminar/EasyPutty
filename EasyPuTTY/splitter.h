@@ -3,7 +3,8 @@
 #include "framework.h"
 
 HWND createSplitWindow(HINSTANCE hInstance, HWND hWnd);
-void registerClass();
+BOOL splitWindowAlive();
+void registerClass(HINSTANCE hInstance);
 void CreateChildWindows(HWND hWnd);
 void ArrangeWindows();
 LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

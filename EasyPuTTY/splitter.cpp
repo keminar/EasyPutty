@@ -2,7 +2,7 @@
 #include "attach.h"
 #include "logs.h"
 
-static HINSTANCE g_appInstance;
+// 不包含主窗口变量，使可以独立存在
 
 HWND g_hWndMain;                // 主窗口句柄
 HWND g_hWndHost;                // 空间容器层，解决putty等窗体移动残影问题
@@ -31,6 +31,8 @@ const int SCROLL_MARGIN = 2;     // 滚动条内边距
 static bool g_splitMainClassRegistered = false;
 static bool g_splitLineClassRegistered = false;
 static bool g_scrollbarClassRegistered = false;
+
+static bool g_parentWindowClose = false;
 
 int g_nDragging = 0;            // 0=未拖动, 1=水平, 2=顶部垂直, 3=底部垂直, 4=顶部滚动条, 5=底部滚动条
 #define TIMER_ID_RESIZE 11      //定时器
@@ -74,13 +76,13 @@ static ScrollBarData g_scrollTopData; // 顶部滚动条数据
 static ScrollBarData g_scrollBottomData; // 底部滚动条数据
 
 // 注册窗口类
-void registerClass() {
+void registerClass(HINSTANCE hInstance) {
 	if (!g_splitMainClassRegistered) {
 		WNDCLASSEX wc = { 0 };
 		wc.cbSize = sizeof(WNDCLASSEX);
 		wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | CS_OWNDC;
 		wc.lpfnWndProc = SplitWindowProc;
-		wc.hInstance = g_appInstance;
+		wc.hInstance = hInstance;
 		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 		wc.lpszClassName = L"SplitScreenClass";
@@ -101,7 +103,7 @@ void registerClass() {
 		splitterWC.cbSize = sizeof(WNDCLASSEX);
 		splitterWC.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 		splitterWC.lpfnWndProc = SplitterProc;
-		splitterWC.hInstance = g_appInstance;
+		splitterWC.hInstance = hInstance;
 		splitterWC.hCursor = LoadCursor(NULL, IDC_ARROW);
 		splitterWC.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
 		splitterWC.lpszClassName = _T("SplitterLineClass");
@@ -123,7 +125,7 @@ void registerClass() {
 		scrollWC.cbSize = sizeof(WNDCLASSEX);
 		scrollWC.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 		scrollWC.lpfnWndProc = ScrollbarProc;
-		scrollWC.hInstance = g_appInstance;
+		scrollWC.hInstance = hInstance;
 		scrollWC.hCursor = LoadCursor(NULL, IDC_ARROW);
 		scrollWC.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 		scrollWC.lpszClassName = _T("CustomScrollbar");
@@ -141,9 +143,16 @@ void registerClass() {
 	}
 }
 
+BOOL splitWindowAlive() {
+	if (g_hWndMain) {
+		g_parentWindowClose = TRUE;
+		return TRUE;
+	}
+	return FALSE;
+}
+
 // 分屏主窗口
 HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
-	g_appInstance = hInstance;
 	if (g_hWndMain) {
 		// 检查窗口是否处于最小化状态
 		if (IsIconic(g_hWndMain)) {
@@ -154,7 +163,7 @@ HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
 		return g_hWndMain;
 	}
 	// 注册窗口类，内部判断只会注册一次
-	registerClass();
+	registerClass(hInstance);
 
 	g_hWndMain = CreateWindowExW(
 		0,
@@ -165,7 +174,7 @@ HWND createSplitWindow(HINSTANCE hInstance, HWND appWindow) {
 		1200, 900,
 		NULL,
 		NULL,
-		g_appInstance,
+		hInstance,
 		NULL
 	);
 	if (!g_hWndMain) {
@@ -483,6 +492,10 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		// 释放滚动条资源
 		FreeScrollBarData(&g_scrollTopData);
 		FreeScrollBarData(&g_scrollBottomData);
+		// 如果父窗口已经关闭，退出进程
+		if (g_parentWindowClose) {
+			PostQuitMessage(0);
+		}
 		return 0;
 	}
 	}
@@ -532,7 +545,7 @@ void CreateChildWindows(HWND hWnd)
 		1200, 900,
 		g_hWndMain,
 		NULL,
-		g_appInstance,
+		NULL,
 		NULL
 	);
 
@@ -541,32 +554,32 @@ void CreateChildWindows(HWND hWnd)
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, 0, SPLITTER_SIZE,
-		g_hWndHost, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, NULL, NULL);
 
 	g_hWndVSplitTop = CreateWindowEx(
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SPLITTER_SIZE, 0,
-		g_hWndHost, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, NULL, NULL);
 
 	g_hWndVSplitBottom = CreateWindowEx(
 		WS_EX_TOPMOST, _T("SplitterLineClass"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SPLITTER_SIZE, 0,
-		g_hWndHost, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, NULL, NULL);
 
 	// 创建自定义同步滚动条（添加WS_BORDER确保可见）
 	g_hScrollTop = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SCROLLBAR_WIDTH, 0,
-		g_hWndHost, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, NULL, NULL);
 
 	g_hScrollBottom = CreateWindowEx(
 		0, _T("CustomScrollbar"), _T(""),
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
 		0, 0, SCROLLBAR_WIDTH, 0,
-		g_hWndHost, NULL, g_appInstance, NULL);
+		g_hWndHost, NULL, NULL, NULL);
 
 	// 检查滚动条是否创建成功
 	if (!g_hScrollTop || !g_hScrollBottom) {

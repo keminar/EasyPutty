@@ -809,7 +809,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		unRegisterAccel(hWnd);
-		PostQuitMessage(0);
+		// 根据分屏窗口决定进程结束
+		if (!splitWindowAlive()) {
+			PostQuitMessage(0);
+		}
 		break;
 	}
 	default:
