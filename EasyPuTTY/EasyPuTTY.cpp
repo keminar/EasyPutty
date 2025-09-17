@@ -11,6 +11,9 @@
 #define WM_ATTACH_CLICK (WM_USER + 1001)
 #define WM_ATTACH_RCLICK (WM_USER + 1002)
 
+// 确保这些常量已正确定义
+#define WM_CLICKBIT (WM_USER + 1003)
+
 // 全局变量:
 HINSTANCE g_appInstance;                        // 当前实例
 WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
@@ -242,6 +245,62 @@ void unRegisterAccel(HWND hWnd) {
 	UnregisterHotKey(hWnd, ID_HOTKEY_SEARCH);
 	UnregisterHotKey(hWnd, ID_HOTKEY_CLONE);
 }
+
+// 托盘图标创建函数
+BOOL CreateTrayIcon(HWND hwnd)
+{
+	NOTIFYICONDATA nid = { 0 };
+
+	// 根据系统版本设置正确的结构大小
+#if (NTDDI_VERSION >= NTDDI_VISTA)
+	nid.cbSize = NOTIFYICONDATA_V2_SIZE;
+#else
+	nid.cbSize = NOTIFYICONDATA_V1_SIZE;
+#endif
+
+	nid.hWnd = hwnd;
+	nid.uID = IDI_EASYPUTTY;
+	nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+	nid.uCallbackMessage = WM_CLICKBIT; //自定义消息
+
+	HICON hIcon = NULL;
+
+	// 尝试加载指定尺寸的自定义图标
+	hIcon = LoadIcon((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+		MAKEINTRESOURCE(IDI_EASYPUTTY));
+
+	if (!hIcon) {
+		return FALSE;
+	}
+	nid.hIcon = hIcon;
+
+	// 设置提示文本
+	wcscpy_s(nid.szTip, GetString(IDS_APP_TITLE));
+	nid.dwState = NIS_SHAREDICON;//是否显示icon
+	// 添加托盘图标
+	BOOL result = Shell_NotifyIcon(NIM_ADD, &nid);
+	// 释放图标资源
+	DestroyIcon(hIcon);
+
+	return result;
+}
+
+//销毁系统托盘图标 
+void DestroyTrayIcon(HWND hwnd)
+{
+	NOTIFYICONDATA nid = { 0 };
+
+	// 关键：根据系统版本设置正确的结构大小
+#if (NTDDI_VERSION >= NTDDI_VISTA)
+	nid.cbSize = NOTIFYICONDATA_V2_SIZE;
+#else
+	nid.cbSize = NOTIFYICONDATA_V1_SIZE;
+#endif
+	nid.uID = IDI_EASYPUTTY;
+	nid.hWnd = hwnd;
+	Shell_NotifyIcon(NIM_DELETE, &nid);
+}
+
 //
 //  函数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -779,29 +838,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
+	case WM_CLICKBIT: {//点击托盘图标
+		switch (lParam)
+		{
+		case WM_LBUTTONUP://托盘图标还原窗口
+			ShowWindow(hWnd, SW_SHOWNORMAL);
+			::SetForegroundWindow(hWnd);
+			DestroyTrayIcon(hWnd);
+			break;
+		default:
+			break;
+		}
+		break;
+	}
 	case WM_CLOSE: {
-		wchar_t confirm[MAX_PATH] = { 0 };
-		wcscpy_s(confirm, _countof(confirm), GetString(IDS_TIP_CONFIRM_CLOSE));
-		// 当用户点击关闭按钮时会触发WM_CLOSE消息
-		int response = MessageBox(
-			hWnd,
-			GetString(IDS_TIP_CLOSE_APP),
-			confirm,
-			MB_YESNO | MB_ICONQUESTION
-		);
+		if (splitWindowAlive()) {
+			// 隐藏窗口， 不关闭窗口是因为鼠标钩子还要用，关了就用不了了
+			CreateTrayIcon(hWnd);
+			ShowWindow(hWnd, SW_HIDE);
+			return 0;
+		}
+		else {
+			wchar_t confirm[MAX_PATH] = { 0 };
+			wcscpy_s(confirm, _countof(confirm), GetString(IDS_TIP_CONFIRM_CLOSE));
+			// 当用户点击关闭按钮时会触发WM_CLOSE消息
+			int response = MessageBox(
+				hWnd,
+				GetString(IDS_TIP_CLOSE_APP),
+				confirm,
+				MB_YESNO | MB_ICONQUESTION
+			);
 
-		if (response == IDYES) {// 用户选择"是"
-			if (splitWindowAlive()) {
-				// 隐藏窗口， 不关闭窗口是因为鼠标钩子还要用，关了就用不了了
-				ShowWindow(hWnd, SW_HIDE);
-			}
-			else {
+			if (response == IDYES) {// 用户选择"是"
 				// 销毁窗口
 				DestroyWindow(hWnd);
+			} else {
+				// 用户选择"否"则不执行任何操作，窗口保持打开状态
+				return 0;
 			}
 		}
-		// 用户选择"否"则不执行任何操作，窗口保持打开状态
-		return 0;
 	}
 	case WM_DESTROY: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
@@ -811,6 +886,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RemoveTab(tabCtrlWinHandle, i, TRUE);
 			}
 		}
+		DestroyTrayIcon(hWnd);
 		// 取消快捷键
 		unRegisterAccel(hWnd);
 		if (g_hMouseHook) {
@@ -829,7 +905,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 // 退出程序
 void QuitEasyPutty() {
-	DestroyWindow(g_mainWindowHandle);
+	PostMessage(g_mainWindowHandle, WM_CLOSE, 0, 0);
 }
 
 // 克隆标签
@@ -1848,4 +1924,3 @@ void PerformSearch(HWND hWnd) {
 	HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW);
 	SetListViewData(hListView);
 }
-

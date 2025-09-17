@@ -60,3 +60,5 @@ LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 void QuitEasyPutty();
+void DestroyTrayIcon(HWND hwnd);
+BOOL CreateTrayIcon(HWND hwnd);

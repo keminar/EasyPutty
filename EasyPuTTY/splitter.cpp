@@ -31,8 +31,6 @@ static bool g_splitMainClassRegistered = false;
 static bool g_splitLineClassRegistered = false;
 static bool g_scrollbarClassRegistered = false;
 
-static bool g_parentWindowClose = false;
-
 int g_nDragging = 0;            // 0=未拖动, 1=水平, 2=顶部垂直, 3=底部垂直, 4=顶部滚动条, 5=底部滚动条
 #define TIMER_ID_RESIZE 11      //定时器
 #define WM_HOOK_MOVESIZE_END (WM_USER + 1001) // 钩子触发的移动结束消息
@@ -144,7 +142,6 @@ void registerClass(HINSTANCE hInstance) {
 
 BOOL splitWindowAlive() {
 	if (g_hWndMain) {
-		g_parentWindowClose = TRUE;
 		return TRUE;
 	}
 	return FALSE;
@@ -492,9 +489,7 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		FreeScrollBarData(&g_scrollTopData);
 		FreeScrollBarData(&g_scrollBottomData);
 		// 如果父窗口已经关闭（隐藏），退出程序
-		if (g_parentWindowClose) {
-			QuitEasyPutty();
-		}
+		QuitEasyPutty();
 		return 0;
 	}
 	}
