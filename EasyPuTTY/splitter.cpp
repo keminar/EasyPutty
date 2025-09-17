@@ -1,8 +1,7 @@
 #include "splitter.h"
 #include "attach.h"
 #include "logs.h"
-
-// 不包含主窗口变量，使可以独立存在
+#include "EasyPuTTY.h"
 
 HWND g_hWndMain;                // 主窗口句柄
 HWND g_hWndHost;                // 空间容器层，解决putty等窗体移动残影问题
@@ -492,9 +491,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		// 释放滚动条资源
 		FreeScrollBarData(&g_scrollTopData);
 		FreeScrollBarData(&g_scrollBottomData);
-		// 如果父窗口已经关闭，退出进程
+		// 如果父窗口已经关闭（隐藏），退出程序
 		if (g_parentWindowClose) {
-			PostQuitMessage(0);
+			QuitEasyPutty();
 		}
 		return 0;
 	}

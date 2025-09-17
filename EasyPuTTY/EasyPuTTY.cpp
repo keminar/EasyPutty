@@ -790,17 +790,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			MB_YESNO | MB_ICONQUESTION
 		);
 
-		if (response == IDYES) {
-			// 用户选择"是"，则销毁窗口
-			DestroyWindow(hWnd);
+		if (response == IDYES) {// 用户选择"是"
+			if (splitWindowAlive()) {
+				// 隐藏窗口， 不关闭窗口是因为鼠标钩子还要用，关了就用不了了
+				ShowWindow(hWnd, SW_HIDE);
+			}
+			else {
+				// 销毁窗口
+				DestroyWindow(hWnd);
+			}
 		}
 		// 用户选择"否"则不执行任何操作，窗口保持打开状态
 		return 0;
 	}
 	case WM_DESTROY: {
-		if (g_hMouseHook) {
-			UnhookWindowsHookEx(g_hMouseHook);  // 必须卸载，否则可能导致进程崩溃
-		}
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (tabItemsCount >= 1) {
@@ -808,17 +811,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RemoveTab(tabCtrlWinHandle, i, TRUE);
 			}
 		}
+		// 取消快捷键
 		unRegisterAccel(hWnd);
-		// 根据分屏窗口决定进程结束
-		if (!splitWindowAlive()) {
-			PostQuitMessage(0);
+		if (g_hMouseHook) {
+			// 卸载鼠标钩子
+			UnhookWindowsHookEx(g_hMouseHook);  // 必须卸载，否则可能导致进程崩溃
 		}
+		// 退出进程
+		PostQuitMessage(0);
 		break;
 	}
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
+}
+
+// 退出程序
+void QuitEasyPutty() {
+	DestroyWindow(g_mainWindowHandle);
 }
 
 // 克隆标签
