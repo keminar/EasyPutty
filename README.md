@@ -57,9 +57,8 @@
 
 分析原因可能是本程序是32位打包，操作系统是64位的，可以按照以下步骤解决：
 
-### **安装官方 Visual C++ 运行库**
-这是最推荐的方法，直接安装微软官方组件：
-1. 若缺少62位运行库，下载 [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+### **安装微软官方 Visual C++ 运行库**
+1. 若缺少62位运行库，下载 [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) ，
    若缺少32位运行库，下载 [vc_redist.x86.exe](https://aka.ms/vs/17/release/vc_redist.x86.exe)
 2. 下载后双击安装程序，按照提示完成安装。（建议上面安装一个不行，另一个也安装试试）
 3. 安装完成后重启电脑，检查问题是否解决。
