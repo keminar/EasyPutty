@@ -35,9 +35,10 @@ void InitLanguage() {
 	}
 }
 
-const wchar_t* GetString(int stringId) {
+const wchar_t* GetStringBase(int stringId, bool isMultiFilter) {
 	if (!g_hInstance) return L"";
 
+	ZeroMemory(g_stringBuffer, sizeof(g_stringBuffer));
 	// 根据当前语言获取对应的语言 ID
 	WORD langId;
 	if (g_currentLang == LANG_CN) {
@@ -73,24 +74,70 @@ const wchar_t* GetString(int stringId) {
 	if (!hMem) return L"";
 
 	wchar_t* pStr = (wchar_t*)LockResource(hMem);
-	if (!pStr) return L"";
+	if (!pStr) {
+		FreeResource(hMem);
+		return L"";
+	}
 
 	int index = stringId & 0x0F;
 	for (int i = 0; i < index; i++) {
 		pStr += *pStr + 1;
 	}
 
-	size_t strLen = *pStr;
-	if (strLen >= sizeof(g_stringBuffer) / sizeof(wchar_t)) {
-		strLen = (sizeof(g_stringBuffer) / sizeof(wchar_t)) - 1;
+	size_t bufferSize = sizeof(g_stringBuffer) / sizeof(wchar_t);
+	if (isMultiFilter) {
+		// --------------------------
+		// 关键：处理过滤器字符串（含多个\0分隔符）
+		// --------------------------
+		wchar_t* filterSource = pStr + 1;          // 跳过“长度字节”，指向过滤器内容
+		size_t filterTotalLen = *pStr;             // 从资源获取过滤器总长度（含所有\0）
+
+		// 验证资源格式：过滤器必须含至少1个\0（分隔“显示名称”和“过滤模式”）
+		bool hasSeparator = false;
+		for (size_t i = 0; i < filterTotalLen; i++) {
+			if (filterSource[i] == L'\0') {
+				hasSeparator = true;
+				break;
+			}
+		}
+		if (!hasSeparator) {
+			// 资源格式错误，手动构造基础过滤器（避免崩溃）
+			wcscpy_s(g_stringBuffer, L"All files(*.*)\0*.*\0\0");
+			UnlockResource(hMem);
+			FreeResource(hMem);
+			return g_stringBuffer;
+		}
+
+		// 复制完整过滤器（含所有\0分隔符），避免截断
+		size_t copyLen = min(filterTotalLen, bufferSize - 2); // 留2个位置确保双\0终止
+		memcpy(g_stringBuffer, filterSource, copyLen * sizeof(wchar_t));
+
+		// 强制补充双\0（过滤器标准结束标志，确保GetOpenFileName识别）
+		g_stringBuffer[copyLen] = L'\0';
+		g_stringBuffer[copyLen + 1] = L'\0';
 	}
-	wcsncpy_s(g_stringBuffer, sizeof(g_stringBuffer) / sizeof(wchar_t), pStr + 1, strLen);
-	g_stringBuffer[strLen] = L'\0';
+	else {
+		// 处理普通字符串
+		size_t strLen = *pStr;
+		if (strLen >= bufferSize) {
+			strLen = bufferSize - 1;
+		}
+		wcsncpy_s(g_stringBuffer, bufferSize, pStr + 1, strLen);
+		g_stringBuffer[strLen] = L'\0';
+	}
 
 	UnlockResource(hMem);
 	FreeResource(hMem);
 
 	return g_stringBuffer;
+}
+
+const wchar_t* GetString(int stringId) {
+	return GetStringBase(stringId, FALSE);
+}
+
+const wchar_t* GetStringBrowser(int stringId) {
+	return GetStringBase(stringId, TRUE);
 }
 
 int FormatString(wchar_t* buffer, size_t bufferSize, int stringId, ...) {

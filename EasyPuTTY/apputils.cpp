@@ -925,27 +925,27 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PUTTY) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PUTTY);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_PUTTY);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_WINSCP) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_COM), IDC_WINSCP);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_COM), IDC_WINSCP);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_FILEZILLA) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_FILEZILLA);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_FILEZILLA);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PUTTYGEN) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PUTTYGEN);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_PUTTYGEN);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PAGEANT) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PAGEANT);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_PAGEANT);
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER_PSFTP) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PSFTP);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_PSFTP);
 			return (INT_PTR)TRUE;
 		}
 		break;
@@ -1170,7 +1170,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			return (INT_PTR)FALSE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_PPK), IDC_PPK);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_PPK), IDC_PPK);
 			return (INT_PTR)TRUE;
 		}
 		break;
@@ -1278,7 +1278,7 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			return (INT_PTR)TRUE;
 		}
 		else if (LOWORD(wParam) == IDC_BROWSER) {
-			setBrowser(hDlg, GetString(IDS_BROWSER_EXE), IDC_PRO_PATH);
+			setBrowser(hDlg, GetStringBrowser(IDS_BROWSER_EXE), IDC_PRO_PATH);
 			return (INT_PTR)TRUE;
 		}
 		break;
