@@ -636,6 +636,7 @@ void SetListViewData(HWND hListView) {
 	}
 	//ÊÍ·ÅÄÚ´æ
 	FreeConfigMap(credentialMap);
+	FreeFileList(programFileList, programCount);
 	FreeFileList(credentialFileList, credentialCount);
 	FreeFileList(sessionFileList, sessionCount);
 }
