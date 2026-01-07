@@ -345,8 +345,9 @@ LRESULT CALLBACK SplitWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	{
 		CreateChildWindows(hWnd);
 		// 重置滚动条数据（避免旧数据干扰）
-		ZeroMemory(&g_scrollTopData, sizeof(ScrollBarData));
-		ZeroMemory(&g_scrollBottomData, sizeof(ScrollBarData));
+                // 先尝试释放旧资源，防止重入导致句柄丢失泄漏
+                FreeScrollBarData(&g_scrollTopData);
+                FreeScrollBarData(&g_scrollBottomData);
 		// 初始化滚动条数据（创建绘图资源）
 		InitScrollBarData(&g_scrollTopData);
 		InitScrollBarData(&g_scrollBottomData);

@@ -363,6 +363,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 				SendMessage(credentialComboBox, CB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
 			}
 		}
+		FreeFileList(credentialFileList, credentialCount);
 
 		// 查找当前选择的会话行简称
 		BOOL ret = FindSelectedSession(findName, MAX_PATH);
@@ -422,6 +423,7 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 						SendMessage(credentialComboBox, CB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
 					}
 				}
+				FreeFileList(credentialFileList, credentialCount);
 			}
 			SetWindowText(hEdit, credential);
 		}
@@ -1024,6 +1026,7 @@ INT_PTR CALLBACK CredentialProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 					SendMessage(listBox, LB_ADDSTRING, 0, (LPARAM)credentialConfig.name);
 				}
 			}
+			FreeFileList(credentialFileList, credentialCount);
 		}
 		return (INT_PTR)TRUE;
 	}
