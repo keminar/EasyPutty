@@ -11,8 +11,10 @@ struct TabWindowsInfo {
 	HWND parentWinHandle; //父窗口g_mainWindowHandle;
 	HWND tabCtrlWinHandle;//tabcontrol 句柄
 	HMENU tabMenuHandle;//标签右键菜单
+	HMENU mainTabMenuHandle; // 原始菜单句柄，用于释放
 	LOGFONT editorFontProperties;//字体属性
 	HFONT editorFontHandle;//逻辑字体句柄
+	HFONT tabCaptionFontHandle; // 标签字体句柄
 };
 
 #define SECTION_NAME L"Settings"

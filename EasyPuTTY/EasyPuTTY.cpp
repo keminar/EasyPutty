@@ -1,43 +1,43 @@
-ï»¿// EasyPuTTY.cpp : å®šä¹‰åº”ç”¨ç¨‹åºçš„å…¥å£ç‚¹ã€‚
+// EasyPuTTY.cpp : ¶¨ÒåÓ¦ÓÃ³ÌĞòµÄÈë¿Úµã¡£
 //
 
 #include "framework.h"
 #include "EasyPuTTY.h"
 
 #define MAX_LOADSTRING 256
-// è®¾ç½®ç„¦ç‚¹å®šæ—¶
+// ÉèÖÃ½¹µã¶¨Ê±
 #define TIMER_ID_FOCUS 10
-// è‡ªå®šä¹‰æ¶ˆæ¯ï¼šé€šçŸ¥ä¸»çª—å£ Attachçª—å£ è¢«ç‚¹å‡»
+// ×Ô¶¨ÒåÏûÏ¢£ºÍ¨ÖªÖ÷´°¿Ú Attach´°¿Ú ±»µã»÷
 #define WM_ATTACH_CLICK (WM_USER + 1001)
 #define WM_ATTACH_RCLICK (WM_USER + 1002)
 
-// ç¡®ä¿è¿™äº›å¸¸é‡å·²æ­£ç¡®å®šä¹‰
+// È·±£ÕâĞ©³£Á¿ÒÑÕıÈ·¶¨Òå
 #define WM_CLICKBIT (WM_USER + 1003)
 
-// å…¨å±€å˜é‡:
-HINSTANCE g_appInstance;                        // å½“å‰å®ä¾‹
-WCHAR szTitle[MAX_LOADSTRING];                  // æ ‡é¢˜æ æ–‡æœ¬
-WCHAR szWindowClass[MAX_LOADSTRING];            // ä¸»çª—å£ç±»å
+// È«¾Ö±äÁ¿:
+HINSTANCE g_appInstance;                        // µ±Ç°ÊµÀı
+WCHAR szTitle[MAX_LOADSTRING];                  // ±êÌâÀ¸ÎÄ±¾
+WCHAR szWindowClass[MAX_LOADSTRING];            // Ö÷´°¿ÚÀàÃû
 
-HWND g_toolbarHandle;                          // å·¥å…·æ¡
-HWND g_mainWindowHandle;                       // ä¸»çª—ä½“
-int g_tabHitIndex;                             // æ ‡ç­¾å³é”®è§¦å‘ç´¢å¼•
-HWND g_hsearchEdit; //æœç´¢æ¡†
+HWND g_toolbarHandle;                          // ¹¤¾ßÌõ
+HWND g_mainWindowHandle;                       // Ö÷´°Ìå
+int g_tabHitIndex;                             // ±êÇ©ÓÒ¼ü´¥·¢Ë÷Òı
+HWND g_hsearchEdit; //ËÑË÷¿ò
 int g_hsearchLastWordLen = 0;
-UINT_PTR g_searchTimer = 0;       // æœç´¢æ¡†å®šæ—¶å™¨ID
+UINT_PTR g_searchTimer = 0;       // ËÑË÷¿ò¶¨Ê±Æ÷ID
 
-HWND g_debugWindow; // æ—¥å¿—çª—å£
-// é™æ€å˜é‡ç”¨äºæ ‡è®°çª—å£ç±»æ˜¯å¦å·²æ³¨å†Œ
+HWND g_debugWindow; // ÈÕÖ¾´°¿Ú
+// ¾²Ì¬±äÁ¿ÓÃÓÚ±ê¼Ç´°¿ÚÀàÊÇ·ñÒÑ×¢²á
 static bool g_debugClassRegistered = false;
 
-HHOOK g_hMouseHook = NULL;  // é’©å­å¥æŸ„
-BOOL g_insideHook = FALSE;  // æ ‡è®°æ˜¯å¦æ­£åœ¨å¤„ç†é’©å­å›è°ƒ
-HWND g_mouseHookWnd = NULL; // å½“å‰æ‹¦æˆªçš„puttyçª—ä½“
+HHOOK g_hMouseHook = NULL;  // ¹³×Ó¾ä±ú
+BOOL g_insideHook = FALSE;  // ±ê¼ÇÊÇ·ñÕıÔÚ´¦Àí¹³×Ó»Øµ÷
+HWND g_mouseHookWnd = NULL; // µ±Ç°À¹½ØµÄputty´°Ìå
 
 // single global instance of TabWindowsInfo
 struct TabWindowsInfo g_tabWindowsInfo;
 
-// æ­¤ä»£ç æ¨¡å—ä¸­åŒ…å«çš„å‡½æ•°çš„å‰å‘å£°æ˜:
+// ´Ë´úÂëÄ£¿éÖĞ°üº¬µÄº¯ÊıµÄÇ°ÏòÉùÃ÷:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -50,35 +50,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	// åˆå§‹åŒ–é€šç”¨æ§ä»¶åº“å¹¶å¯ç”¨è§†è§‰æ ·å¼
+	// ³õÊ¼»¯Í¨ÓÃ¿Ø¼ş¿â²¢ÆôÓÃÊÓ¾õÑùÊ½
 	INITCOMMONCONTROLSEX icex;
 	// Initialize common controls.
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
 	icex.dwICC = ICC_TAB_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES;
 	InitCommonControlsEx(&icex);
 
-	// åˆå§‹åŒ–è¯­è¨€ç®¡ç†
+	// ³õÊ¼»¯ÓïÑÔ¹ÜÀí
 	SetLangInstance(hInstance);
 	InitLanguage();
 
-	// åˆå§‹åŒ–å…¨å±€å­—ç¬¦ä¸²
+	// ³õÊ¼»¯È«¾Ö×Ö·û´®
 	wcscpy_s(szTitle, MAX_LOADSTRING, GetString(IDS_APP_TITLE));
 	//LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_EASYPUTTY, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
-	// æ‰§è¡Œåº”ç”¨ç¨‹åºåˆå§‹åŒ–:
+	// Ö´ĞĞÓ¦ÓÃ³ÌĞò³õÊ¼»¯:
 	if (!InitInstance(hInstance, nCmdShow))
 	{
 		return FALSE;
 	}
 
-	// æ³¨å†Œå¿«æ·é”®æ¥è§¦å‘èœå•å‘½ä»¤ï¼Œå¯¹çª—å£ç„¦ç‚¹æœ‰è¦æ±‚ä¸å¥½ç”¨
+	// ×¢²á¿ì½İ¼üÀ´´¥·¢²Ëµ¥ÃüÁî£¬¶Ô´°¿Ú½¹µãÓĞÒªÇó²»ºÃÓÃ
 	//HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_EASYPUTTY));
 
 	MSG msg;
 
-	// ä¸»æ¶ˆæ¯å¾ªç¯:
+	// Ö÷ÏûÏ¢Ñ­»·:
 	while (GetMessage(&msg, nullptr, 0, 0))
 	{
 		//if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -94,9 +94,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 
 //
-//  å‡½æ•°: MyRegisterClass()
+//  º¯Êı: MyRegisterClass()
 //
-//  ç›®æ ‡: æ³¨å†Œçª—å£ç±»ã€‚
+//  Ä¿±ê: ×¢²á´°¿ÚÀà¡£
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -107,7 +107,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	// æ”¯æŒåŒå‡»æ¶ˆæ¯
+	// Ö§³ÖË«»÷ÏûÏ¢
 	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
@@ -116,7 +116,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 32, 32, 0);
 	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	//wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);//ä¸æ˜¾ç¤ºèœå•
+	//wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_EASYPUTTY);//²»ÏÔÊ¾²Ëµ¥
 	wcex.lpszClassName = szWindowClass;
 	wcex.hIconSm = (HICON)LoadImageW(hInstance, MAKEINTRESOURCEW(IDI_EASYPUTTY), IMAGE_ICON, 16, 16, 0);
 
@@ -124,22 +124,22 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 
 ////
-//   å‡½æ•°: InitInstance(HINSTANCE, int)
+//   º¯Êı: InitInstance(HINSTANCE, int)
 //
-//   ç›®æ ‡: ä¿å­˜å®ä¾‹å¥æŸ„å¹¶åˆ›å»ºä¸»çª—å£
+//   Ä¿±ê: ±£´æÊµÀı¾ä±ú²¢´´½¨Ö÷´°¿Ú
 //
-//   æ³¨é‡Š:
+//   ×¢ÊÍ:
 //
-//        åœ¨æ­¤å‡½æ•°ä¸­ï¼Œæˆ‘ä»¬åœ¨å…¨å±€å˜é‡ä¸­ä¿å­˜å®ä¾‹å¥æŸ„å¹¶
-//        åˆ›å»ºå’Œæ˜¾ç¤ºä¸»ç¨‹åºçª—å£ã€‚
+//        ÔÚ´Ëº¯ÊıÖĞ£¬ÎÒÃÇÔÚÈ«¾Ö±äÁ¿ÖĞ±£´æÊµÀı¾ä±ú²¢
+//        ´´½¨ºÍÏÔÊ¾Ö÷³ÌĞò´°¿Ú¡£
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-	g_appInstance = hInstance; // å°†å®ä¾‹å¥æŸ„å­˜å‚¨åœ¨å…¨å±€å˜é‡ä¸­
+	g_appInstance = hInstance; // ½«ÊµÀı¾ä±ú´æ´¢ÔÚÈ«¾Ö±äÁ¿ÖĞ
 
-	// è·å–å±å¹•åˆ†è¾¨ç‡
-	int screenWidth = GetSystemMetrics(SM_CXSCREEN);  // å±å¹•å®½åº¦
-	int screenHeight = GetSystemMetrics(SM_CYSCREEN); // å±å¹•é«˜åº¦
+	// »ñÈ¡ÆÁÄ»·Ö±æÂÊ
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);  // ÆÁÄ»¿í¶È
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN); // ÆÁÄ»¸ß¶È
 
 	int windowWidth = (int)(screenWidth * 0.8);
 	int windowHeight = (int)(screenHeight * 0.8);
@@ -150,10 +150,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 		windowHeight = windowWidth;
 	}
 
-	// è®¡ç®—çª—å£å·¦ä¸Šè§’ä½ç½®ï¼ˆå±…ä¸­æ˜¾ç¤ºï¼‰
+	// ¼ÆËã´°¿Ú×óÉÏ½ÇÎ»ÖÃ£¨¾ÓÖĞÏÔÊ¾£©
 	int windowX = (screenWidth - windowWidth) / 2;
 	int windowY = (screenHeight - windowHeight) / 2;
-	// é€šè¿‡szWindowClasså’Œå‰é¢æ³¨å†Œçš„çª—å£ç±»wcexå…³è”èµ·æ¥
+	// Í¨¹ıszWindowClassºÍÇ°Ãæ×¢²áµÄ´°¿ÚÀàwcex¹ØÁªÆğÀ´
 	g_mainWindowHandle = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS,
 		windowX, windowY, windowWidth, windowHeight, nullptr, nullptr, hInstance, nullptr);
 
@@ -168,42 +168,42 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	return TRUE;
 }
 
-// å‰ªè´´æ¿é•¿åº¦æ£€æŸ¥å‡½æ•°
+// ¼ôÌù°å³¤¶È¼ì²éº¯Êı
 int clipboardLen() {
-	// æ‰“å¼€å‰ªè´´æ¿
+	// ´ò¿ª¼ôÌù°å
 	if (!OpenClipboard(NULL)) {
 		return 0;
 	}
 
 	int len = 0;
-	// æ£€æŸ¥å‰ªè´´æ¿æ˜¯å¦åŒ…å«æ–‡æœ¬æ•°æ®
+	// ¼ì²é¼ôÌù°åÊÇ·ñ°üº¬ÎÄ±¾Êı¾İ
 	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
 		HANDLE hData = GetClipboardData(CF_UNICODETEXT);
 		if (hData) {
-			// é”å®šå†…å­˜å¹¶è·å–æŒ‡é’ˆ
+			// Ëø¶¨ÄÚ´æ²¢»ñÈ¡Ö¸Õë
 			wchar_t* pszText = (wchar_t*)GlobalLock(hData);
 			if (pszText) {
 				len = wcslen(pszText);
-				// è§£é”å†…å­˜
+				// ½âËøÄÚ´æ
 				GlobalUnlock(hData);
 			}
 		}
 	}
-	// å…³é—­å‰ªè´´æ¿
+	// ¹Ø±Õ¼ôÌù°å
 	CloseClipboard();
 	return len;
 }
 
-// å…¨å±€ä½çº§é¼ æ ‡é’©å­å›è°ƒï¼ˆWH_MOUSE_LLï¼‰
+// È«¾ÖµÍ¼¶Êó±ê¹³×Ó»Øµ÷£¨WH_MOUSE_LL£©
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	if (g_insideHook) {
 		return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
 	}
 	if (nCode >= 0) {
-		// WH_MOUSE_LL é’©å­çš„ lParam æ˜¯ MSLLHOOKSTRUCT*
+		// WH_MOUSE_LL ¹³×ÓµÄ lParam ÊÇ MSLLHOOKSTRUCT*
 		MSLLHOOKSTRUCT* pMouse = (MSLLHOOKSTRUCT*)lParam;
 
-		// 1. è·å–é¼ æ ‡ç‚¹å‡»ä½ç½®å¯¹åº”çš„çª—å£å¥æŸ„
+		// 1. »ñÈ¡Êó±êµã»÷Î»ÖÃ¶ÔÓ¦µÄ´°¿Ú¾ä±ú
 		HWND hWndUnderMouse = WindowFromPoint(pMouse->pt);
 		 
 		if (hWndUnderMouse && wParam == WM_LBUTTONDOWN) {
@@ -214,7 +214,7 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		else if (hWndUnderMouse && wParam == WM_RBUTTONDOWN) {
 			wchar_t className[256] = { 0 };
 			if (GetClassNameW(hWndUnderMouse, className, 256)) {
-				// æ¯”è¾ƒç±»åæ˜¯å¦ä¸º"PuTTY"ï¼ˆå¤§å°å†™æ•æ„Ÿï¼‰
+				// ±È½ÏÀàÃûÊÇ·ñÎª"PuTTY"£¨´óĞ¡Ğ´Ãô¸Ğ£©
 				if (wcscmp(className, L"PuTTY") == 0) {
 					g_mouseHookWnd = hWndUnderMouse;
 					PostMessage(g_mainWindowHandle, WM_ATTACH_RCLICK, wParam, NULL);
@@ -223,21 +223,21 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 	}
-	// ä¼ é€’æ¶ˆæ¯ç»™ä¸‹ä¸€ä¸ªé’©å­
+	// ´«µİÏûÏ¢¸øÏÂÒ»¸ö¹³×Ó
 	return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
 }
 
 
-// æ³¨å†Œå¿«æ·é”®
+// ×¢²á¿ì½İ¼ü
 void registerAccel(HWND hWnd) {
-	RegisterHotKey(hWnd, ID_HOTKEY_NEW, MOD_ALT, 'T');//æ–°å»º
-	RegisterHotKey(hWnd, ID_HOTKEY_CLOSE, MOD_ALT, 'D');//å…³é—­
-	RegisterHotKey(hWnd, ID_HOTKEY_WINDOW, MOD_ALT, 'W');//çª—å£
-	RegisterHotKey(hWnd, ID_HOTKEY_SEARCH, MOD_ALT, 'F');//æœç´¢
-	RegisterHotKey(hWnd, ID_HOTKEY_CLONE, MOD_ALT, 'V');//å…‹éš†
+	RegisterHotKey(hWnd, ID_HOTKEY_NEW, MOD_ALT, 'T');//ĞÂ½¨
+	RegisterHotKey(hWnd, ID_HOTKEY_CLOSE, MOD_ALT, 'D');//¹Ø±Õ
+	RegisterHotKey(hWnd, ID_HOTKEY_WINDOW, MOD_ALT, 'W');//´°¿Ú
+	RegisterHotKey(hWnd, ID_HOTKEY_SEARCH, MOD_ALT, 'F');//ËÑË÷
+	RegisterHotKey(hWnd, ID_HOTKEY_CLONE, MOD_ALT, 'V');//¿ËÂ¡
 }
 
-// æ³¨é”€å¿«æ·é”®
+// ×¢Ïú¿ì½İ¼ü
 void unRegisterAccel(HWND hWnd) {
 	UnregisterHotKey(hWnd, ID_HOTKEY_NEW);
 	UnregisterHotKey(hWnd, ID_HOTKEY_CLOSE);
@@ -246,12 +246,12 @@ void unRegisterAccel(HWND hWnd) {
 	UnregisterHotKey(hWnd, ID_HOTKEY_CLONE);
 }
 
-// æ‰˜ç›˜å›¾æ ‡åˆ›å»ºå‡½æ•°
+// ÍĞÅÌÍ¼±ê´´½¨º¯Êı
 BOOL CreateTrayIcon(HWND hwnd)
 {
 	NOTIFYICONDATA nid = { 0 };
 
-	// æ ¹æ®ç³»ç»Ÿç‰ˆæœ¬è®¾ç½®æ­£ç¡®çš„ç»“æ„å¤§å°
+	// ¸ù¾İÏµÍ³°æ±¾ÉèÖÃÕıÈ·µÄ½á¹¹´óĞ¡
 #if (NTDDI_VERSION >= NTDDI_VISTA)
 	nid.cbSize = NOTIFYICONDATA_V2_SIZE;
 #else
@@ -261,11 +261,11 @@ BOOL CreateTrayIcon(HWND hwnd)
 	nid.hWnd = hwnd;
 	nid.uID = IDI_EASYPUTTY;
 	nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-	nid.uCallbackMessage = WM_CLICKBIT; //è‡ªå®šä¹‰æ¶ˆæ¯
+	nid.uCallbackMessage = WM_CLICKBIT; //×Ô¶¨ÒåÏûÏ¢
 
 	HICON hIcon = NULL;
 
-	// å°è¯•åŠ è½½æŒ‡å®šå°ºå¯¸çš„è‡ªå®šä¹‰å›¾æ ‡
+	// ³¢ÊÔ¼ÓÔØÖ¸¶¨³ß´çµÄ×Ô¶¨ÒåÍ¼±ê
 	hIcon = LoadIcon((HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
 		MAKEINTRESOURCE(IDI_EASYPUTTY));
 
@@ -274,23 +274,23 @@ BOOL CreateTrayIcon(HWND hwnd)
 	}
 	nid.hIcon = hIcon;
 
-	// è®¾ç½®æç¤ºæ–‡æœ¬
+	// ÉèÖÃÌáÊ¾ÎÄ±¾
 	wcscpy_s(nid.szTip, GetString(IDS_APP_TITLE));
-	nid.dwState = NIS_SHAREDICON;//æ˜¯å¦æ˜¾ç¤ºicon
-	// æ·»åŠ æ‰˜ç›˜å›¾æ ‡
+	nid.dwState = NIS_SHAREDICON;//ÊÇ·ñÏÔÊ¾icon
+	// Ìí¼ÓÍĞÅÌÍ¼±ê
 	BOOL result = Shell_NotifyIcon(NIM_ADD, &nid);
-	// é‡Šæ”¾å›¾æ ‡èµ„æº
+	// ÊÍ·ÅÍ¼±ê×ÊÔ´
 	DestroyIcon(hIcon);
 
 	return result;
 }
 
-//é”€æ¯ç³»ç»Ÿæ‰˜ç›˜å›¾æ ‡ 
+//Ïú»ÙÏµÍ³ÍĞÅÌÍ¼±ê 
 void DestroyTrayIcon(HWND hwnd)
 {
 	NOTIFYICONDATA nid = { 0 };
 
-	// å…³é”®ï¼šæ ¹æ®ç³»ç»Ÿç‰ˆæœ¬è®¾ç½®æ­£ç¡®çš„ç»“æ„å¤§å°
+	// ¹Ø¼ü£º¸ù¾İÏµÍ³°æ±¾ÉèÖÃÕıÈ·µÄ½á¹¹´óĞ¡
 #if (NTDDI_VERSION >= NTDDI_VISTA)
 	nid.cbSize = NOTIFYICONDATA_V2_SIZE;
 #else
@@ -302,13 +302,13 @@ void DestroyTrayIcon(HWND hwnd)
 }
 
 //
-//  å‡½æ•°: WndProc(HWND, UINT, WPARAM, LPARAM)
+//  º¯Êı: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  ç›®æ ‡: å¤„ç†ä¸»çª—å£çš„æ¶ˆæ¯ã€‚
+//  Ä¿±ê: ´¦ÀíÖ÷´°¿ÚµÄÏûÏ¢¡£
 //
-//  WM_COMMAND  - å¤„ç†åº”ç”¨ç¨‹åºèœå•
-//  WM_PAINT    - ç»˜åˆ¶ä¸»çª—å£
-//  WM_DESTROY  - å‘é€é€€å‡ºæ¶ˆæ¯å¹¶è¿”å›
+//  WM_COMMAND  - ´¦ÀíÓ¦ÓÃ³ÌĞò²Ëµ¥
+//  WM_PAINT    - »æÖÆÖ÷´°¿Ú
+//  WM_DESTROY  - ·¢ËÍÍË³öÏûÏ¢²¢·µ»Ø
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -316,8 +316,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_ERASEBKGND: {
-		// ç›´æ¥è¿”å›TRUEè¡¨ç¤ºæˆ‘ä»¬å·²ç»å¤„ç†äº†èƒŒæ™¯æ“¦é™¤
-		// è¿™æ ·å¯ä»¥é¿å…ç³»ç»Ÿé»˜è®¤çš„èƒŒæ™¯æ“¦é™¤æ“ä½œï¼Œå‡å°‘puttyå…³é—­å’Œæ ‡ç­¾åˆ‡æ¢æ—¶çš„é—ªçƒ
+		// Ö±½Ó·µ»ØTRUE±íÊ¾ÎÒÃÇÒÑ¾­´¦ÀíÁË±³¾°²Á³ı
+		// ÕâÑù¿ÉÒÔ±ÜÃâÏµÍ³Ä¬ÈÏµÄ±³¾°²Á³ı²Ù×÷£¬¼õÉÙputty¹Ø±ÕºÍ±êÇ©ÇĞ»»Ê±µÄÉÁË¸
 		return TRUE;
 	}
 	case WM_CREATE:
@@ -328,7 +328,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Microsoft Sans Serif");
 		//StringCchCopyW(fontPropertyVal, sizeof(fontPropertyVal) / sizeof(wchar_t), L"Lucida console");
 		// here we specify default properties of font shared by all editor instances
-		g_tabWindowsInfo.editorFontProperties.lfHeight = -16; //å­—ä½“å¤§å°
+		g_tabWindowsInfo.editorFontProperties.lfHeight = -16; //×ÖÌå´óĞ¡
 		g_tabWindowsInfo.editorFontProperties.lfWidth = 0;
 		g_tabWindowsInfo.editorFontProperties.lfEscapement = 0;
 		g_tabWindowsInfo.editorFontProperties.lfOrientation = 0;
@@ -344,7 +344,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wcscpy_s(g_tabWindowsInfo.editorFontProperties.lfFaceName, _countof(g_tabWindowsInfo.editorFontProperties.lfFaceName), fontPropertyVal);
 		g_tabWindowsInfo.editorFontHandle = CreateFontIndirectW(&(g_tabWindowsInfo.editorFontProperties));
 
-		// åˆ›å»ºå·¥å…·æ¡å’Œæ ‡ç­¾
+		// ´´½¨¹¤¾ßÌõºÍ±êÇ©
 		CreateToolBarTabControl(&g_tabWindowsInfo, hWnd);
 
 		if (g_tabWindowsInfo.tabCtrlWinHandle == NULL) {
@@ -354,19 +354,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		else {
-			// è·å–æ ‡ç­¾çš„å³é”®èœå•
-			g_tabWindowsInfo.tabMenuHandle = LoadMenuW(g_appInstance, MakeIntreSource(IDM_TABMENU, IDM_TABMENU_EN));
-			g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.tabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
+			// »ñÈ¡±êÇ©µÄÓÒ¼ü²Ëµ¥
+			g_tabWindowsInfo.mainTabMenuHandle = LoadMenuW(g_appInstance, MakeIntreSource(IDM_TABMENU, IDM_TABMENU_EN));
+			g_tabWindowsInfo.tabMenuHandle = GetSubMenu(g_tabWindowsInfo.mainTabMenuHandle, 0); // we can't show top-level menu, we must use PopupMenu, which is a single child of this menu
 
-			// æ·»åŠ åˆå§‹æ ‡ç­¾
+			// Ìí¼Ó³õÊ¼±êÇ©
 			AddNewOverview(&g_tabWindowsInfo);
 		}
 
 		g_hMouseHook = SetWindowsHookEx(
-			WH_MOUSE_LL,        // å…¨å±€ä½çº§é¼ æ ‡é’©å­
-			MouseHookProc,      // å›è°ƒå‡½æ•°
-			GetModuleHandle(NULL),  // å½“å‰æ¨¡å—å¥æŸ„ï¼ˆæ— éœ€ DLLï¼‰
-			0                   // 0 è¡¨ç¤ºç›‘æ§æ‰€æœ‰çº¿ç¨‹
+			WH_MOUSE_LL,        // È«¾ÖµÍ¼¶Êó±ê¹³×Ó
+			MouseHookProc,      // »Øµ÷º¯Êı
+			GetModuleHandle(NULL),  // µ±Ç°Ä£¿é¾ä±ú£¨ÎŞĞè DLL£©
+			0                   // 0 ±íÊ¾¼à¿ØËùÓĞÏß³Ì
 		);
 
 		registerAccel(hWnd);
@@ -374,55 +374,55 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_SIZE:
 	{
-		// è·³è¿‡æœ€å°åŒ–å¤„ç†ï¼Œå¦åˆ™åœ¨puttyä¸­å¼€screenæœ€å°åŒ–åæœ€å¤§åŒ–æ˜¾ç¤ºä¼šå˜
+		// Ìø¹ı×îĞ¡»¯´¦Àí£¬·ñÔòÔÚputtyÖĞ¿ªscreen×îĞ¡»¯ºó×î´ó»¯ÏÔÊ¾»á±ä
 		if (wParam == SIZE_MINIMIZED) {
 			return 0;
 		}
 
-		// è°ƒæ•´æ ‡ç­¾æ§ä»¶å’ŒæŒ‰é’®å¤§å°
+		// µ÷Õû±êÇ©¿Ø¼şºÍ°´Å¥´óĞ¡
 		if (g_toolbarHandle) {
-			// æ§åˆ¶çª—å£å°çš„æ—¶å€™å‡ºæ¨ªå‘æ»šåŠ¨æ¡
+			// ¿ØÖÆ´°¿ÚĞ¡µÄÊ±ºò³öºáÏò¹ö¶¯Ìõ
 			//MoveWindow(g_toolbarHandle, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
-			// è‡ªåŠ¨è°ƒæ•´å¤§å°
+			// ×Ô¶¯µ÷Õû´óĞ¡
 			SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 		}
 		RECT rc;
 		// WM_SIZE params contain width and height of main window's client area
 		// Since client area's left and top coordinates are both 0, having width and height gives us absolute coordinates of client's area
-		// å€¼ç­‰äºGetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
+		// ÖµµÈÓÚGetClientRect((&g_tabWindowsInfo)->parentWinHandle, &rc);
 		SetRect(&rc, 0, 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 
 		resizeTabControl(&g_tabWindowsInfo, rc);
 
-		// åˆ·æ–°å½“å‰æ ‡ç­¾
+		// Ë¢ĞÂµ±Ç°±êÇ©
 		/*HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 		if (sel != -1) {
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
-			if (tabCtrlItemInfo.attachWindowHandle) {//è§£å†³å¥æŸ„ä¸ºNULL + RDW_ALLCHILDRENæ—¶ï¼Œä¸¤ä¸ªè¿›ç¨‹è°ƒæ•´ä¸€ä¸ªå¤§å°å¦ä¸€ä¸ªä¹Ÿä¼šåˆ·æ–°çš„é—®é¢˜
+			if (tabCtrlItemInfo.attachWindowHandle) {//½â¾ö¾ä±úÎªNULL + RDW_ALLCHILDRENÊ±£¬Á½¸ö½ø³Ìµ÷ÕûÒ»¸ö´óĞ¡ÁíÒ»¸öÒ²»áË¢ĞÂµÄÎÊÌâ
 				RedrawWindow(tabCtrlItemInfo.attachWindowHandle, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 			}
 		}*/
-		// åœ¨å¤„ç†  WM_SIZ æœŸé—´è°ƒç”¨ SetForegroundWindow ä¼šä¸èƒ½è°ƒæ•´å¤§å°, é€šè¿‡å®šæ—¶å™¨å®ç°
+		// ÔÚ´¦Àí  WM_SIZ ÆÚ¼äµ÷ÓÃ SetForegroundWindow »á²»ÄÜµ÷Õû´óĞ¡, Í¨¹ı¶¨Ê±Æ÷ÊµÏÖ
 		SetTimer(hWnd, TIMER_ID_FOCUS, 500, NULL);
 		return 0;
 	}
 	case WM_TIMER: {
 		if (wParam == TIMER_ID_FOCUS) {
-			KillTimer(hWnd, TIMER_ID_FOCUS); // å…³é—­è®¡æ—¶å™¨
+			KillTimer(hWnd, TIMER_ID_FOCUS); // ¹Ø±Õ¼ÆÊ±Æ÷
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			if (sel != -1) {
 				getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
-				// tabç„¦ç‚¹ä¸èƒ½å†™åœ¨TabCtrl_GetCurSelå‰
+				// tab½¹µã²»ÄÜĞ´ÔÚTabCtrl_GetCurSelÇ°
 				if (tabCtrlItemInfo.attachWindowHandle) {
 					SetForegroundWindow(tabCtrlItemInfo.attachWindowHandle);
 					for (int i = 0; i < 100; i++) {
-						// å¾ˆé‡è¦ï¼Œå½“ä¸ºå‰å°çª—å£æ‰èƒ½è®¾ç½®ç„¦ç‚¹
+						// ºÜÖØÒª£¬µ±ÎªÇ°Ì¨´°¿Ú²ÅÄÜÉèÖÃ½¹µã
 						if (tabCtrlItemInfo.attachWindowHandle == GetForegroundWindow()) {
-							// è®¾ç½®ç„¦ç‚¹
+							// ÉèÖÃ½¹µã
 							SetFocus(tabCtrlItemInfo.attachWindowHandle);
 							break;
 						}
@@ -434,10 +434,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}	
 	case WM_ACTIVATE: {
-		// çª—å£åˆ‡æ¢æ¿€æ´»ï¼Œè®¾ç½®ç„¦ç‚¹
+		// ´°¿ÚÇĞ»»¼¤»î£¬ÉèÖÃ½¹µã
 		switch (LOWORD(wParam)) {
-		case WA_ACTIVE: { //ï¼ˆéé¼ æ ‡ç‚¹å‡»ï¼Œé¼ æ ‡ç‚¹å‡»æ¿€æ´»ç„¦ç‚¹ä¸èƒ½å¤±å»ï¼Œå¦åˆ™ä¸»çª—ä½“åŠŸèƒ½æ²¡æ³•ç”¨ï¼‰
-			// å°†ç°æœ‰çª—å£è®¾ç½®å…ˆç½®é¡¶å†å–æ¶ˆ
+		case WA_ACTIVE: { //£¨·ÇÊó±êµã»÷£¬Êó±êµã»÷¼¤»î½¹µã²»ÄÜÊ§È¥£¬·ñÔòÖ÷´°Ìå¹¦ÄÜÃ»·¨ÓÃ£©
+			// ½«ÏÖÓĞ´°¿ÚÉèÖÃÏÈÖÃ¶¥ÔÙÈ¡Ïû
 			SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			SetTimer(hWnd, TIMER_ID_FOCUS, 100, NULL);
@@ -446,7 +446,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
-	case WM_ATTACH_CLICK: {//åœ¨attachç¨‹åºä¸Šç‚¹å‡»å·¦é”®
+	case WM_ATTACH_CLICK: {//ÔÚattach³ÌĞòÉÏµã»÷×ó¼ü
 		DWORD PID = (DWORD)lParam;
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
@@ -454,26 +454,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, sel, &tabCtrlItemInfo);
 			if (tabCtrlItemInfo.attachWindowHandle && tabCtrlItemInfo.attachProcessId == PID) {
-				//å…ˆç½®é¡¶å†å–æ¶ˆï¼Œè§£å†³çª—å£å±‚çº§é—®é¢˜
+				//ÏÈÖÃ¶¥ÔÙÈ¡Ïû£¬½â¾ö´°¿Ú²ã¼¶ÎÊÌâ
 				SetWindowPos(hWnd, HWND_TOPMOST,  0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 				SetWindowPos(hWnd, HWND_NOTOPMOST,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 			}
 		}
 		return 0;
 	}
-	case WM_ATTACH_RCLICK: {//puttyå³é”®ç²˜è´´
+	case WM_ATTACH_RCLICK: {//puttyÓÒ¼üÕ³Ìù
 		HWND hWndUnderMouse  = g_mouseHookWnd;
 		if (!hWndUnderMouse) {
 			return 0;
 		} 
 		int len = clipboardLen();
 		if (len <= 200) {
-			g_insideHook = TRUE;  // å¼€å§‹æ¨¡æ‹Ÿå‰è®¾ç½®æ ‡è®°
-			// æ¨¡æ‹Ÿå‘é€å³é”®æŒ‰ä¸‹æ¶ˆæ¯
+			g_insideHook = TRUE;  // ¿ªÊ¼Ä£ÄâÇ°ÉèÖÃ±ê¼Ç
+			// Ä£Äâ·¢ËÍÓÒ¼ü°´ÏÂÏûÏ¢
 			SendMessage(hWndUnderMouse, WM_RBUTTONDOWN, MK_RBUTTON, NULL);
-			// å‘é€å³é”®é‡Šæ”¾æ¶ˆæ¯ï¼ˆå®Œæˆç‚¹å‡»ï¼‰
+			// ·¢ËÍÓÒ¼üÊÍ·ÅÏûÏ¢£¨Íê³Éµã»÷£©
 			SendMessage(hWndUnderMouse, WM_RBUTTONUP, 0, NULL);
-			g_insideHook = FALSE; // æ¨¡æ‹Ÿå®Œæˆåæ¸…é™¤æ ‡è®°
+			g_insideHook = FALSE; // Ä£ÄâÍê³ÉºóÇå³ı±ê¼Ç
 			return 0;
 		}
 
@@ -485,19 +485,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			MB_OKCANCEL | MB_ICONQUESTION);
 
 		if (result == IDOK) {
-			g_insideHook = TRUE;  // å¼€å§‹æ¨¡æ‹Ÿå‰è®¾ç½®æ ‡è®°
-			// æ¨¡æ‹Ÿå‘é€å³é”®æŒ‰ä¸‹æ¶ˆæ¯
+			g_insideHook = TRUE;  // ¿ªÊ¼Ä£ÄâÇ°ÉèÖÃ±ê¼Ç
+			// Ä£Äâ·¢ËÍÓÒ¼ü°´ÏÂÏûÏ¢
 			SendMessage(hWndUnderMouse, WM_RBUTTONDOWN, MK_RBUTTON, NULL);
-			// å‘é€å³é”®é‡Šæ”¾æ¶ˆæ¯ï¼ˆå®Œæˆç‚¹å‡»ï¼‰
+			// ·¢ËÍÓÒ¼üÊÍ·ÅÏûÏ¢£¨Íê³Éµã»÷£©
 			SendMessage(hWndUnderMouse, WM_RBUTTONUP, 0, NULL);
-			g_insideHook = FALSE; // æ¨¡æ‹Ÿå®Œæˆåæ¸…é™¤æ ‡è®°
+			g_insideHook = FALSE; // Ä£ÄâÍê³ÉºóÇå³ı±ê¼Ç
 		}
 		g_mouseHookWnd = NULL;
 		return 0;
 	}
 	case WM_HOTKEY: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
-		// wParamä¸ºæ³¨å†Œæ—¶çš„idï¼Œåˆ¤æ–­æ˜¯å“ªä¸ªå¿«æ·é”®
+		// wParamÎª×¢²áÊ±µÄid£¬ÅĞ¶ÏÊÇÄÄ¸ö¿ì½İ¼ü
 		switch (wParam) {
 		case ID_HOTKEY_NEW:
 			AddNewOverview(&g_tabWindowsInfo);
@@ -522,25 +522,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND: {
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int wmId = LOWORD(wParam);
-		// åˆ†æèœå•é€‰æ‹©:
+		// ·ÖÎö²Ëµ¥Ñ¡Ôñ:
 		switch (wmId)
 		{
-		case ID_SEARCH_BUTTON://æœç´¢æ¡†æ¸…ç©º
+		case ID_SEARCH_BUTTON://ËÑË÷¿òÇå¿Õ
 			if (HIWORD(wParam) == BN_CLICKED) {
 				SetWindowText(g_hsearchEdit, L"");
 				g_hsearchLastWordLen = 0;
 				PerformSearch(g_hsearchEdit);
 			}
 			break;
-		case IDM_OPEN: {//æ–°å¢æ ‡ç­¾
+		case IDM_OPEN: {//ĞÂÔö±êÇ©
 			AddNewOverview(&g_tabWindowsInfo);
 			break;
 		}
-		case IDM_SPLIT: {//å››åˆ†å±
+		case IDM_SPLIT: {//ËÄ·ÖÆÁ
 			createSplitWindow(g_appInstance, hWnd);
 			break;
 		}
-		case ID_TAB_CLOSE: {//å³é”®å…³é—­å½“å‰é¼ æ ‡ä½ç½®æ ‡ç­¾
+		case ID_TAB_CLOSE: {//ÓÒ¼ü¹Ø±Õµ±Ç°Êó±êÎ»ÖÃ±êÇ©
 			RemoveTab(tabCtrlWinHandle, g_tabHitIndex, FALSE);
 			break;
 		}
@@ -579,23 +579,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			return 0;
 		}
-		case ID_TAB_CLONE: {//å…‹éš†
+		case ID_TAB_CLONE: {//¿ËÂ¡
 			cloneTab(tabCtrlWinHandle);
 			break;
 		}
-		case ID_TAB_RENAME: {//é‡å‘½åå¼¹çª—
+		case ID_TAB_RENAME: {//ÖØÃüÃûµ¯´°
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_RENAME, IDD_RENAME_EN), hWnd, RenameProc);
 			break;
 		}
-		case ID_TAB_RENAME_GET: { // è·å–æ—§æ ‡ç­¾å
+		case ID_TAB_RENAME_GET: { // »ñÈ¡¾É±êÇ©Ãû
 			TCITEM tie = { 0 };
-			tie.mask = TCIF_TEXT;         // åªè·å–æ–‡æœ¬å±æ€§
-			tie.cchTextMax = 256;         // ç¼“å†²åŒºæœ€å¤§é•¿åº¦
-			tie.pszText = (wchar_t*)lParam;   // æŒ‡å‘æ¥æ”¶æ–‡æœ¬çš„ç¼“å†²åŒº
+			tie.mask = TCIF_TEXT;         // Ö»»ñÈ¡ÎÄ±¾ÊôĞÔ
+			tie.cchTextMax = 256;         // »º³åÇø×î´ó³¤¶È
+			tie.pszText = (wchar_t*)lParam;   // Ö¸Ïò½ÓÊÕÎÄ±¾µÄ»º³åÇø
 			SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
 			return 0;
 		}
-		case ID_TAB_RENAME_DO: {//ç¡®è®¤ä¿®æ”¹æ ‡ç­¾å
+		case ID_TAB_RENAME_DO: {//È·ÈÏĞŞ¸Ä±êÇ©Ãû
 			wchar_t cutTitle[256] = { 0 };
 			TruncateString((wchar_t*)lParam, cutTitle, 18);
 			TCITEM tie = { 0 };
@@ -604,7 +604,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SendMessage(tabCtrlWinHandle, TCM_SETITEM, g_tabHitIndex, (LPARAM)&tie);
 			break;
 		}
-		case ID_TAB_AUTO: { //attachè¿›ç¨‹è‡ªåŠ¨å…³é—­åå›è°ƒæ›´æ–°æ ‡ç­¾
+		case ID_TAB_AUTO: { //attach½ø³Ì×Ô¶¯¹Ø±Õºó»Øµ÷¸üĞÂ±êÇ©
 			HANDLE hProcess = (HANDLE)lParam;
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int currentTab;
@@ -617,12 +617,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					deleteTab = i;
 
 					ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
-					// å…ˆé‡Šæ”¾å†…å­˜
+					// ÏÈÊÍ·ÅÄÚ´æ
 					if (tabCtrlItemInfo.command != NULL) {
 						delete[] tabCtrlItemInfo.command;
 						tabCtrlItemInfo.command = NULL;
 					}
-					// å› ä¸ºæ ‡ç­¾æ²¡é©¬ä¸Šåˆ é™¤ï¼Œå…ˆæ›´æ–°æ ‡ç­¾æ•°æ®, processHandle ä¸‹é¢åˆ¤æ–­è¿˜æœ‰ç”¨ï¼Œå…ˆä¿ç•™;
+					// ÒòÎª±êÇ©Ã»ÂíÉÏÉ¾³ı£¬ÏÈ¸üĞÂ±êÇ©Êı¾İ, processHandle ÏÂÃæÅĞ¶Ï»¹ÓĞÓÃ£¬ÏÈ±£Áô;
 					tabCtrlItemInfo.waitHandle = NULL;
 					tabCtrlItemInfo.attachProcessId = 0;
 					tabCtrlItemInfo.attachWindowHandle = NULL;
@@ -633,7 +633,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (deleteTab == -1) {
 				return 0;
 			}
-			// è·å–æ ‡ç­¾å
+			// »ñÈ¡±êÇ©Ãû
 			wchar_t szText[MAX_PATH] = { 0 };
 			TCITEM tie = { 0 };
 			tie.mask = TCIF_TEXT;
@@ -642,8 +642,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SendMessage(tabCtrlWinHandle, TCM_GETITEM, deleteTab, (LPARAM)&tie);
 			swprintf_s(szText, _countof(szText), GetString(IDS_TAB_CLOSE_TIP), szText);
 			MessageBox(hWnd, szText, GetString(IDS_TAB_CLOSE_TITLE), MB_OK);
-			// é”€æ¯æ ‡ç­¾, å› ä¸ºåˆ é™¤æ ‡ç­¾åç´¢å¼•å€¼ä¼šå˜åŒ–ï¼Œæ‰€ä»¥ç”¨ä¹‹å‰è·å–çš„deleteTabåˆ é™¤å¤šä¸ªæ ‡ç­¾æ—¶å…ˆåˆ é™¤å‰é¢çš„
-			// å†åˆ é™¤åé¢çš„æ­¤æ—¶ç´¢å¼•å€¼å·²ç»å˜åŒ–ï¼Œä¼šå¯¼è‡´åˆ é™¤å¤±è´¥ã€‚è§£å†³åŠæ³•æ˜¯é‡æ–°å¾ªç¯æ ‡ç­¾æŸ¥è¯¢ï¼Œæ€»æ•°ä¹Ÿé‡æ–°ç®—
+			// Ïú»Ù±êÇ©, ÒòÎªÉ¾³ı±êÇ©ºóË÷ÒıÖµ»á±ä»¯£¬ËùÒÔÓÃÖ®Ç°»ñÈ¡µÄdeleteTabÉ¾³ı¶à¸ö±êÇ©Ê±ÏÈÉ¾³ıÇ°ÃæµÄ
+			// ÔÙÉ¾³ıºóÃæµÄ´ËÊ±Ë÷ÒıÖµÒÑ¾­±ä»¯£¬»áµ¼ÖÂÉ¾³ıÊ§°Ü¡£½â¾ö°ì·¨ÊÇÖØĞÂÑ­»·±êÇ©²éÑ¯£¬×ÜÊıÒ²ÖØĞÂËã
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			for (int i = 0; i < count; i++) {
 				getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
@@ -655,13 +655,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (deleteTab == -1) {
 				return 0;
 			}
-			// è¦åœ¨åˆ é™¤å‰å†è·å–ä¸€æ¬¡å½“å‰é€‰ä¸­å€¼
+			// ÒªÔÚÉ¾³ıÇ°ÔÙ»ñÈ¡Ò»´Îµ±Ç°Ñ¡ÖĞÖµ
 			currentTab = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
 			if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 				DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 			}
-			// è·å–æœ€æ–°æ ‡ç­¾æ€»æ•°
+			// »ñÈ¡×îĞÂ±êÇ©×ÜÊı
 			count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (count == 0) {
 				AddNewOverview(&g_tabWindowsInfo);
@@ -672,7 +672,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		}
-		case ID_TAB_REFRESH: {//å³é”®åˆ·æ–°
+		case ID_TAB_REFRESH: {//ÓÒ¼üË¢ĞÂ
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
 			if (!tabCtrlItemInfo.attachWindowHandle) {
@@ -681,7 +681,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		}
-		case ID_TAB_MOVETOLEFT: { // ç§»åŠ¨æ ‡ç­¾
+		case ID_TAB_MOVETOLEFT: { // ÒÆ¶¯±êÇ©
 			selectedTabToLeft();
 			return 0;
 		}
@@ -724,7 +724,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_PUTTYGEN: {
 			wchar_t iniPath[MAX_PATH] = { 0 };
 			wchar_t puttygen[MAX_PATH] = { 0 };
-			// puttyè·¯å¾„
+			// puttyÂ·¾¶
 			GetAppIni(iniPath, MAX_PATH);
 			GetPrivateProfileStringW(SECTION_NAME, L"Puttygen", L"", puttygen, MAX_PATH, iniPath);
 			if (puttygen[0] == L'\0') {
@@ -733,29 +733,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			startApp(puttygen, TRUE);
 			break;
 		}
-		case IDM_DEBUG: {//æ—¥å¿—çª—å£
+		case IDM_DEBUG: {//ÈÕÖ¾´°¿Ú
 			createDebugWindow();
 			break;
 		}
-		case IDM_ABOUT:  //å…³äº
+		case IDM_ABOUT:  //¹ØÓÚ
 			showDialogBox(g_appInstance, &g_tabWindowsInfo, MakeIntreSource(IDD_ABOUTBOX, IDD_ABOUTBOX_EN), hWnd, About);
 			break;
-		case IDM_EXIT://é€€å‡ºèœå•
+		case IDM_EXIT://ÍË³ö²Ëµ¥
 			DestroyWindow(hWnd);
 			break;
 		case WM_GETMAINWINDOW:
-			// ä¸»çª—å£ç›´æ¥è¿”å›è‡ªèº«å¥æŸ„
+			// Ö÷´°¿ÚÖ±½Ó·µ»Ø×ÔÉí¾ä±ú
 			return (LRESULT)hWnd;
-		case ID_ENUM_ATTACH: { // åµŒå…¥ç¨‹åº
+		case ID_ENUM_ATTACH: { // Ç¶Èë³ÌĞò
 			HWND attachHwnd = (HWND)lParam;
 			AddAttachTab(&g_tabWindowsInfo, attachHwnd);
 			return 0;
 		}
-		case ID_TAB_DETACH: { //åˆ†ç¦»ç¨‹åº
+		case ID_TAB_DETACH: { //·ÖÀë³ÌĞò
 			DetachTab(tabCtrlWinHandle, g_tabHitIndex, NULL);
 			return 0;
 		}
-		case ID_TAB_DETACH_ALL: {//å…¨åˆ†ç¦»
+		case ID_TAB_DETACH_ALL: {//È«·ÖÀë
 			HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 			int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 			if (tabItemsCount < 1) {
@@ -782,7 +782,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SplitTab(g_tabHitIndex, 4);
 			return 0;
 		}
-		case ID_LIST_ATTACH: { // ç‚¹å‡»å¯åŠ¨ç¨‹åºå¹¶åµŒå…¥æ ‡ç­¾
+		case ID_LIST_ATTACH: { // µã»÷Æô¶¯³ÌĞò²¢Ç¶Èë±êÇ©
 			wchar_t msgCaption[MAX_PATH] = { 0 };
 			int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 			NameCommand* selLine = (NameCommand*)lParam;
@@ -806,27 +806,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
-	case WM_LBUTTONDBLCLK: {//åŒå‡»å¼€æ–°æ ‡ç­¾
-		// å¤„ç†é¼ æ ‡åŒå‡»äº‹ä»¶(ä¸åŒ…å«æ ‡ç­¾ä¸Šé¢çš„åŒå‡»ï¼‰
+	case WM_LBUTTONDBLCLK: {//Ë«»÷¿ªĞÂ±êÇ©
+		// ´¦ÀíÊó±êË«»÷ÊÂ¼ş(²»°üº¬±êÇ©ÉÏÃæµÄË«»÷£©
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
 
-		// æ ‡å‡† C è¯­è¨€ä¸­æ­£ç¡®çš„ POINT ç»“æ„ä½“åˆå§‹åŒ–æ–¹å¼
+		// ±ê×¼ C ÓïÑÔÖĞÕıÈ·µÄ POINT ½á¹¹Ìå³õÊ¼»¯·½Ê½
 		POINT pt = { x, y };
 
-		// è·å–æ ‡ç­¾åŒºåŸŸ
+		// »ñÈ¡±êÇ©ÇøÓò
 		RECT tabRect;
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		GetClientRect(tabCtrlWinHandle, &tabRect);
 		int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (count > 0) {
-			// è·å–æœ€åä¸€ä¸ªæ ‡ç­¾é¡¹çš„çŸ©å½¢
+			// »ñÈ¡×îºóÒ»¸ö±êÇ©ÏîµÄ¾ØĞÎ
 			RECT tabStripRect = { 0 };
 			RECT toolbarRect;
 			TabCtrl_GetItemRect(tabCtrlWinHandle, count - 1, &tabStripRect);
-			// è·å–å·¥å…·æ çš„å±å¹•åæ ‡
+			// »ñÈ¡¹¤¾ßÀ¸µÄÆÁÄ»×ø±ê
 			GetWindowRect(g_toolbarHandle, &toolbarRect);
-			// å°†å·¥å…·æ åæ ‡è½¬æ¢ä¸ºçˆ¶çª—å£çš„å®¢æˆ·åŒºåæ ‡
+			// ½«¹¤¾ßÀ¸×ø±ê×ª»»Îª¸¸´°¿ÚµÄ¿Í»§Çø×ø±ê
 			MapWindowPoints(HWND_DESKTOP, (&g_tabWindowsInfo)->parentWinHandle, (LPPOINT)&toolbarRect, 2);
 
 			tabRect.left = tabStripRect.right;
@@ -838,10 +838,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
-	case WM_CLICKBIT: {//ç‚¹å‡»æ‰˜ç›˜å›¾æ ‡
+	case WM_CLICKBIT: {//µã»÷ÍĞÅÌÍ¼±ê
 		switch (lParam)
 		{
-		case WM_LBUTTONUP://æ‰˜ç›˜å›¾æ ‡è¿˜åŸçª—å£
+		case WM_LBUTTONUP://ÍĞÅÌÍ¼±ê»¹Ô­´°¿Ú
 			ShowWindow(hWnd, SW_SHOWNORMAL);
 			::SetForegroundWindow(hWnd);
 			DestroyTrayIcon(hWnd);
@@ -853,7 +853,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_CLOSE: {
 		if (splitWindowAlive()) {
-			// éšè—çª—å£ï¼Œ ä¸å…³é—­çª—å£æ˜¯å› ä¸ºé¼ æ ‡é’©å­è¿˜è¦ç”¨ï¼Œå…³äº†å°±ç”¨ä¸äº†äº†
+			// Òş²Ø´°¿Ú£¬ ²»¹Ø±Õ´°¿ÚÊÇÒòÎªÊó±ê¹³×Ó»¹ÒªÓÃ£¬¹ØÁË¾ÍÓÃ²»ÁËÁË
 			CreateTrayIcon(hWnd);
 			ShowWindow(hWnd, SW_HIDE);
 			return 0;
@@ -861,7 +861,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		else {
 			wchar_t confirm[MAX_PATH] = { 0 };
 			wcscpy_s(confirm, _countof(confirm), GetString(IDS_TIP_CONFIRM_CLOSE));
-			// å½“ç”¨æˆ·ç‚¹å‡»å…³é—­æŒ‰é’®æ—¶ä¼šè§¦å‘WM_CLOSEæ¶ˆæ¯
+			// µ±ÓÃ»§µã»÷¹Ø±Õ°´Å¥Ê±»á´¥·¢WM_CLOSEÏûÏ¢
 			int response = MessageBox(
 				hWnd,
 				GetString(IDS_TIP_CLOSE_APP),
@@ -869,16 +869,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				MB_YESNO | MB_ICONQUESTION
 			);
 
-			if (response == IDYES) {// ç”¨æˆ·é€‰æ‹©"æ˜¯"
-				// é”€æ¯çª—å£
+			if (response == IDYES) {// ÓÃ»§Ñ¡Ôñ"ÊÇ"
+				// Ïú»Ù´°¿Ú
 				DestroyWindow(hWnd);
 			} else {
-				// ç”¨æˆ·é€‰æ‹©"å¦"åˆ™ä¸æ‰§è¡Œä»»ä½•æ“ä½œï¼Œçª—å£ä¿æŒæ‰“å¼€çŠ¶æ€
+				// ÓÃ»§Ñ¡Ôñ"·ñ"Ôò²»Ö´ĞĞÈÎºÎ²Ù×÷£¬´°¿Ú±£³Ö´ò¿ª×´Ì¬
 				return 0;
 			}
 		}
 	}
 	case WM_DESTROY: {
+		// ÊÍ·ÅGDI×ÊÔ´
+		DeleteObject(g_tabWindowsInfo.editorFontHandle);
+		DeleteObject(g_tabWindowsInfo.tabCaptionFontHandle);
+		DestroyMenu(g_tabWindowsInfo.mainTabMenuHandle);
+
 		HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
 		int tabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (tabItemsCount >= 1) {
@@ -887,13 +892,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		DestroyTrayIcon(hWnd);
-		// å–æ¶ˆå¿«æ·é”®
+		// È¡Ïû¿ì½İ¼ü
 		unRegisterAccel(hWnd);
 		if (g_hMouseHook) {
-			// å¸è½½é¼ æ ‡é’©å­
-			UnhookWindowsHookEx(g_hMouseHook);  // å¿…é¡»å¸è½½ï¼Œå¦åˆ™å¯èƒ½å¯¼è‡´è¿›ç¨‹å´©æºƒ
+			// Ğ¶ÔØÊó±ê¹³×Ó
+			UnhookWindowsHookEx(g_hMouseHook);  // ±ØĞëĞ¶ÔØ£¬·ñÔò¿ÉÄÜµ¼ÖÂ½ø³Ì±ÀÀ£
 		}
-		// é€€å‡ºè¿›ç¨‹
+		
+		// ÍË³ö½ø³Ì
 		PostQuitMessage(0);
 		break;
 	}
@@ -903,27 +909,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-// é€€å‡ºç¨‹åº
+// ÍË³ö³ÌĞò
 void QuitEasyPutty() {
 	PostMessage(g_mainWindowHandle, WM_CLOSE, 0, 0);
 }
 
-// å…‹éš†æ ‡ç­¾
+// ¿ËÂ¡±êÇ©
 void cloneTab(HWND tabCtrlWinHandle) {
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
-	// æ£€æŸ¥å…‹éš†æ¡ä»¶
+	// ¼ì²é¿ËÂ¡Ìõ¼ş
 	if (tabCtrlItemInfo.attachProcessId == 0) {
 		return;
 	}
-	// è·å–æ—§æ ‡ç­¾å
-	wchar_t receivedText[256] = { 0 };  // é¢„å…ˆåˆ†é…è¶³å¤Ÿå¤§çš„ç¼“å†²åŒº
+	// »ñÈ¡¾É±êÇ©Ãû
+	wchar_t receivedText[256] = { 0 };  // Ô¤ÏÈ·ÖÅä×ã¹»´óµÄ»º³åÇø
 	TCITEM tie = { 0 };
-	tie.mask = TCIF_TEXT;         // åªè·å–æ–‡æœ¬å±æ€§
-	tie.cchTextMax = 256;         // ç¼“å†²åŒºæœ€å¤§é•¿åº¦
-	tie.pszText = receivedText;   // æŒ‡å‘æ¥æ”¶æ–‡æœ¬çš„ç¼“å†²åŒº
+	tie.mask = TCIF_TEXT;         // Ö»»ñÈ¡ÎÄ±¾ÊôĞÔ
+	tie.cchTextMax = 256;         // »º³åÇø×î´ó³¤¶È
+	tie.pszText = receivedText;   // Ö¸Ïò½ÓÊÕÎÄ±¾µÄ»º³åÇø
 	SendMessage(tabCtrlWinHandle, TCM_GETITEM, g_tabHitIndex, (LPARAM)&tie);
-	// æ–°å»ºæ ‡ç­¾
+	// ĞÂ½¨±êÇ©
 	wchar_t msgCaption[MAX_PATH] = { 0 };
 	int newIndex = AddNewOverview(&g_tabWindowsInfo);
 	if (newIndex == -1) {
@@ -934,7 +940,7 @@ void cloneTab(HWND tabCtrlWinHandle) {
 	openAttach(tabCtrlWinHandle, newIndex, receivedText, tabCtrlItemInfo.command);
 }
 
-// ä»overviewæ–°å»ºç«‹ æˆ–è€…å…‹éš†
+// ´ÓoverviewĞÂ½¨Á¢ »òÕß¿ËÂ¡
 void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* command) {
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	HWND newHostWinHandle;
@@ -954,22 +960,22 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 	}
 	else {
 		getTabItemInfo(tabCtrlWinHandle, selected, &tabCtrlItemInfo);
-		// åˆ›å»ºæ–°çš„æ ‡ç­¾é¡µï¼Œåˆ›å»ºå…¶ä»–è¿›ç¨‹éœ€è¦attachWinHandleæ‰“åº•ï¼Œä¸ç„¶å¦‚explorerè¿›ç¨‹æµ‹è¯•æ˜¾ç¤ºä¼šæœ‰é—®é¢˜
+		// ´´½¨ĞÂµÄ±êÇ©Ò³£¬´´½¨ÆäËû½ø³ÌĞèÒªattachWinHandle´òµ×£¬²»È»Èçexplorer½ø³Ì²âÊÔÏÔÊ¾»áÓĞÎÊÌâ
 		puttyWindowHandle = createPuttyWindow(g_appInstance, newHostWinHandle, command);
 		if (puttyWindowHandle && IsWindow(puttyWindowHandle)) {
 			if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
-				DestroyWindow(tabCtrlItemInfo.hostWindowHandle); // ä¼šè‡ªåŠ¨é”€æ¯æ‰€æœ‰å­æ§ä»¶
+				DestroyWindow(tabCtrlItemInfo.hostWindowHandle); // »á×Ô¶¯Ïú»ÙËùÓĞ×Ó¿Ø¼ş
 			}
 			GetWindowThreadProcessId(puttyWindowHandle, &dwThreadId);
 			hProcess = ProcessRegisterClose(dwThreadId, &hWait);
 
-			// è¾“å‡ºè°ƒè¯•æ—¥å¿—
+			// Êä³öµ÷ÊÔÈÕÖ¾
 			LOG_INFO(L"hostWindow: %p", newHostWinHandle);
 
 			tabCtrlItemInfo.hostWindowHandle = newHostWinHandle;
 			tabCtrlItemInfo.attachWindowHandle = puttyWindowHandle;
 			tabCtrlItemInfo.attachProcessId = dwThreadId;
-			// æŒ‰ç…§å‘½ä»¤é•¿åº¦ç”³è¯·åˆé€‚å¤§å°çš„å†…å­˜ï¼Œå¹¶å­˜å‚¨å­—ç¬¦
+			// °´ÕÕÃüÁî³¤¶ÈÉêÇëºÏÊÊ´óĞ¡µÄÄÚ´æ£¬²¢´æ´¢×Ö·û
 			commandLen = wcslen(command) + 1;
 			if (tabCtrlItemInfo.command == NULL) {
 				tabCtrlItemInfo.command = new wchar_t[commandLen];
@@ -980,10 +986,10 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 				tabCtrlItemInfo.waitHandle = hWait;
 			}
 
-			// è¦æ›´æ–°æ•°æ®ï¼Œçª—å£å¤§å°è°ƒæ•´æ—¶æ‰éšåŠ¨
+			// Òª¸üĞÂÊı¾İ£¬´°¿Ú´óĞ¡µ÷ÕûÊ±²ÅËæ¶¯
 			TabCtrl_SetItem(tabCtrlWinHandle, selected, &tabCtrlItemInfo);
 
-			// ä¿®æ”¹é€‰é¡¹å¡æ ‡é¢˜
+			// ĞŞ¸ÄÑ¡Ïî¿¨±êÌâ
 			wchar_t cutTitle[256] = { 0 };
 			TruncateString(name, cutTitle, 18);
 			TCITEM tie = { 0 };
@@ -1005,7 +1011,7 @@ void openAttach(HWND tabCtrlWinHandle, int selected, wchar_t* name, wchar_t* com
 		}
 	}
 }
-// æ³¨å†Œå›è°ƒ
+// ×¢²á»Øµ÷
 HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait) {
 	if (!hWait) {
 		return NULL;
@@ -1020,12 +1026,12 @@ HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait) {
 		return NULL;
 	}
 	BOOL result = RegisterWaitForSingleObject(
-		hWait,                // è¾“å‡ºç­‰å¾…å¥æŸ„
-		hProcess,             // ç­‰å¾…çš„è¿›ç¨‹å¥æŸ„
-		ProcessEndCallback,   // å›è°ƒå‡½æ•°
-		hProcess,             // ä¼ é€’ç»™å›è°ƒçš„å‚æ•°
-		INFINITE,             // ç­‰å¾…è¶…æ—¶æ—¶é—´ï¼ˆINFINITEä¸ºæ— é™ç­‰å¾…ï¼‰
-		WT_EXECUTEONLYONCE    // åªæ‰§è¡Œä¸€æ¬¡å›è°ƒ
+		hWait,                // Êä³öµÈ´ı¾ä±ú
+		hProcess,             // µÈ´ıµÄ½ø³Ì¾ä±ú
+		ProcessEndCallback,   // »Øµ÷º¯Êı
+		hProcess,             // ´«µİ¸ø»Øµ÷µÄ²ÎÊı
+		INFINITE,             // µÈ´ı³¬Ê±Ê±¼ä£¨INFINITEÎªÎŞÏŞµÈ´ı£©
+		WT_EXECUTEONLYONCE    // Ö»Ö´ĞĞÒ»´Î»Øµ÷
 	);
 	if (!result) {
 		CloseHandle(hProcess);
@@ -1034,9 +1040,9 @@ HANDLE ProcessRegisterClose(DWORD dwThreadId, HANDLE* hWait) {
 	return hProcess;
 }
 
-// å›æ”¶èµ„æº
+// »ØÊÕ×ÊÔ´
 void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess) {
-	// Microsoft å®˜æ–¹æ–‡æ¡£ æŒ‡å‡ºåœ¨è°ƒç”¨ UnregisterWaitEx ä¹‹å‰ï¼Œä¸è¦å…³é—­ç­‰å¾…çš„å¥æŸ„,å¦‚hProcess
+	// Microsoft ¹Ù·½ÎÄµµ Ö¸³öÔÚµ÷ÓÃ UnregisterWaitEx Ö®Ç°£¬²»Òª¹Ø±ÕµÈ´ıµÄ¾ä±ú,ÈçhProcess
 	if (hWait) {
 		UnregisterWaitEx(hWait, INVALID_HANDLE_VALUE);
 	}
@@ -1045,35 +1051,35 @@ void ProcessUnRegisterClose(HANDLE hWait, HANDLE hProcess) {
 	}
 }
 
-// è¿›ç¨‹ç»“æŸæ—¶çš„å›è°ƒå‡½æ•°
+// ½ø³Ì½áÊøÊ±µÄ»Øµ÷º¯Êı
 void CALLBACK ProcessEndCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired) {
-	// å¿…é¡»å‘æ¶ˆæ¯å›åˆ°ä¸»è¿›ç¨‹æ“ä½œ, è¿˜å¾—æ˜¯å¼‚æ­¥æ¶ˆæ¯
+	// ±ØĞë·¢ÏûÏ¢»Øµ½Ö÷½ø³Ì²Ù×÷, »¹µÃÊÇÒì²½ÏûÏ¢
 	PostMessage(g_mainWindowHandle, WM_COMMAND, ID_TAB_AUTO, LPARAM(lpParameter));
 }
 
 int GetTitleBarHeightWithoutMenu(HWND hWnd) {
 	if (!IsWindow(hWnd)) return 0;
 	RECT windowRect, clientRect;
-	GetWindowRect(hWnd, &windowRect);        // è·å–çª—å£åœ¨å±å¹•åæ ‡ç³»ä¸­çš„ä½ç½®
-	GetClientRect(hWnd, &clientRect);        // è·å–å®¢æˆ·åŒºåœ¨çª—å£åæ ‡ç³»ä¸­çš„ä½ç½®
+	GetWindowRect(hWnd, &windowRect);        // »ñÈ¡´°¿ÚÔÚÆÁÄ»×ø±êÏµÖĞµÄÎ»ÖÃ
+	GetClientRect(hWnd, &clientRect);        // »ñÈ¡¿Í»§ÇøÔÚ´°¿Ú×ø±êÏµÖĞµÄÎ»ÖÃ
 
-	// å°†å®¢æˆ·åŒºå·¦ä¸Šè§’åæ ‡ä»çª—å£åæ ‡è½¬æ¢ä¸ºå±å¹•åæ ‡
+	// ½«¿Í»§Çø×óÉÏ½Ç×ø±ê´Ó´°¿Ú×ø±ê×ª»»ÎªÆÁÄ»×ø±ê
 	POINT clientTopLeft = { clientRect.left, clientRect.top };
 	ClientToScreen(hWnd, &clientTopLeft);
 
-	// è®¡ç®—æ ‡é¢˜æ é«˜åº¦ï¼ˆåŒ…å«è¾¹æ¡†ï¼‰
+	// ¼ÆËã±êÌâÀ¸¸ß¶È£¨°üº¬±ß¿ò£©
 	int titleBarHeight = clientTopLeft.y - windowRect.top;
 	return titleBarHeight;
 }
 
 BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL refresh) {
-	//ä¸èƒ½ä½¿ç”¨SetWindowPosçª—å£åˆ·æ–°ä¼šæœ‰é—®é¢˜ï¼ŒMoveWindowä¹Ÿä¸é‡ç»˜
-	// æ–°å¢ï¼šè°ƒæ•´ PuTTY çª—å£å¤§å°ï¼ˆè‹¥å¥æŸ„æœ‰æ•ˆï¼‰
+	//²»ÄÜÊ¹ÓÃSetWindowPos´°¿ÚË¢ĞÂ»áÓĞÎÊÌâ£¬MoveWindowÒ²²»ÖØ»æ
+	// ĞÂÔö£ºµ÷Õû PuTTY ´°¿Ú´óĞ¡£¨Èô¾ä±úÓĞĞ§£©
 	if (attachWindowHandle && IsWindow(attachWindowHandle)) {
-		// 2æ¬¡MoveWindowå¥‡æ€ªçš„è§£å†³äº† cmd è¿›ç¨‹åå¤attach å’Œdetachæ—¶å€™çš„åˆ·æ–°é—®é¢˜ï¼Œç¬¬ä¸€æ¬¡å¯ä»¥æ˜¯FALSE
+		// 2´ÎMoveWindowÆæ¹ÖµÄ½â¾öÁË cmd ½ø³Ì·´¸´attach ºÍdetachÊ±ºòµÄË¢ĞÂÎÊÌâ£¬µÚÒ»´Î¿ÉÒÔÊÇFALSE
 		MoveWindow(attachWindowHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
 		int captionHeight = GetTitleBarHeightWithoutMenu(attachWindowHandle);
-		// è¿™ä¸ªè¦ç”¨TRUE
+		// Õâ¸öÒªÓÃTRUE
 		MoveWindow(attachWindowHandle, 0, -captionHeight+2,
 			(rc.right - rc.left), (rc.bottom - rc.top + captionHeight), refresh);
 
@@ -1081,7 +1087,7 @@ BOOL setTabWindowPos(HWND hostWinHandle, HWND attachWindowHandle, RECT rc, BOOL 
 	return MoveWindow(hostWinHandle, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, refresh);
 }
 
-// tabäº‹ä»¶
+// tabÊÂ¼ş
 LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND menuCommandProcessorWindowHandle, int code) {
 
 	POINT cursorPos, absCursorPos;
@@ -1093,13 +1099,13 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 		return 0;
 	}
 
-	case TCN_SELCHANGE: {//é€‰ä¸­æ ‡ç­¾
+	case TCN_SELCHANGE: {//Ñ¡ÖĞ±êÇ©
 		showWindowForSelectedTabItem(tabCtrlWinHandle, -1);
 
 		SetTimer(g_mainWindowHandle, TIMER_ID_FOCUS, 1, NULL);
 		return 1;
 	}
-	case NM_RCLICK: { //å³é”®ç‚¹å‡»
+	case NM_RCLICK: { //ÓÒ¼üµã»÷
 		GetCursorPos(&absCursorPos);
 		cursorPos = absCursorPos;
 		// since tab control is a child window itself (no self menu, no self border, ...) so it's client area corresponds to whole tab control window
@@ -1129,7 +1135,7 @@ LRESULT processTabNotification(HWND tabCtrlWinHandle, HMENU tabMenuHandle, HWND 
 	return 0;
 }
 
-// åªç§»åŠ¨æ ‡ç­¾ä¸ä¿®æ”¹é€‰ä¸­
+// Ö»ÒÆ¶¯±êÇ©²»ĞŞ¸ÄÑ¡ÖĞ
 void moveTabToPosition(struct TabWindowsInfo* tabWindowsInfo, int tabIndex, int newPosition) {
 
 	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
@@ -1176,43 +1182,43 @@ void selectedTabToLeft() {
 	}
 }
 
-// è·å–å½“å‰æœ¬åœ°æ—¶é—´ï¼Œç”¨äºè¾“å…¥æ³•å›è½¦ä¸Šå±æ–°å’Œæ—§é•¿åº¦ä¸€è‡´æ²¡æ›´æ–°çš„é—®é¢˜
+// »ñÈ¡µ±Ç°±¾µØÊ±¼ä£¬ÓÃÓÚÊäÈë·¨»Ø³µÉÏÆÁĞÂºÍ¾É³¤¶ÈÒ»ÖÂÃ»¸üĞÂµÄÎÊÌâ
 int calcWordLen(int len) {
 	SYSTEMTIME st;
 	GetLocalTime(&st);
 	return len + st.wSecond / 2 * 1000;
 }
 
-// å­ç±»åŒ–åçš„çª—å£è¿‡ç¨‹å‡½æ•°
+// ×ÓÀà»¯ºóµÄ´°¿Ú¹ı³Ìº¯Êı
 LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	// è·å–åŸå§‹çª—å£è¿‡ç¨‹
+	// »ñÈ¡Ô­Ê¼´°¿Ú¹ı³Ì
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
 	switch (message) {
 	case WM_COMMAND: {
-			// ä½å­—æ˜¯æ§ä»¶IDï¼Œé«˜å­—æ˜¯é€šçŸ¥ç 
+			// µÍ×ÖÊÇ¿Ø¼şID£¬¸ß×ÖÊÇÍ¨ÖªÂë
 			UINT_PTR nID = LOWORD(wParam);
 			UINT_PTR nCode = HIWORD(wParam);
-			// åˆ¤æ–­æ˜¯å¦æ˜¯ç›®æ ‡ç¼–è¾‘æ¡†çš„EN_CHANGEé€šçŸ¥
+			// ÅĞ¶ÏÊÇ·ñÊÇÄ¿±ê±à¼­¿òµÄEN_CHANGEÍ¨Öª
 			if (nID == ID_SEARCH_EDIT && nCode == EN_CHANGE) {
-				// æ”¶åˆ°å†…å®¹å˜åŒ–ï¼Œé‡ç½®å®šæ—¶å™¨
+				// ÊÕµ½ÄÚÈİ±ä»¯£¬ÖØÖÃ¶¨Ê±Æ÷
 				if (g_searchTimer) {
-					KillTimer(hWnd, g_searchTimer); // æ¸…é™¤æ—§å®šæ—¶å™¨
+					KillTimer(hWnd, g_searchTimer); // Çå³ı¾É¶¨Ê±Æ÷
 				}
-				// å¯åŠ¨æ–°å®šæ—¶å™¨ï¼ˆç­‰å¾…300æ¯«ç§’ï¼‰
+				// Æô¶¯ĞÂ¶¨Ê±Æ÷£¨µÈ´ı300ºÁÃë£©
 				g_searchTimer = SetTimer(hWnd, 1, 300, NULL);
 			}
 		}
 		break;
 	case WM_TIMER: {
 			wchar_t searchWord[256] = { 0 };
-			// å®šæ—¶å™¨è§¦å‘ï¼šè§†ä¸ºè¾“å…¥ç¨³å®šï¼Œå¤„ç†å†…å®¹
-			KillTimer(hWnd, g_searchTimer); // å…ˆé”€æ¯å®šæ—¶å™¨
+			// ¶¨Ê±Æ÷´¥·¢£ºÊÓÎªÊäÈëÎÈ¶¨£¬´¦ÀíÄÚÈİ
+			KillTimer(hWnd, g_searchTimer); // ÏÈÏú»Ù¶¨Ê±Æ÷
 			g_searchTimer = 0;
 			
 			GetWindowText(g_hsearchEdit, searchWord, 256);
 			int newLen = calcWordLen(lstrlen(searchWord));
 			LOG_DEBUG(L"search: change g_hsearchLastWordLen=%d, wordlen=%d, newLen=%d", g_hsearchLastWordLen, lstrlen(searchWord), newLen);
-			// åŒé•¿åº¦åˆšæŸ¥è¯¢è¿‡ï¼Œä¸è§¦å‘æŸ¥è¯¢
+			// Í¬³¤¶È¸Õ²éÑ¯¹ı£¬²»´¥·¢²éÑ¯
 			if (g_hsearchLastWordLen != newLen) {
 				g_hsearchLastWordLen = newLen;
 				PerformSearch(hWnd);
@@ -1221,7 +1227,7 @@ LRESULT CALLBACK ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		break;
 	}
 
-	// è°ƒç”¨åŸå§‹çª—å£è¿‡ç¨‹å¤„ç†å…¶ä»–æ¶ˆæ¯
+	// µ÷ÓÃÔ­Ê¼´°¿Ú¹ı³Ì´¦ÀíÆäËûÏûÏ¢
 	return CallWindowProc(originalProc, hWnd, message, wParam, lParam);
 }
 
@@ -1229,58 +1235,58 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	WNDPROC originalProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
 
 	switch (message) {
-		// æ‹¦æˆªå­—ç¬¦æ¶ˆæ¯ï¼ˆå…³é”®ï¼Œå¾ˆå¤šæ—¶å€™å“é“ƒç”±æ­¤è§¦å‘,å¦‚æœä¸æ‹¦æˆªæŒ‰å›è½¦æ—¶ä¼šå‘ç”Ÿå“é“ƒï¼‰
+		// À¹½Ø×Ö·ûÏûÏ¢£¨¹Ø¼ü£¬ºÜ¶àÊ±ºòÏìÁåÓÉ´Ë´¥·¢,Èç¹û²»À¹½Ø°´»Ø³µÊ±»á·¢ÉúÏìÁå£©
 	case WM_CHAR:
-		if (wParam == VK_RETURN || wParam == 13) {// 13æ˜¯å›è½¦çš„ASCIIç 
+		if (wParam == VK_RETURN || wParam == 13) {// 13ÊÇ»Ø³µµÄASCIIÂë
 			wchar_t searchWord[256] = { 0 };
 			GetWindowText(g_hsearchEdit, searchWord, 256);
 
-			// å°ç‹¼æ¯«è¾“å…¥æ³•å›è½¦ä¸Šå±
+			// Ğ¡ÀÇºÁÊäÈë·¨»Ø³µÉÏÆÁ
 			int newLen = calcWordLen(lstrlen(searchWord));
 			LOG_DEBUG(L"search: return g_hsearchLastWordLen=%d, wordlen=%d, newLen=%d", g_hsearchLastWordLen, lstrlen(searchWord), newLen);
 			if (g_hsearchLastWordLen != newLen) {
 				g_hsearchLastWordLen = newLen;
 				PerformSearch(hWnd);
 			}
-			// å¤„ç†å›è½¦é”®
+			// ´¦Àí»Ø³µ¼ü
 			TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 			int selected = TabCtrl_GetCurSel((&g_tabWindowsInfo)->tabCtrlWinHandle);
 			getTabItemInfo((&g_tabWindowsInfo)->tabCtrlWinHandle, selected, &tabCtrlItemInfo);
 			if (tabCtrlItemInfo.attachProcessId == 0) {
-				// è·å– ListView æ§ä»¶å¥æŸ„
-				HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW); // æˆ–è€…é€šè¿‡å…¶ä»–æ–¹å¼è·å–
+				// »ñÈ¡ ListView ¿Ø¼ş¾ä±ú
+				HWND hListView = GetDlgItem(tabCtrlItemInfo.hostWindowHandle, ID_LIST_VIEW); // »òÕßÍ¨¹ıÆäËû·½Ê½»ñÈ¡
 
-				// è·å–è¡Œæ•°
+				// »ñÈ¡ĞĞÊı
 				int itemCount = ListView_GetItemCount(hListView);
 
-				// å¦‚æœæœ‰é¡¹ç›®ï¼Œåˆ™é€‰ä¸­ç¬¬ä¸€è¡Œ
+				// Èç¹ûÓĞÏîÄ¿£¬ÔòÑ¡ÖĞµÚÒ»ĞĞ
 				if (itemCount > 0) {
-					// è®¾ç½®ç¬¬ä¸€è¡Œ(ç´¢å¼•0)ä¸ºé€‰ä¸­çŠ¶æ€
+					// ÉèÖÃµÚÒ»ĞĞ(Ë÷Òı0)ÎªÑ¡ÖĞ×´Ì¬
 					ListView_SetItemState(hListView, 0, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 
-					// ç¡®ä¿é€‰ä¸­çš„é¡¹å¯è§
+					// È·±£Ñ¡ÖĞµÄÏî¿É¼û
 					ListView_EnsureVisible(hListView, 0, FALSE);
 					SetFocus(hListView);
 				}
 
 			}
-			return 0; // é˜»æ­¢é»˜è®¤å¤„ç†ï¼ˆåŒ…æ‹¬å“é“ƒå’Œè¾“å…¥å›è½¦ç¬¦ï¼‰
+			return 0; // ×èÖ¹Ä¬ÈÏ´¦Àí£¨°üÀ¨ÏìÁåºÍÊäÈë»Ø³µ·û£©
 		}
 		break;
 	}
 
-	// è°ƒç”¨åŸå§‹çª—å£è¿‡ç¨‹å¤„ç†å…¶ä»–æ¶ˆæ¯
+	// µ÷ÓÃÔ­Ê¼´°¿Ú¹ı³Ì´¦ÀíÆäËûÏûÏ¢
 	return CallWindowProc(originalProc, hWnd, message, wParam, lParam);
 }
 
-// åˆ›å»º TabControl æ§ä»¶
+// ´´½¨ TabControl ¿Ø¼ş
 void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentWinHandle) {
 	HWND tabCtrlWinHandle;
 	LOGFONTW tabCaptionFont;
 	HFONT tabCaptionFontHandle;
 	int searchLeft = 700;
 	int searchWidth = 300;
-	// ä¸ºæ¯ä¸ªæŒ‰é’®æ–‡æœ¬å®šä¹‰ç‹¬ç«‹çš„å±€éƒ¨å˜é‡
+	// ÎªÃ¿¸ö°´Å¥ÎÄ±¾¶¨Òå¶ÀÁ¢µÄ¾Ö²¿±äÁ¿
 	wchar_t btnTextCreate[64] = { 0 };
 	wchar_t btnTextSplit[64] = { 0 };
 	wchar_t btnTextWindow[64] = { 0 };
@@ -1297,21 +1303,21 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	tabWindowsInfo->tabIncrementor = 0;
 	tabWindowsInfo->parentWinHandle = parentWinHandle;
 
-	// åˆ›å»º Toolbar
-	// å¦‚æœè®¾ç½®äº†TBSTYLE_FLATï¼ŒåŒæ—¶ä¸»çª—ä½“è®¾ç½®äº†WM_ERASEBKGND{return true;} å·¥å…·æ èƒŒæ™¯ä¼šå˜æˆé»‘è‰²ï¼Œæ‰€ä»¥ä¸è®¾ç½®
+	// ´´½¨ Toolbar
+	// Èç¹ûÉèÖÃÁËTBSTYLE_FLAT£¬Í¬Ê±Ö÷´°ÌåÉèÖÃÁËWM_ERASEBKGND{return true;} ¹¤¾ßÀ¸±³¾°»á±ä³ÉºÚÉ«£¬ËùÒÔ²»ÉèÖÃ
 	g_toolbarHandle = CreateWindowW(
 		TOOLBARCLASSNAME, NULL,
 		WS_CHILD | WS_VISIBLE | TBSTYLE_TOOLTIPS,
 		0, 0, 0, 0, parentWinHandle, (HMENU)IDR_MAIN_TOOLBAR, g_appInstance, NULL
 	);
 	WNDPROC originalToolbarProc = (WNDPROC)SetWindowLongPtr(g_toolbarHandle, GWLP_WNDPROC, (LONG_PTR)ToolbarProc);
-	// å­˜å‚¨åŸå§‹çª—å£è¿‡ç¨‹ï¼Œç”¨äºåç»­è°ƒç”¨
+	// ´æ´¢Ô­Ê¼´°¿Ú¹ı³Ì£¬ÓÃÓÚºóĞøµ÷ÓÃ
 	SetWindowLongPtrW(g_toolbarHandle, GWLP_USERDATA, (LONG_PTR)originalToolbarProc);
-	// è®¾ç½® ImageList
+	// ÉèÖÃ ImageList
 	SendMessage(g_toolbarHandle, TB_SETIMAGELIST, 0, 0);
 
 
-	// ä»èµ„æºåŠ è½½å­—ç¬¦ä¸²åˆ°ç‹¬ç«‹å˜é‡
+	// ´Ó×ÊÔ´¼ÓÔØ×Ö·û´®µ½¶ÀÁ¢±äÁ¿
 	wcscpy_s(btnTextCreate, _countof(btnTextCreate), GetString(IDS_TOOLBAR_CREATE));
 	wcscpy_s(btnTextSplit, _countof(btnTextSplit), GetString(IDS_TOOLBAR_SPLIT));
 	wcscpy_s(btnTextWindow, _countof(btnTextWindow), GetString(IDS_TOOLBAR_WINDOW));
@@ -1324,7 +1330,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	wcscpy_s(btnTextDebug, _countof(btnTextDebug), GetString(IDS_TOOLBAR_DEBUG));
 	wcscpy_s(btnTextAbout, _countof(btnTextAbout), GetString(IDS_TOOLBAR_ABOUT));
 
-	// å®šä¹‰æŒ‰é’®
+	// ¶¨Òå°´Å¥
 	TBBUTTON tbButtons[] = {
 		{ -1, IDM_OPEN,   TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextCreate },
 		{ -1, IDM_SPLIT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextSplit },
@@ -1338,17 +1344,17 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		{ -1, IDM_DEBUG,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextDebug },
 		{ -1, IDM_ABOUT,  TBSTATE_ENABLED, TBSTYLE_BUTTON, {0}, 0, (INT_PTR)btnTextAbout }
 	};
-	//å¿…é¡»åœ¨è°ƒç”¨ TB_ADDBUTTONS ä¹‹å‰è®¾ç½®TB_BUTTONSTRUCTSIZE ä¼ é€’ç»“æ„ä½“å¤§å°ï¼Œå¦åˆ™å·¥å…·æ å¯èƒ½æ— æ³•æ­£ç¡®è§£ææŒ‰é’®æ•°æ®ã€‚
+	//±ØĞëÔÚµ÷ÓÃ TB_ADDBUTTONS Ö®Ç°ÉèÖÃTB_BUTTONSTRUCTSIZE ´«µİ½á¹¹Ìå´óĞ¡£¬·ñÔò¹¤¾ßÀ¸¿ÉÄÜÎŞ·¨ÕıÈ·½âÎö°´Å¥Êı¾İ¡£
 	SendMessage(g_toolbarHandle, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
-	// æ·»åŠ æŒ‰é’®
+	// Ìí¼Ó°´Å¥
 	SendMessage(g_toolbarHandle, TB_ADDBUTTONS,
 		sizeof(tbButtons) / sizeof(TBBUTTON), (LPARAM)&tbButtons);
-	// è‡ªåŠ¨è°ƒæ•´å¤§å°
+	// ×Ô¶¯µ÷Õû´óĞ¡
 	SendMessage(g_toolbarHandle, TB_AUTOSIZE, 0, 0);
 	if (g_currentLang == LANG_EN) {
 		searchLeft = 900;
 	}
-	// åˆ›å»ºæœç´¢æ¡†å’Œæœç´¢æŒ‰é’®
+	// ´´½¨ËÑË÷¿òºÍËÑË÷°´Å¥
 	g_hsearchEdit = CreateWindowEx(
 		WS_EX_CLIENTEDGE,
 		_T("EDIT"),
@@ -1368,10 +1374,10 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		g_appInstance, NULL
 	);
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
-	// å­˜å‚¨åŸå§‹çª—å£è¿‡ç¨‹ï¼Œç”¨äºåç»­è°ƒç”¨
+	// ´æ´¢Ô­Ê¼´°¿Ú¹ı³Ì£¬ÓÃÓÚºóĞøµ÷ÓÃ
 	SetWindowLongPtrW(g_hsearchEdit, GWLP_USERDATA, (LONG_PTR)originalProc);
 
-	// åˆ›å»ºæ ‡ç­¾æ§ä»¶
+	// ´´½¨±êÇ©¿Ø¼ş
 	tabCtrlWinHandle = CreateWindowW(
 		WC_TABCONTROL, L"",
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_FOCUSNEVER | TCS_HOTTRACK,
@@ -1402,14 +1408,16 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	tabCaptionFont.lfPitchAndFamily = DEFAULT_PITCH;
 	wcscpy_s(tabCaptionFont.lfFaceName, _countof(tabCaptionFont.lfFaceName), L"MS Shell dlg"); // this font is used by dialog controls
 	tabCaptionFontHandle = CreateFontIndirectW(&tabCaptionFont);
+	tabWindowsInfo->tabCaptionFontHandle = tabCaptionFontHandle;
 
+	//Ê¹ÓÃ WM_SETFONT Ê±Èç¹û²ÎÊıÎª FALSE,×ÖÌå¶ÔÏó²»»á±»¿Ø¼ş¸´ÖÆ£¬ ËùÒÔÒª¼ÓÈ«¾Ö±äÁ¿Ïú»Ù
 	SendMessageW(tabCtrlWinHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(g_toolbarHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(g_hsearchEdit, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(searchButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 }
 
-// æ·»åŠ æ–°æ ‡ç­¾
+// Ìí¼ÓĞÂ±êÇ©
 int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	int count = TabCtrl_GetItemCount(tabCtrlWinHandle);
@@ -1432,7 +1440,7 @@ int AddNewTab(HWND tabCtrlWinHandle, int suffix) {
 	return count;
 }
 
-// é¢„è§ˆçª—å£
+// Ô¤ÀÀ´°¿Ú
 int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 	RECT rc;
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
@@ -1449,13 +1457,13 @@ int AddNewOverview(struct TabWindowsInfo *tabWindowsInfo) {
 		return -1;
 	}
 	InitOverview(g_appInstance, tabWindowsInfo, hostWindow, g_hsearchEdit);
-	// å…ˆè·å–å†æ›´æ–°
+	// ÏÈ»ñÈ¡ÔÙ¸üĞÂ
 	getTabItemInfo(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 	tabCtrlItemInfo.tcitemheader.mask = TCIF_PARAM;
 	tabCtrlItemInfo.hostWindowHandle = hostWindow;
 	TabCtrl_SetItem(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
 
-	// è·å–æ•´ä¸ªwindowåŒºåŸŸ
+	// »ñÈ¡Õû¸öwindowÇøÓò
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
 	rc = getTabRect(tabWindowsInfo, rc);
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
@@ -1470,7 +1478,7 @@ void selectTab(HWND tabCtrlWinHandle, int tabIndex) {
 	showWindowForSelectedTabItem(tabCtrlWinHandle, tabIndex);
 }
 
-// åˆ‡æ¢åˆ°è¦æ˜¾ç¤ºçš„æ ‡ç­¾å†…å®¹
+// ÇĞ»»µ½ÒªÏÔÊ¾µÄ±êÇ©ÄÚÈİ
 void showWindowForSelectedTabItem(HWND tabCtrlWinHandle, int selected) {
 	int iPage = selected < 0 ? TabCtrl_GetCurSel(tabCtrlWinHandle) : selected;
 	int numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
@@ -1505,7 +1513,7 @@ HWND getHostWindowForTabItem(HWND tabCtrlWinHandle, int i) {
 	return tabCtrlItemInfo.hostWindowHandle;
 }
 
-// åˆ é™¤æ ‡ç­¾
+// É¾³ı±êÇ©
 void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 	int count;
 	int newSelectedTab;
@@ -1515,49 +1523,49 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 	getTabItemInfo(tabCtrlWinHandle, deleteTab, &tabCtrlItemInfo);
 
 	if (!quit) {
-		// æœ€åä¸€ä¸ªé¢„è§ˆä¸åˆ é™¤
+		// ×îºóÒ»¸öÔ¤ÀÀ²»É¾³ı
 		count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 		if (count == 1 && tabCtrlItemInfo.attachProcessId == 0) {
 			return;
 		}
 	}
 
-	// åˆ é™¤æ ‡ç­¾
+	// É¾³ı±êÇ©
 	TabCtrl_DeleteItem(tabCtrlWinHandle, deleteTab);
 	if (tabCtrlItemInfo.attachWindowHandle && IsWindow(tabCtrlItemInfo.attachWindowHandle)) {
-		//å¦‚æœæœ‰attachäº†cmdè¿›ç¨‹ ï¼Œé€€å‡ºæ‰§è¡Œä¼šå‘ç”Ÿ(ntdll.dll)å¤„å¼•å‘çš„å¼‚å¸¸: 0xC0000005: å†™å…¥ä½ç½® 0xCCCCCCD4 æ—¶å‘ç”Ÿè®¿é—®å†²çª
-		//æš‚æ—¶ä¸çŸ¥é“å¦‚ä½•è§£å†³ï¼Œé€€å‡ºæ—¶ifæ‰
-		//ç›®å‰å¥½åƒå·²ç»è§£å†³è®¿é—®å†²çªé—®é¢˜ï¼Œå»æ‰if
+		//Èç¹ûÓĞattachÁËcmd½ø³Ì £¬ÍË³öÖ´ĞĞ»á·¢Éú(ntdll.dll)´¦Òı·¢µÄÒì³£: 0xC0000005: Ğ´ÈëÎ»ÖÃ 0xCCCCCCD4 Ê±·¢Éú·ÃÎÊ³åÍ»
+		//ÔİÊ±²»ÖªµÀÈçºÎ½â¾ö£¬ÍË³öÊ±ifµô
+		//Ä¿Ç°ºÃÏñÒÑ¾­½â¾ö·ÃÎÊ³åÍ»ÎÊÌâ£¬È¥µôif
 		//if (!quit) {
 		ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
 		//}
 
-		// é”€æ¯çª—ä½“
+		// Ïú»Ù´°Ìå
 		DestroyWindow(tabCtrlItemInfo.attachWindowHandle);
 
-		// æ£€æŸ¥è¿›ç¨‹æ˜¯å¦å…³é—­ï¼Œè¶…æ—¶å¼ºæ€è¿›ç¨‹
-		// todo chromeä¸èƒ½å…³é—­è¿›ç¨‹pidä¼šå½±å“æ‰€æœ‰æ ‡ç­¾çª—å£,vscodeä¹Ÿæœ‰åŒæ ·é—®é¢˜
+		// ¼ì²é½ø³ÌÊÇ·ñ¹Ø±Õ£¬³¬Ê±Ç¿É±½ø³Ì
+		// todo chrome²»ÄÜ¹Ø±Õ½ø³Ìpid»áÓ°ÏìËùÓĞ±êÇ©´°¿Ú,vscodeÒ²ÓĞÍ¬ÑùÎÊÌâ
 		if (tabCtrlItemInfo.attachProcessId > 0) {
 			/*DWORD dwExitCode = 0;
-			// æ‰“å¼€è¿›ç¨‹ï¼Œè·å–å¥æŸ„
+			// ´ò¿ª½ø³Ì£¬»ñÈ¡¾ä±ú
 			HANDLE hProc = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, tabCtrlItemInfo.attachProcessId);
 			if (hProc != NULL) {
 				BOOL stoped = FALSE;
 				int i;
 				for (i = 0; i < 3; i++) {
 					if (WaitForSingleObject(hProc, 50) == WAIT_OBJECT_0) {
-						// è¿›ç¨‹å·²ç»“æŸ
+						// ½ø³ÌÒÑ½áÊø
 						stoped = TRUE;
 						break;
 					}
 				}
 				int j = i;
 				if (!stoped) {
-					//exeæ–‡ä»¶é‡‡ç”¨è¿™ç§å¯ä»¥å…³é—­
+					//exeÎÄ¼ş²ÉÓÃÕâÖÖ¿ÉÒÔ¹Ø±Õ
 					DWORD dwExitCode = 0;
-					// è·å–å­è¿›ç¨‹çš„é€€å‡ºç 
+					// »ñÈ¡×Ó½ø³ÌµÄÍË³öÂë
 					GetExitCodeProcess(hProc, &dwExitCode);
-					TerminateProcess(hProc, dwExitCode);//ç»ˆæ­¢è¿›ç¨‹
+					TerminateProcess(hProc, dwExitCode);//ÖÕÖ¹½ø³Ì
 				}
 				CloseHandle(hProc);
 			}*/
@@ -1568,40 +1576,42 @@ void RemoveTab(HWND tabCtrlWinHandle, int deleteTab, BOOL quit) {
 	if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
 	}
-	// é‡Šæ”¾å†…å­˜
+	// ÊÍ·ÅÄÚ´æ
 	if (tabCtrlItemInfo.command != NULL) {
 		delete[] tabCtrlItemInfo.command;
+		tabCtrlItemInfo.command = NULL;
 	}
+
 	if (quit) {
 		return;
 	}
 
-	// æ ‡ç­¾åˆ‡æ¢
+	// ±êÇ©ÇĞ»»
 	count = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	if (count == 0) {
 		AddNewOverview(&g_tabWindowsInfo);
 	}
-	else if (deleteTab == currentTab) { //å¦‚æœåˆ é™¤é¡¹éé€‰ä¸­é¡¹ï¼Œä¸åˆ‡æ¢é€‰ä¸­
+	else if (deleteTab == currentTab) { //Èç¹ûÉ¾³ıÏî·ÇÑ¡ÖĞÏî£¬²»ÇĞ»»Ñ¡ÖĞ
 		// if last item was removed, select previous item, otherwise select next item
 		newSelectedTab = (currentTab == count) ? (currentTab - 1) : currentTab;
 		selectTab(tabCtrlWinHandle, newSelectedTab);
 	}
 }
 
-// å«æ ‡ç­¾æ¡å¤§å°ä½ç½®
+// º¬±êÇ©Ìõ´óĞ¡Î»ÖÃ
 RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	RECT toolbarRect;
 	RECT tabRect = rc;
-	// è·å–å·¥å…·æ çš„å±å¹•åæ ‡
+	// »ñÈ¡¹¤¾ßÀ¸µÄÆÁÄ»×ø±ê
 	GetWindowRect(g_toolbarHandle, &toolbarRect);
 
-	// å°†å·¥å…·æ åæ ‡è½¬æ¢ä¸ºçˆ¶çª—å£çš„å®¢æˆ·åŒºåæ ‡
+	// ½«¹¤¾ßÀ¸×ø±ê×ª»»Îª¸¸´°¿ÚµÄ¿Í»§Çø×ø±ê
 	MapWindowPoints(HWND_DESKTOP, tabWindowsInfo->parentWinHandle, (LPPOINT)&toolbarRect, 2);
 
-	// è®¡ç®—å·¥å…·æ é«˜åº¦
+	// ¼ÆËã¹¤¾ßÀ¸¸ß¶È
 	int toolbarHeight = toolbarRect.bottom - toolbarRect.top;
 
-	// è°ƒæ•´æ ‡ç­¾æ§ä»¶ä½ç½®åˆ°å·¥å…·æ ä¸‹æ–¹
+	// µ÷Õû±êÇ©¿Ø¼şÎ»ÖÃµ½¹¤¾ßÀ¸ÏÂ·½
 	tabRect.top = toolbarRect.bottom;
 	tabRect.bottom = rc.bottom;
 
@@ -1613,28 +1623,28 @@ RECT getTabRect(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 	int numTabs, i;
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
-	RECT clientRect;       // æ ‡ç­¾æ§ä»¶å®¢æˆ·åŒºçš„ä½ç½®å’Œå¤§å°
+	RECT clientRect;       // ±êÇ©¿Ø¼ş¿Í»§ÇøµÄÎ»ÖÃºÍ´óĞ¡
 
 	HWND tabCtrlWinHandle = tabWindowsInfo->tabCtrlWinHandle;
 
 	rc = getTabRect(tabWindowsInfo, rc);
 	clientRect = rc;
-	// è®¡ç®—æ ‡ç­¾æ§ä»¶çš„å®¢æˆ·åŒºï¼ˆä¸åŒ…æ‹¬æ ‡ç­¾æ ï¼‰
+	// ¼ÆËã±êÇ©¿Ø¼şµÄ¿Í»§Çø£¨²»°üÀ¨±êÇ©À¸£©
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &clientRect);
 
-	// è®¾ç½®æ ‡ç­¾æ¡
+	// ÉèÖÃ±êÇ©Ìõ
 	if (!SetWindowPos(tabCtrlWinHandle,
 		HWND_TOP,
 		rc.left,
-		rc.top,    // ä»å·¥å…·æ ä¸‹æ–¹å¼€å§‹
+		rc.top,    // ´Ó¹¤¾ßÀ¸ÏÂ·½¿ªÊ¼
 		rc.right - rc.left,
-		clientRect.top - rc.top,      // ä½¿ç”¨æ­£ç¡®çš„é«˜åº¦
+		clientRect.top - rc.top,      // Ê¹ÓÃÕıÈ·µÄ¸ß¶È
 		SWP_DEFERERASE | SWP_NOREPOSITION | SWP_NOOWNERZORDER))
 		return E_FAIL;
 
 	int sel = TabCtrl_GetCurSel(tabCtrlWinHandle);
 	
-	// è°ƒæ•´æ¯ä¸ªæ ‡ç­¾é¡µå†…å®¹çª—å£çš„ä½ç½®
+	// µ÷ÕûÃ¿¸ö±êÇ©Ò³ÄÚÈİ´°¿ÚµÄÎ»ÖÃ
 	numTabs = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	for (i = 0; i < numTabs; i++) {
 		getTabItemInfo(tabCtrlWinHandle, i, &tabCtrlItemInfo);
@@ -1643,7 +1653,7 @@ HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 		if (sel == i) {
 			refresh = TRUE;
 		}
-		// ä½¿ç”¨ clientRect ä½œä¸ºæ ‡ç­¾é¡µå†…å®¹çš„ä½ç½®å’Œå¤§å°
+		// Ê¹ÓÃ clientRect ×÷Îª±êÇ©Ò³ÄÚÈİµÄÎ»ÖÃºÍ´óĞ¡
 		setTabWindowPos(tabCtrlItemInfo.hostWindowHandle,
 			tabCtrlItemInfo.attachWindowHandle,
 			clientRect, refresh);
@@ -1653,7 +1663,7 @@ HRESULT resizeTabControl(struct TabWindowsInfo *tabWindowsInfo, RECT rc) {
 }
 
 HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
-	// åˆ›å»ºå®¿ä¸»çª—å£
+	// ´´½¨ËŞÖ÷´°¿Ú
 	HWND hostWindow = CreateWindowExW(
 		0,
 		L"Static",
@@ -1674,18 +1684,18 @@ HWND createHostWindow(HINSTANCE hInstance, HWND parentWindow) {
 	return hostWindow;
 }
 
-// è°ƒè¯•çª—å£è¿‡ç¨‹
+// µ÷ÊÔ´°¿Ú¹ı³Ì
 LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 { 
 	switch (msg)
 	{
 	case WM_CREATE:
 	{
-		// åœ¨çª—å£ä¸­åˆ›å»ºç‹¬ç«‹çš„ç¼–è¾‘æ¡†æ§ä»¶
+		// ÔÚ´°¿ÚÖĞ´´½¨¶ÀÁ¢µÄ±à¼­¿ò¿Ø¼ş
 		HWND hDebugEdit = CreateWindowExW(
 			0,
 			L"EDIT",
-			L"",      // åˆå§‹æ–‡æœ¬ä¸ºç©º
+			L"",      // ³õÊ¼ÎÄ±¾Îª¿Õ
 			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | WS_BORDER,
 			0, 0, 0, 0,
 			hWnd,
@@ -1694,7 +1704,7 @@ LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 			NULL
 		);
 
-		// è®¾ç½®ç¼–è¾‘æ¡†å­—ä½“
+		// ÉèÖÃ±à¼­¿ò×ÖÌå
 		HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 		SendMessage(hDebugEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
 
@@ -1721,19 +1731,19 @@ LRESULT CALLBACK DebugWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
-// è°ƒè¯•çª—å£
+// µ÷ÊÔ´°¿Ú
 void createDebugWindow() {
 	const wchar_t* CLASS_NAME = L"DebugWindowClass";
 	if (g_debugWindow) {
-		// æ£€æŸ¥çª—å£æ˜¯å¦å¤„äºæœ€å°åŒ–çŠ¶æ€
+		// ¼ì²é´°¿ÚÊÇ·ñ´¦ÓÚ×îĞ¡»¯×´Ì¬
 		if (IsIconic(g_debugWindow)) {
-			// è¿˜åŸçª—å£ï¼ˆä»æœ€å°åŒ–çŠ¶æ€æ¢å¤ï¼‰
+			// »¹Ô­´°¿Ú£¨´Ó×îĞ¡»¯×´Ì¬»Ö¸´£©
 			ShowWindow(g_debugWindow, SW_RESTORE);
 		}
 		SetForegroundWindow(g_debugWindow);
 		return;
 	}
-	// ç¡®ä¿çª—å£ç±»åªæ³¨å†Œä¸€æ¬¡ï¼ˆé¦–æ¬¡è°ƒç”¨æ—¶æ³¨å†Œï¼‰
+	// È·±£´°¿ÚÀàÖ»×¢²áÒ»´Î£¨Ê×´Îµ÷ÓÃÊ±×¢²á£©
 	if (!g_debugClassRegistered) {
 		WNDCLASS wc = { 0 };
 		wc.lpfnWndProc = DebugWindowProc;
@@ -1742,16 +1752,16 @@ void createDebugWindow() {
 		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 		
-		// å°è¯•æ³¨å†Œçª—å£ç±»
+		// ³¢ÊÔ×¢²á´°¿ÚÀà
 		ATOM atom = RegisterClass(&wc);
 		DWORD error = GetLastError();
 
-		// æ£€æŸ¥æ˜¯å¦æ³¨å†ŒæˆåŠŸæˆ–ç±»å·²å­˜åœ¨
+		// ¼ì²éÊÇ·ñ×¢²á³É¹¦»òÀàÒÑ´æÔÚ
 		if (!atom && error != ERROR_CLASS_ALREADY_EXISTS) {
 			MessageBoxW(NULL, GetString(IDS_REGISTER_WNDCLASS_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK | MB_ICONERROR);
 			return;
 		}
-		g_debugClassRegistered = true; // æ ‡è®°ä¸ºå·²æ³¨å†Œï¼ˆæ— è®ºæœ¬æ¬¡æ˜¯å¦å®é™…æ³¨å†Œï¼‰
+		g_debugClassRegistered = true; // ±ê¼ÇÎªÒÑ×¢²á£¨ÎŞÂÛ±¾´ÎÊÇ·ñÊµ¼Ê×¢²á£©
 	}
 
 	g_debugWindow = CreateWindowExW(
@@ -1773,7 +1783,7 @@ void createDebugWindow() {
 	}
 }
 
-// é™„åŠ çª—å£
+// ¸½¼Ó´°¿Ú
 void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	RECT rc;
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
@@ -1789,16 +1799,16 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 		MessageBoxW(NULL, GetString(IDS_TAB_CREATE_FAIL), GetString(IDS_MESSAGE_CAPTION), MB_OK);
 		return;
 	}
-	// åµŒå…¥çª—å£åˆ°å®¿ä¸»çª—å£
+	// Ç¶Èë´°¿Úµ½ËŞÖ÷´°¿Ú
 	SetParent(attachHwnd, hostWindow);
-	// cmdè®¾ç½®æ ·å¼ä¼šæœ‰é—®é¢˜
+	// cmdÉèÖÃÑùÊ½»áÓĞÎÊÌâ
 	if (!IsConsoleWindow(attachHwnd)) {
 		LONG_PTR style = GetWindowLongPtr(attachHwnd, GWL_STYLE);
 		style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 		SetWindowLongPtr(attachHwnd, GWL_STYLE, style);
 	}
 	getTabItemInfo(tabCtrlWinHandle, newTabIndex, &tabCtrlItemInfo);
-	// è·å–è¿›ç¨‹ID
+	// »ñÈ¡½ø³ÌID
 	DWORD processId;
 	GetWindowThreadProcessId(attachHwnd, &processId);
 
@@ -1817,7 +1827,7 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	selectTab(tabCtrlWinHandle, newTabIndex);
 	(tabWindowsInfo->tabIncrementor)++;
 
-	// æ›´æ–°æ ‡é¢˜
+	// ¸üĞÂ±êÌâ
 	wchar_t attachTitle[256] = { 0 };
 	wchar_t cutTitle[256] = { 0 };
 	GetWindowTextW(attachHwnd, attachTitle, _countof(attachTitle));
@@ -1827,17 +1837,17 @@ void AddAttachTab(struct TabWindowsInfo *tabWindowsInfo, HWND attachHwnd) {
 	tie.pszText = cutTitle;
 	SendMessage(tabCtrlWinHandle, TCM_SETITEM, newTabIndex, (LPARAM)&tie);
 
-	// è·å–æ•´ä¸ªwindowåŒºåŸŸ
+	// »ñÈ¡Õû¸öwindowÇøÓò
 	GetClientRect(tabWindowsInfo->parentWinHandle, &rc);
 	rc = getTabRect(tabWindowsInfo, rc);
 	TabCtrl_AdjustRect(tabCtrlWinHandle, FALSE, &rc);
 	setTabWindowPos(hostWindow, attachHwnd, rc, TRUE);
-	//é‡ç»˜ï¼Œéƒ¨åˆ†è½¯ä»¶éœ€è¦ï¼Œå¦‚cmd
+	//ÖØ»æ£¬²¿·ÖÈí¼şĞèÒª£¬Èçcmd
 
 	//RedrawWindow(attachHwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
-// åˆ†ç¦»ç¨‹åºå¹¶åˆ é™¤æ ‡ç­¾
+// ·ÖÀë³ÌĞò²¢É¾³ı±êÇ©
 void DetachTab(HWND tabCtrlWinHandle, int indexTab, HWND newParent) {
 	int newTabItemsCount;
 	int newSelectedTab;
@@ -1852,44 +1862,49 @@ void DetachTab(HWND tabCtrlWinHandle, int indexTab, HWND newParent) {
 		return;
 	}
 
-	// å…ˆå…³é—­æ ‡ç­¾
+	// ÏÈ¹Ø±Õ±êÇ©
 	TabCtrl_DeleteItem(tabCtrlWinHandle, indexTab);
 	newTabItemsCount = TabCtrl_GetItemCount(tabCtrlWinHandle);
 	if (newTabItemsCount == 0) {
 		AddNewOverview(&g_tabWindowsInfo);
 	}
-	else if (indexTab == currentTab) { //å¦‚æœåˆ é™¤é¡¹éé€‰ä¸­é¡¹ï¼Œä¸åˆ‡æ¢é€‰ä¸­
+	else if (indexTab == currentTab) { //Èç¹ûÉ¾³ıÏî·ÇÑ¡ÖĞÏî£¬²»ÇĞ»»Ñ¡ÖĞ
 		// if last item was removed, select previous item, otherwise select next item
 		newSelectedTab = (currentTab == newTabItemsCount) ? (currentTab - 1) : currentTab;
 		selectTab(tabCtrlWinHandle, newSelectedTab);
 	}
 
-	// ååˆ†ç¦»çª—å£ï¼Œè¿™æ ·æ–°çª—å£åœ¨å‰å°
+	// ºó·ÖÀë´°¿Ú£¬ÕâÑùĞÂ´°¿ÚÔÚÇ°Ì¨
 	RECT rect;
-	// è·å–å­çª—å£å½“å‰ä½ç½®å’Œå¤§å°
+	// »ñÈ¡×Ó´°¿Úµ±Ç°Î»ÖÃºÍ´óĞ¡
 	GetWindowRect(tabCtrlItemInfo.attachWindowHandle, &rect);
-	// å…ˆä¿®æ”¹æ ·å¼ï¼Œå› ä¸ºåˆ†ç¦»åè®¾ç½®æ ·å¼å¯èƒ½æ— æ•ˆå¯¼è‡´éƒ¨åˆ†è½¯ä»¶æ˜¾ç¤ºå¼‚å¸¸
+	// ÏÈĞŞ¸ÄÑùÊ½£¬ÒòÎª·ÖÀëºóÉèÖÃÑùÊ½¿ÉÄÜÎŞĞ§µ¼ÖÂ²¿·ÖÈí¼şÏÔÊ¾Òì³£
 	if (!IsConsoleWindow(tabCtrlItemInfo.attachWindowHandle)) {
 		LONG_PTR style = GetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE);
 		style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
 		SetWindowLongPtr(tabCtrlItemInfo.attachWindowHandle, GWL_STYLE, style);
 	}
-	// å»æ‰å›è°ƒå‡½æ•°
+	// È¥µô»Øµ÷º¯Êı
 	ProcessUnRegisterClose(tabCtrlItemInfo.waitHandle, tabCtrlItemInfo.processHandle);
-	// æœ€ååˆ†ç¦»
+	// ×îºó·ÖÀë
 	SetParent(tabCtrlItemInfo.attachWindowHandle, newParent);
 	if (newParent == NULL) {
 		int diff = indexTab % 10 * 30;
-		// é‡æ–°å®šä½çª—å£ï¼Œå¢åŠ ä¸€äº›é”™ä½
+		// ÖØĞÂ¶¨Î»´°¿Ú£¬Ôö¼ÓÒ»Ğ©´íÎ»
 		MoveWindow(tabCtrlItemInfo.attachWindowHandle,
 			rect.left + 30 + diff, rect.top + 50 + diff,
 			rect.right - rect.left, rect.bottom - rect.top,
 			TRUE);
 	}
 	
-	// æœ€åé‡Šæ”¾èµ„æº
+	// ×îºóÊÍ·Å×ÊÔ´
 	if (tabCtrlItemInfo.hostWindowHandle && IsWindow(tabCtrlItemInfo.hostWindowHandle)) {
 		DestroyWindow(tabCtrlItemInfo.hostWindowHandle);
+	}
+	// ÊÍ·ÅÄÚ´æ
+	if (tabCtrlItemInfo.command != NULL) {
+		delete[] tabCtrlItemInfo.command;
+		tabCtrlItemInfo.command = NULL;
 	}
 }
 
@@ -1899,18 +1914,18 @@ void SplitTab(int g_tabHitIndex, int pos) {
 	if (!splitHwnd) {
 		return;
 	}
-	// å…ˆè·å–çª—å£
+	// ÏÈ»ñÈ¡´°¿Ú
 	TCCUSTOMITEM tabCtrlItemInfo = { 0 };
 	getTabItemInfo(tabCtrlWinHandle, g_tabHitIndex, &tabCtrlItemInfo);
-	// åˆ†ç¦»çª—å£
+	// ·ÖÀë´°¿Ú
 	DetachTab(tabCtrlWinHandle, g_tabHitIndex, splitHwnd);
-	// å†™å…¥åˆ†å±ç¼–å·
+	// Ğ´Èë·ÖÆÁ±àºÅ
 	if (tabCtrlItemInfo.attachWindowHandle && IsWindow(tabCtrlItemInfo.attachWindowHandle)) {
 		insertSplitWindow(tabCtrlItemInfo.attachWindowHandle, pos);
 	}
 }
 
-// æ‰§è¡Œæœç´¢åŠŸèƒ½çš„å‡½æ•°
+// Ö´ĞĞËÑË÷¹¦ÄÜµÄº¯Êı
 void PerformSearch(HWND hWnd) {
 	LOG_DEBUG(L"search: search");
 	HWND tabCtrlWinHandle = (&g_tabWindowsInfo)->tabCtrlWinHandle;
