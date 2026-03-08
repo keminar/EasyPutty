@@ -2,6 +2,7 @@
 //
 
 #include "framework.h"
+#include "Resource.h"
 #include "EasyPuTTY.h"
 
 #define MAX_LOADSTRING 256
@@ -529,6 +530,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (HIWORD(wParam) == BN_CLICKED) {
 				SetWindowText(g_hsearchEdit, L"");
 				g_hsearchLastWordLen = 0;
+				PerformSearch(g_hsearchEdit);
+			}
+			break;
+		case ID_FILTER_FAVORITE://筛选收藏
+			if (HIWORD(wParam) == BN_CLICKED) {
+				ToggleFavoriteFilter();
 				PerformSearch(g_hsearchEdit);
 			}
 			break;
@@ -1373,6 +1380,15 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
 		g_appInstance, NULL
 	);
+	HWND favoriteButton = CreateWindowEx(
+		0,
+		_T("BUTTON"),
+		GetString(IDS_BTN_FAVORITE),
+		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		searchLeft + searchWidth + 65, 1, 80, 30,
+		g_toolbarHandle, (HMENU)ID_FILTER_FAVORITE,
+		g_appInstance, NULL
+	);
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
 	// 存储原始窗口过程，用于后续调用
 	SetWindowLongPtrW(g_hsearchEdit, GWLP_USERDATA, (LONG_PTR)originalProc);
@@ -1415,6 +1431,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	SendMessageW(g_toolbarHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(g_hsearchEdit, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(searchButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(favoriteButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 }
 
 // 添加新标签

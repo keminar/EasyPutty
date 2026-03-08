@@ -377,18 +377,29 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_NAME);
 			SetWindowText(hEdit, sessionConfig.name);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_IP);
 			SetWindowText(hEdit, sessionConfig.hostName);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_PORT);
 			SetWindowText(hEdit, port);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_CONNECT);
 			SetWindowText(hEdit, sessionConfig.connectType);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
 			SetWindowText(hEdit, sessionConfig.credential);
+
 			hEdit = GetDlgItem(hDlg, IDC_TAGS);
 			SetWindowText(hEdit, sessionConfig.tags);
+
 			hEdit = GetDlgItem(hDlg, IDC_OTHER_PARAMS);
 			SetWindowText(hEdit, sessionConfig.otherParams);
+
+			HWND hCheckFavorite = GetDlgItem(hDlg, IDC_CHECK_FAVORITE);
+			if (hCheckFavorite) {
+				Button_SetCheck(hCheckFavorite, sessionConfig.favorite ? BST_CHECKED : BST_UNCHECKED);
+			}
 		}
 
 		return (INT_PTR)TRUE;
@@ -478,6 +489,13 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Credential", credential, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"OtherParams", otherParams, iniPath);
+			HWND hCheckFavorite = GetDlgItem(hDlg, IDC_CHECK_FAVORITE);
+			if (hCheckFavorite) {
+				BOOL favorite = Button_GetCheck(hCheckFavorite) == BST_CHECKED;
+				WritePrivateProfileString(SECTION_NAME, L"Favorite", favorite ? L"1" : L"0", iniPath);
+			} else {
+				WritePrivateProfileString(SECTION_NAME, L"Favorite", L"0", iniPath);
+			}
 			if (!result) {
 				showError(hDlg, GetString(IDS_ADD_FAIL));
 				return FALSE;
@@ -1236,6 +1254,10 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			SetWindowText(hEdit, programConfig.params);
 			hEdit = GetDlgItem(hDlg, IDC_PRO_TAGS);
 			SetWindowText(hEdit, programConfig.tags);
+			HWND hCheckFavorite = GetDlgItem(hDlg, IDC_CHECK_FAVORITE);
+			if (hCheckFavorite) {
+				Button_SetCheck(hCheckFavorite, programConfig.favorite ? BST_CHECKED : BST_UNCHECKED);
+			}
 		}
 		return (INT_PTR)TRUE;
 	}
@@ -1280,6 +1302,13 @@ INT_PTR CALLBACK ProgramProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			WritePrivateProfileString(SECTION_NAME, L"Path", path, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Params", params, iniPath);
 			WritePrivateProfileString(SECTION_NAME, L"Tags", tags, iniPath);
+			HWND hCheckFavorite = GetDlgItem(hDlg, IDC_CHECK_FAVORITE);
+			if (hCheckFavorite) {
+				BOOL favorite = Button_GetCheck(hCheckFavorite) == BST_CHECKED;
+				WritePrivateProfileString(SECTION_NAME, L"Favorite", favorite ? L"1" : L"0", iniPath);
+			} else {
+				WritePrivateProfileString(SECTION_NAME, L"Favorite", L"0", iniPath);
+			}
 
 			if (!result) {
 				showError(hDlg, GetString(IDS_ADD_FAIL));
