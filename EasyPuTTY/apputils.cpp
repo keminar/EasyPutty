@@ -955,7 +955,7 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	return (INT_PTR)FALSE;
 }
 
-// Click button to show file selection dialog
+// 点击按钮后弹出文件选择对话框
 void setBrowser(HWND hwnd, LPCWSTR lpstrFilter, int nIDDlgItem)
 {
 	OPENFILENAME ofn = { 0 };
@@ -994,11 +994,11 @@ void setBrowser(HWND hwnd, LPCWSTR lpstrFilter, int nIDDlgItem)
 		ofn.lpstrInitialDir = initialDir;
 	}
 
-	//GetOpenFileName dialog changes current working directory (CWD) to user's last selected directory
-	//So relative paths (like .\EasyPuTTY.ini) will be written to unexpected location.
-	//So writing ini file must use full path
+	//GetOpenFileName 对话框默认会将当前工作目录（CWD）更改为用户最后选择的目录
+	//所以后续使用相对路径（如 .\EasyPuTTY.ini）时，文件会被写入到非预期位置。
+	//所以写ini文件要使用全路径
 	if (GetOpenFileName(&ofn)) {
-		// Get selected file path and set to edit control
+		// 获取选择的文件路径并设置到编辑控件中
 		SetWindowText(hEdit, szFile);
 	}
 }
