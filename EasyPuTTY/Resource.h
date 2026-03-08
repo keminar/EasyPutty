@@ -75,6 +75,8 @@
 #define ID_SEARCH_BUTTON                1044
 #define IDC_PAGEANT_STATUS              1045
 #define IDC_INPUT                       1046
+#define IDC_CHECK_FAVORITE              1047
+#define ID_FILTER_FAVORITE              32835
 #define IDS_APP_TITLE                   2001
 #define IDS_TAB_NEW                     2002
 #define IDS_MENU_ATTACH                 2003
@@ -214,6 +216,7 @@
 #define ID_SPLITSCREEN_TOP32830         32830
 #define ID_SPLITSCREEN_BOTTOM           32831
 #define ID_SPLITSCREEN_BOTTOM32832      32832
+#define ID_LIST_FAVORITE                32833
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -222,8 +225,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        142
-#define _APS_NEXT_COMMAND_VALUE         32833
-#define _APS_NEXT_CONTROL_VALUE         1047
+#define _APS_NEXT_COMMAND_VALUE         32836
+#define _APS_NEXT_CONTROL_VALUE         1048
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

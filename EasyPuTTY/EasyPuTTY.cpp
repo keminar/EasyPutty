@@ -2,6 +2,7 @@
 //
 
 #include "framework.h"
+#include "Resource.h"
 #include "EasyPuTTY.h"
 
 #define MAX_LOADSTRING 256
@@ -529,6 +530,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (HIWORD(wParam) == BN_CLICKED) {
 				SetWindowText(g_hsearchEdit, L"");
 				g_hsearchLastWordLen = 0;
+				PerformSearch(g_hsearchEdit);
+			}
+			break;
+		case ID_FILTER_FAVORITE://…∏—° ’≤ÿ
+			if (HIWORD(wParam) == BN_CLICKED) {
+				ToggleFavoriteFilter();
 				PerformSearch(g_hsearchEdit);
 			}
 			break;
@@ -1371,6 +1378,15 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 		searchLeft+ searchWidth, 1, 60, 30,
 		g_toolbarHandle, (HMENU)ID_SEARCH_BUTTON,
+		g_appInstance, NULL
+	);
+	HWND favoriteButton = CreateWindowEx(
+		0,
+		_T("BUTTON"),
+		L"Favorite",
+		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		searchLeft + searchWidth + 65, 1, 80, 30,
+		g_toolbarHandle, (HMENU)ID_FILTER_FAVORITE,
 		g_appInstance, NULL
 	);
 	WNDPROC originalProc = (WNDPROC)SetWindowLongPtr(g_hsearchEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);

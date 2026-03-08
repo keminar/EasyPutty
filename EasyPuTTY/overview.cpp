@@ -5,6 +5,7 @@
 static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
 static HWND g_searchEdit;
+static BOOL g_filterFavorite = FALSE;
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -159,6 +160,38 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
 				filezillaCommand(hwnd, hListView, selectedItem);
+			}
+			break;
+		}
+		case ID_LIST_FAVORITE: {
+			HWND hListView = GetDlgItem(hwnd, ID_LIST_VIEW);
+			wchar_t szText[MAX_PATH] = { 0 };
+			wchar_t szType[MAX_PATH] = { 0 };
+			wchar_t dirPath[MAX_PATH] = { 0 };
+			wchar_t iniPath[MAX_PATH] = { 0 };
+			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+			if (selectedItem != -1) {
+				ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+				if (wcsstr(szType, L"PuTTY") != NULL) {
+					GetPuttySessionsPath(dirPath, MAX_PATH);
+					SessionInfo sessionConfig = { 0 };
+					PathCombine(iniPath, dirPath, szText);
+					swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);
+					ReadSessionFromIni(iniPath, &sessionConfig);
+					sessionConfig.favorite = !sessionConfig.favorite;
+					WritePrivateProfileString(SECTION_NAME, L"Favorite", sessionConfig.favorite ? L"1" : L"0", iniPath);
+				}
+				else {
+					GetProgramPath(dirPath, MAX_PATH);
+					ProgramInfo programConfig = { 0 };
+					PathCombine(iniPath, dirPath, szText);
+					swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);
+					ReadProgramFromIni(iniPath, &programConfig);
+					programConfig.favorite = !programConfig.favorite;
+					WritePrivateProfileString(SECTION_NAME, L"Favorite", programConfig.favorite ? L"1" : L"0", iniPath);
+				}
+				SetListViewData(hListView);
 			}
 			break;
 		}
@@ -554,12 +587,14 @@ void SetListViewData(HWND hListView) {
 		if (programFileList[i] != NULL) {
 			ReadProgramFromIni(programFileList[i], &programConfig);
 			if (programConfig.path[0] != L'\0') {
-				if (searchWord[0] == L'\0'
+				BOOL matchSearch = (searchWord[0] == L'\0'
 					|| wcsstr(programConfig.name, searchWord) != NULL
 					|| wcsstr(programConfig.tags, searchWord) != NULL
-					|| wcsstr(programConfig.path, searchWord) != NULL) {
+					|| wcsstr(programConfig.path, searchWord) != NULL);
+				BOOL matchFavorite = (!g_filterFavorite || programConfig.favorite);
+				if (matchSearch && matchFavorite) {
 					swprintf(command, MAX_COMMAND_LEN, L"%s %s", programConfig.path, programConfig.params);
-					AddListViewItem(hListView, nItem, programConfig.name, textCustom, command, programConfig.tags, L"", textInput);
+					AddListViewItem(hListView, nItem, programConfig.name, textCustom, command, programConfig.tags, L"", textInput, programConfig.favorite);
 					nItem++;
 				}
 			}
@@ -596,7 +631,8 @@ void SetListViewData(HWND hListView) {
 				|| wcsstr(sessionConfig.hostName, searchWord) != NULL) {
 				add = TRUE;
 			}
-			if (!add) {
+			BOOL matchFavorite = (!g_filterFavorite || sessionConfig.favorite);
+			if (!add || !matchFavorite) {
 				continue;
 			}
 			foundCredential = findConfigByName(credentialMap, sessionConfig.credential);
@@ -626,10 +662,10 @@ void SetListViewData(HWND hListView) {
 			}
 
 			if (input_hotkey[0] != L'\0') {
-				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, input_hotkey);
+				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, input_hotkey, sessionConfig.favorite);
 			}
 			else {
-				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, GetString(IDS_NONE));
+				AddListViewItem(hListView, nItem, sessionConfig.name, L"PuTTY", command, sessionConfig.tags, sessionConfig.credential, GetString(IDS_NONE), sessionConfig.favorite);
 			}
 			nItem++;
 		}
@@ -678,7 +714,7 @@ void InitializeListViewColumns(HWND hWndListView) {
 }
 
 // 添加列表项
-void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input) {
+void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input, BOOL favorite) {
 	LVITEMW lvi = { 0 };
 	lvi.mask = LVIF_TEXT;
 	lvi.iItem = nItem;
@@ -696,6 +732,13 @@ void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wc
 	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)credential);
 	lvi.iSubItem++;
 	ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)input);
+
+	// Set favorite icon in name column
+	if (favorite) {
+		wchar_t displayName[512] = { 0 };
+		swprintf(displayName, 512, L"%s %s", L"", name);
+		ListView_SetItemText(hWndListView, lvi.iItem, 0, displayName);
+	}
 }
 
 // 获取指定目录下的所有INI文件
@@ -819,7 +862,8 @@ void ReadProgramFromIni(const wchar_t* filepath, ProgramInfo* config) {
 	GetPrivateProfileStringW(SECTION_NAME, L"Tags", L"",
 		config->tags, sizeof(config->tags) / sizeof(wchar_t),
 		filepath);
-
+	// 读取Favorite
+	config->favorite = GetPrivateProfileIntW(SECTION_NAME, L"Favorite", 0, filepath) != 0;
 }
 
 // 从INI文件读取配置信息
@@ -857,7 +901,8 @@ void ReadSessionFromIni(const wchar_t* filepath, SessionInfo* config) {
 	GetPrivateProfileStringW(SECTION_NAME, L"OtherParams", L"",
 		config->otherParams, sizeof(config->otherParams) / sizeof(wchar_t),
 		filepath);
-
+	// 读取Favorite
+	config->favorite = GetPrivateProfileIntW(SECTION_NAME, L"Favorite", 0, filepath) != 0;
 }
 
 // 从INI文件读取配置信息
@@ -967,6 +1012,11 @@ CredentialInfo* findConfigByName(ConfigMap* map, const wchar_t* name) {
 	}
 
 	return NULL;
+}
+
+// 切换收藏过滤状态
+void ToggleFavoriteFilter() {
+	g_filterFavorite = !g_filterFavorite;
 }
 
 // 释放配置映射表内存

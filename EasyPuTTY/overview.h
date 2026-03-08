@@ -13,6 +13,7 @@ typedef struct {
 	wchar_t path[MAX_PATH];
 	wchar_t params[MAX_COMMAND_LEN];
 	wchar_t tags[256];
+	BOOL favorite;
 } ProgramInfo;
 
 typedef struct {
@@ -23,6 +24,7 @@ typedef struct {
 	wchar_t credential[256];
 	wchar_t otherParams[256];
 	wchar_t tags[256];
+	BOOL favorite;
 } SessionInfo;
 
 typedef struct {
@@ -56,10 +58,11 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 void InitOverview(HINSTANCE hInstance, struct TabWindowsInfo *tabWindowsInfo, HWND hostWindow, HWND searchEdit);
 void SetListViewData(HWND hListView);
 void InitializeListViewColumns(HWND hWndListView);
-void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input);
+void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wchar_t* type, const wchar_t* command, const wchar_t* tags, const wchar_t* credential, const wchar_t* input, BOOL favorite);
 void execCommand(HWND hwnd, HWND hListView, int selectedItem, BOOL tab);
 void filezillaCommand(HWND hwnd, HWND hListView, int selectedItem);
 void winscpCommand(HWND hwnd, HWND hListView, int selectedItem);
+void ToggleFavoriteFilter();
 void psftpCommand(HWND hwnd, HWND hListView, int selectedItem);
 wchar_t** ListIniFiles(const wchar_t* directoryPath, int* fileCount);
 void FreeFileList(wchar_t** fileList, int fileCount);
