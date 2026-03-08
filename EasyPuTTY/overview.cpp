@@ -711,6 +711,11 @@ void InitializeListViewColumns(HWND hWndListView) {
 	lvc.cx = 200;
 	lvc.pszText = (LPWSTR)GetString(IDS_INPUT);
 	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
+
+	lvc.iSubItem = 6;
+	lvc.cx = 200;
+	lvc.pszText = (LPWSTR)GetString(IDS_FAVORITE);
+	ListView_InsertColumn(hWndListView, lvc.iSubItem, &lvc);
 }
 
 // 添加列表项
@@ -735,9 +740,12 @@ void AddListViewItem(HWND hWndListView, int nItem, const wchar_t* name, const wc
 
 	// Set favorite icon in name column
 	if (favorite) {
-		wchar_t displayName[512] = { 0 };
-		swprintf(displayName, 512, L"%s %s", L"", name);
-		ListView_SetItemText(hWndListView, lvi.iItem, 0, displayName);
+		lvi.iSubItem++;
+		ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)L"Yes");
+	}
+	else {
+		lvi.iSubItem++;
+		ListView_SetItemText(hWndListView, lvi.iItem, lvi.iSubItem, (LPWSTR)L"");
 	}
 }
 

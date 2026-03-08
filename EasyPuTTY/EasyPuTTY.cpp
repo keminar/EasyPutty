@@ -1383,7 +1383,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	HWND favoriteButton = CreateWindowEx(
 		0,
 		_T("BUTTON"),
-		L"Favorite",
+		GetString(IDS_BTN_FAVORITE),
 		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 		searchLeft + searchWidth + 65, 1, 80, 30,
 		g_toolbarHandle, (HMENU)ID_FILTER_FAVORITE,
@@ -1431,6 +1431,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 	SendMessageW(g_toolbarHandle, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(g_hsearchEdit, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 	SendMessageW(searchButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
+	SendMessageW(favoriteButton, WM_SETFONT, (WPARAM)tabCaptionFontHandle, FALSE);
 }
 
 // Ìí¼ÓÐÂ±êÇ©

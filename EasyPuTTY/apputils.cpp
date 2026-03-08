@@ -377,18 +377,25 @@ INT_PTR CALLBACK SessionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_NAME);
 			SetWindowText(hEdit, sessionConfig.name);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_IP);
 			SetWindowText(hEdit, sessionConfig.hostName);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_PORT);
 			SetWindowText(hEdit, port);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_CONNECT);
 			SetWindowText(hEdit, sessionConfig.connectType);
+
 			hEdit = GetDlgItem(hDlg, IDC_SESSION_CREDENTIAL);
 			SetWindowText(hEdit, sessionConfig.credential);
+
 			hEdit = GetDlgItem(hDlg, IDC_TAGS);
 			SetWindowText(hEdit, sessionConfig.tags);
+
 			hEdit = GetDlgItem(hDlg, IDC_OTHER_PARAMS);
 			SetWindowText(hEdit, sessionConfig.otherParams);
+
 			HWND hCheckFavorite = GetDlgItem(hDlg, IDC_CHECK_FAVORITE);
 			if (hCheckFavorite) {
 				Button_SetCheck(hCheckFavorite, sessionConfig.favorite ? BST_CHECKED : BST_UNCHECKED);
