@@ -955,11 +955,31 @@ INT_PTR CALLBACK SettingProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 	return (INT_PTR)FALSE;
 }
 
-// 点击按钮后弹出文件选择对话框
+// Click button to show file selection dialog
 void setBrowser(HWND hwnd, LPCWSTR lpstrFilter, int nIDDlgItem)
 {
 	OPENFILENAME ofn = { 0 };
 	wchar_t szFile[MAX_PATH] = { 0 };
+	wchar_t initialDir[MAX_PATH] = { 0 };
+
+	// Get current value from edit control as initial filename
+	HWND hEdit = GetDlgItem(hwnd, nIDDlgItem);
+	if (hEdit) {
+		GetWindowText(hEdit, szFile, MAX_PATH);
+
+		// If edit box has a valid file path, use its directory as initial directory
+		if (szFile[0] != L'\0') {
+			DWORD attribs = GetFileAttributes(szFile);
+			if (attribs != INVALID_FILE_ATTRIBUTES && !(attribs & FILE_ATTRIBUTE_DIRECTORY)) {
+				// Valid file path exists, extract its directory
+				wcscpy_s(initialDir, MAX_PATH, szFile);
+				wchar_t* lastSlash = wcsrchr(initialDir, L'\\');
+				if (lastSlash) {
+					*lastSlash = L'\0';
+				}
+			}
+		}
+	}
 
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = hwnd;
@@ -969,12 +989,16 @@ void setBrowser(HWND hwnd, LPCWSTR lpstrFilter, int nIDDlgItem)
 	ofn.nFilterIndex = 1;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-	//GetOpenFileName 对话框默认会将当前工作目录（CWD）更改为用户最后选择的目录
-	//所以后续使用相对路径（如 .\EasyPuTTY.ini）时，文件会被写入到非预期位置。
-	//所以写ini文件要使用全路径
+	// Set initial directory if edit box has a valid file path
+	if (initialDir[0] != L'\0') {
+		ofn.lpstrInitialDir = initialDir;
+	}
+
+	//GetOpenFileName dialog changes current working directory (CWD) to user's last selected directory
+	//So relative paths (like .\EasyPuTTY.ini) will be written to unexpected location.
+	//So writing ini file must use full path
 	if (GetOpenFileName(&ofn)) {
-		// 获取选择的文件路径并设置到编辑控件中
-		HWND hEdit = GetDlgItem(hwnd, nIDDlgItem);
+		// Get selected file path and set to edit control
 		SetWindowText(hEdit, szFile);
 	}
 }
