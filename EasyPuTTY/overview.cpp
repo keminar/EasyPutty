@@ -262,11 +262,23 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			wchar_t szType[MAX_PATH] = { 0 };
 			wchar_t dirPath[MAX_PATH] = { 0 };
 			wchar_t iniPath[MAX_PATH] = { 0 };
+			wchar_t msgCaption[MAX_PATH] = { 0 };
+			wchar_t confirmMsg[MAX_PATH] = { 0 };
 
 			int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 			if (selectedItem != -1) {
 				ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
 				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+
+				// 确认删除提示
+				wcscpy_s(msgCaption, _countof(msgCaption), GetString(IDS_MESSAGE_CAPTION));
+				swprintf(confirmMsg, MAX_PATH, GetString(IDS_DELETE_CONFIRM), szText);
+
+				int result = MessageBox(hwnd, confirmMsg, msgCaption, MB_YESNO | MB_ICONQUESTION);
+				if (result != IDYES) {
+					break;
+				}
+
 				if (wcsstr(szType, L"PuTTY") != NULL) {
 					GetPuttySessionsPath(dirPath, MAX_PATH);
 				}
