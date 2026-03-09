@@ -68,6 +68,19 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				HMENU hMenu = LoadMenuW(g_appInstance, MakeIntreSource(IDR_SESSION, IDR_SESSION_EN));
 				HMENU hSubMenu = GetSubMenu(hMenu, 0);
 
+				// 如果选中了项目，检查是否已收藏并设置菜单项的勾选状态
+				if (itemIndex != -1) {
+					wchar_t szFavorite[MAX_PATH] = { 0 };
+					BOOL isFavorite = FALSE;
+
+					// 直接从ListView最后一列读取收藏状态
+					ListView_GetItemText(hListView, itemIndex, 6, szFavorite, sizeof(szFavorite));
+					isFavorite = (wcscmp(szFavorite, L"Yes") == 0);
+
+					// 根据收藏状态设置菜单项的勾选状态
+					CheckMenuItem(hSubMenu, ID_LIST_FAVORITE, isFavorite ? MF_CHECKED : MF_UNCHECKED);
+				}
+
 				// 显示右键菜单（TrackPopupMenu是阻塞函数，会等待用户选择菜单项）
 				TrackPopupMenu(hSubMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON,
 					pt.x, pt.y, 0, hwnd, NULL);
