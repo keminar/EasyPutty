@@ -1384,7 +1384,7 @@ void CreateToolBarTabControl(struct TabWindowsInfo *tabWindowsInfo, HWND parentW
 		0,
 		_T("BUTTON"),
 		GetString(IDS_BTN_FAVORITE),
-		WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
 		searchLeft + searchWidth + 65, 1, 80, 30,
 		g_toolbarHandle, (HMENU)ID_FILTER_FAVORITE,
 		g_appInstance, NULL
