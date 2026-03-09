@@ -116,9 +116,9 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				wchar_t szType[MAX_PATH] = { 0 };
 				ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
 				if (wcsstr(szType, L"PuTTY") != NULL) {
-					showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_SESSION), hwnd, SessionProc);
+					showDialogBox(g_appInstance, g_tabWindowsInfo, MakeIntreSource(IDD_SESSION, IDD_SESSION_EN), hwnd, SessionProc);
 				} else{
-					showDialogBox(g_appInstance, g_tabWindowsInfo, MAKEINTRESOURCE(IDD_PROGRAM), hwnd, ProgramProc);
+					showDialogBox(g_appInstance, g_tabWindowsInfo, MakeIntreSource(IDD_PROGRAM, IDD_PROGRAM_EN), hwnd, ProgramProc);
 				}
 			}
 			break;
