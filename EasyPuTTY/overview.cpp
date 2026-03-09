@@ -46,6 +46,40 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 						execCommand(hwnd, hListView, selectedItem, TRUE);
 					}
 				}
+				else if (pnmlvkd->wVKey == 0x43 && (GetKeyState(VK_CONTROL) < 0)) {  // Ctrl+C 快捷复制主机地址到粘贴板
+					int selectedItem = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+					if (selectedItem != -1) {
+						wchar_t szType[MAX_PATH] = { 0 };
+						ListView_GetItemText(hListView, selectedItem, 1, szType, sizeof(szType));
+						if (wcsstr(szType, L"PuTTY") != NULL) {
+							wchar_t szText[MAX_PATH] = { 0 };
+							wchar_t dirPath[MAX_PATH] = { 0 };
+							wchar_t iniPath[MAX_PATH] = { 0 };
+							ListView_GetItemText(hListView, selectedItem, 0, szText, sizeof(szText));
+
+							GetPuttySessionsPath(dirPath, MAX_PATH);
+							SessionInfo sessionConfig = { 0 };
+							PathCombine(iniPath, dirPath, szText);
+							swprintf(iniPath, MAX_PATH, L"%s.ini", iniPath);
+							ReadSessionFromIni(iniPath, &sessionConfig);
+
+							if (sessionConfig.hostName[0] != L'\0') {
+								if (OpenClipboard(hwnd)) {
+									EmptyClipboard();
+									size_t len = wcslen(sessionConfig.hostName);
+									HGLOBAL hglb = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(wchar_t));
+									if (hglb) {
+										wchar_t* lptstr = (wchar_t*)GlobalLock(hglb);
+										wcscpy_s(lptstr, len + 1, sessionConfig.hostName);
+										GlobalUnlock(hglb);
+										SetClipboardData(CF_UNICODETEXT, hglb);
+									}
+									CloseClipboard();
+								}
+							}
+						}
+					}
+				}
 			}
 			else if (pnmh->code == NM_RCLICK) {
 				// 获取鼠标位置（屏幕坐标）
