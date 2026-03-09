@@ -6,6 +6,104 @@ static HINSTANCE g_appInstance;
 static TabWindowsInfo* g_tabWindowsInfo = NULL;
 static HWND g_searchEdit;
 static BOOL g_filterFavorite = FALSE;
+static HWND g_hToastWindow = NULL;
+
+// Toast 窗口过程
+LRESULT CALLBACK ToastProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	switch (uMsg) {
+	case WM_PAINT: {
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hwnd, &ps);
+		RECT rc;
+		GetClientRect(hwnd, &rc);
+
+		// 绘制背景
+		HBRUSH hBrush = CreateSolidBrush(RGB(0, 120, 215));
+		FillRect(hdc, &rc, hBrush);
+		DeleteObject(hBrush);
+
+		// 绘制文字
+		SetBkMode(hdc, TRANSPARENT);
+		SetTextColor(hdc, RGB(255, 255, 255));
+
+		wchar_t* text = (wchar_t*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+		if (text) {
+			DrawText(hdc, text, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		}
+
+		EndPaint(hwnd, &ps);
+		return 0;
+	}
+	case WM_TIMER: {
+		DestroyWindow(hwnd);
+		return 0;
+	}
+	case WM_DESTROY: {
+		wchar_t* text = (wchar_t*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+		if (text) {
+			free(text);
+		}
+		if (g_hToastWindow == hwnd) {
+			g_hToastWindow = NULL;
+		}
+		return 0;
+	}
+	default:
+		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	}
+	return 0;
+}
+
+// 显示 Toast 提示
+void ShowToast(HWND parent, const wchar_t* text) {
+	// 销毁现有的 Toast
+	if (g_hToastWindow && IsWindow(g_hToastWindow)) {
+		DestroyWindow(g_hToastWindow);
+		g_hToastWindow = NULL;
+	}
+
+	// 注册窗口类（如果还没注册）
+	static BOOL registered = FALSE;
+	if (!registered) {
+		WNDCLASSW wc = { 0 };
+		wc.lpfnWndProc = ToastProc;
+		wc.hInstance = g_appInstance;
+		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+		wc.lpszClassName = L"EasyPuttyToast";
+		RegisterClassW(&wc);
+		registered = TRUE;
+	}
+
+	// 创建 Toast 窗口
+	g_hToastWindow = CreateWindowExW(
+		WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+		L"EasyPuttyToast",
+		L"",
+		WS_POPUP,
+		0, 0, 200, 40,
+		parent, NULL, g_appInstance, NULL
+	);
+
+	if (g_hToastWindow) {
+		// 保存文字
+		size_t len = wcslen(text);
+		wchar_t* textCopy = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
+		wcscpy_s(textCopy, len + 1, text);
+		SetWindowLongPtrW(g_hToastWindow, GWLP_USERDATA, (LONG_PTR)textCopy);
+
+		// 居中显示在父窗口底部
+		RECT parentRect;
+		GetWindowRect(parent, &parentRect);
+		int toastWidth = 200;
+		int toastHeight = 40;
+		int x = parentRect.left + (parentRect.right - parentRect.left - toastWidth) / 2;
+		int y = parentRect.bottom - toastHeight - 20;
+		SetWindowPos(g_hToastWindow, HWND_TOPMOST, x, y, toastWidth, toastHeight, SWP_SHOWWINDOW);
+
+		// 2秒后自动关闭
+		SetTimer(g_hToastWindow, 1, 2000, NULL);
+	}
+}
 
 // 宿主窗口的子类化过程
 LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -73,6 +171,7 @@ LRESULT CALLBACK HostWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 										wcscpy_s(lptstr, len + 1, sessionConfig.hostName);
 										GlobalUnlock(hglb);
 										SetClipboardData(CF_UNICODETEXT, hglb);
+										ShowToast(hwnd, GetString(IDS_COPY_SUCCESS));
 									}
 									CloseClipboard();
 								}

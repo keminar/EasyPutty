@@ -144,6 +144,7 @@
 #define IDS_WINSCP_PATH                 2066
 #define IDS_PSFTP_PATH                  2067
 #define IDS_NOT_PUTTY_TIPS              2068
+#define IDS_COPY_SUCCESS                2069
 #define IDS_DEBUG_TITLE                 2070
 #define IDD_ABOUTBOX_EN                 2071
 #define IDD_PAGEANT_EN                  2072
